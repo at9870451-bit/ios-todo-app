@@ -115,7 +115,9 @@ fi
 echo "${c}36══════════════════════════════════════════${c}0"
 echo
 echo "iOS App「设置」页填："
-echo "  地址：http://$(curl -s -m 3 ifconfig.co 2>/dev/null || echo '<服务器IPv6>'):${PORT}"
+IPV6=$(ip -6 addr show scope global 2>/dev/null | grep -oP '(?<=inet6\s)[0-9a-f:]+' | head -1 || true)
+HOST="${IPV6:-2404:8c80:85:8001::be}"
+echo "  地址：http://[${HOST}]:${PORT}"
 echo "  令牌：${TOKEN}"
 echo
 echo "管理命令："
