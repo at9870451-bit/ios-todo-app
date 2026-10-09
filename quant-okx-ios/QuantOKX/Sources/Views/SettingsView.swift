@@ -145,7 +145,7 @@ struct SettingsView: View {
             Text(k)
             Spacer()
             Text(v)
-                .foregroundStyle(ok ? .secondary : .orange)
+                .foregroundStyle(ok ? Color.secondary : Color.orange)
                 .font(.callout.monospaced())
                 .lineLimit(1)
         }

@@ -10,7 +10,7 @@ struct ApiEnvelope<T: Decodable>: Decodable {
 
 /// 后端返回的数字有时是字符串有时是数字，统一容错解析
 @propertyWrapper
-struct FlexDouble: Decodable {
+struct FlexDouble: Decodable, Equatable {
     var wrappedValue: Double
 
     init(wrappedValue: Double = 0) { self.wrappedValue = wrappedValue }
@@ -22,6 +22,8 @@ struct FlexDouble: Decodable {
         if let i = try? c.decode(Int.self) { wrappedValue = Double(i); return }
         wrappedValue = 0
     }
+
+    static func == (l: FlexDouble, r: FlexDouble) -> Bool { l.wrappedValue == r.wrappedValue }
 }
 
 // MARK: - 系统状态
@@ -136,7 +138,7 @@ struct LogDTO: Decodable, Identifiable {
 
 // MARK: - 配置
 
-struct ConfigDTO: Decodable {
+struct ConfigDTO: Decodable, Equatable {
     let okxConfigured: Bool
     let okxApiKeyMasked: String?
     let demoTrading: Bool

@@ -113,7 +113,7 @@ struct StrategyView: View {
                             .frame(width: 34, height: 34)
                             .background(strategy == kind ? Color.blue : Color.gray.opacity(0.18),
                                         in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            .foregroundStyle(strategy == kind ? .white : .secondary)
+                            .foregroundStyle(strategy == kind ? Color.white : Color.secondary)
 
                         VStack(alignment: .leading, spacing: 3) {
                             Text(kind.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary)
@@ -221,7 +221,7 @@ struct StrategyView: View {
                     Text("模拟盘模式")
                     Text(demoTrading ? "使用 OKX 模拟环境，不涉及真实资金" : "⚠️ 实盘，会真实下单")
                         .font(.caption2)
-                        .foregroundStyle(demoTrading ? .secondary : .red)
+                        .foregroundStyle(demoTrading ? Color.secondary : Color.red)
                 }
             }
         } header: {
