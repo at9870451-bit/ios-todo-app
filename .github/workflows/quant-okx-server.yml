@@ -1,0 +1,77 @@
+name: Build QuantOKX Server
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["server-v*"]
+    branches: [main]
+    paths:
+      - "quant-okx-server/**"
+      - ".github/workflows/quant-okx-server.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 编译 Java 后端
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: temurin
+          cache: maven
+
+      - name: 显示环境
+        run: |
+          java -version
+          mvn -v
+
+      - name: 编译打包
+        working-directory: quant-okx-server
+        run: mvn -B package -DskipTests 2>&1 | tee /tmp/mvn.log | tail -50
+
+      - name: 收集产物
+        working-directory: quant-okx-server
+        run: |
+          JAR=$(find target -maxdepth 1 -name "*.jar" ! -name "*-sources.jar" ! -name "*.original" | head -1)
+          if [ -z "$JAR" ]; then echo "::error::没有生成 jar"; exit 1; fi
+          cp "$JAR" ../quant-okx-server.jar
+          echo "=== 产物 ==="
+          ls -lh ../quant-okx-server.jar
+          echo "SHA256: $(sha256sum ../quant-okx-server.jar | awk '{print $1}')"
+          echo "JAR=$JAR" >> $GITHUB_ENV
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: quant-okx-server-jar
+          path: quant-okx-server.jar
+          retention-days: 30
+
+      - name: 发 Release
+        if: startsWith(github.ref, 'refs/tags/server-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            QuantOKX Java 后端可执行 jar。
+            运行：`java -jar quant-okx-server.jar`
+            提交：`${{ github.sha }}`
+          files: quant-okx-server.jar
+          draft: false
+
+      - name: 失败时上传日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-log
+          path: /tmp/mvn.log
+          retention-days: 7

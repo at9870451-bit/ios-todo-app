@@ -1,0 +1,11 @@
+target/
+data/
+*.log
+logs/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+*.env
+.env
+*.pid
