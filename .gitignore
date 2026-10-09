@@ -1,0 +1,14 @@
+# XcodeGen 生成的工程（由 CI 重建，不入库）
+*.xcodeproj/
+*.xcworkspace/
+MyApp/Info.plist
+
+# 构建产物
+build/
+DerivedData/
+*.ipa
+Payload/
+build.log
+
+# macOS
+.DS_Store

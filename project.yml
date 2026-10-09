@@ -1,0 +1,38 @@
+name: MyApp
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: ""          # 有付费开发者账号时填 Team ID
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: ""         # 无签名构建；有无账号都能出 ipa
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGNING_ALLOWED: "NO"
+
+targets:
+  MyApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: MyApp/Sources
+    info:
+      path: MyApp/Info.plist
+      properties:
+        CFBundleDisplayName: 我的清单
+        CFBundleShortVersionString: "1.0"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.myapp
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_USER_SCRIPT_SANDBOXING: NO

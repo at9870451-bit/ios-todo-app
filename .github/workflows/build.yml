@@ -1,0 +1,110 @@
+name: Build iOS App
+
+on:
+  workflow_dispatch:          # 在 GitHub App 里点一下就能跑
+    inputs:
+      note:
+        description: "构建备注（可选）"
+        required: false
+        default: ""
+  push:
+    tags: ["v*"]              # 打 tag 自动出正式包
+    branches: [main]
+
+permissions:
+  contents: write             # 需要写权限才能创建 Release
+
+jobs:
+  build:
+    name: 编译 ipa
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 显示环境
+        run: |
+          echo "Xcode: $(xcodebuild -version | head -1)"
+          echo "Swift: $(swift --version | head -1)"
+          sw_vers
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        run: xcodegen generate --spec project.yml
+
+      - name: 编译（未签名）
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MyApp.xcodeproj \
+            -scheme MyApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_ENTITLEMENTS="" \
+            build 2>&1 | tee build.log | tail -40
+
+      - name: 打包成 ipa
+        run: |
+          APP_PATH="build/Build/Products/Release-iphoneos/MyApp.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::找不到产物 $APP_PATH"
+            exit 1
+          fi
+
+          rm -rf Payload MyApp.ipa
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          # 未签名包：清掉可能残留的签名文件，交给重签名工具处理
+          rm -rf Payload/MyApp.app/_CodeSignature 2>/dev/null || true
+          zip -qry MyApp.ipa Payload
+
+          echo "=== 产物信息 ==="
+          ls -lh MyApp.ipa
+          echo "SHA256: $(shasum -a 256 MyApp.ipa | awk '{print $1}')"
+          echo "架构: $(lipo -archs Payload/MyApp.app/MyApp 2>/dev/null || echo unknown)"
+          echo "最低系统: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/MyApp.app/Info.plist 2>/dev/null || echo unknown)"
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyApp-ipa
+          path: MyApp.ipa
+          retention-days: 30
+
+      - name: 发布到 Release
+        if: github.event_name != 'push' || startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: >-
+            ${{ startsWith(github.ref, 'refs/tags/v')
+                && github.ref_name
+                || format('build-{0}', github.run_number) }}
+          name: >-
+            ${{ startsWith(github.ref, 'refs/tags/v')
+                && github.ref_name
+                || format('构建 #{0}', github.run_number) }}
+          body: |
+            自动构建产物，可直接下载 ipa 安装。
+
+            - 提交：`${{ github.sha }}`
+            - 触发：${{ github.event_name }}
+            - 备注：${{ inputs.note }}
+          files: MyApp.ipa
+          draft: false
+          prerelease: false
+
+      - name: 上传编译日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          retention-days: 7
