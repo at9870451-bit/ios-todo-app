@@ -12,3 +12,6 @@ build.log
 
 # macOS
 .DS_Store
+
+# 图标预览
+icon-preview.png

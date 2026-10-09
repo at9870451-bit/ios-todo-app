@@ -38,7 +38,7 @@ jobs:
   testflight:
     needs: check-secrets
     if: needs.check-secrets.outputs.ready == 'true'
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
