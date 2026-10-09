@@ -15,3 +15,11 @@ build.log
 
 # 图标预览
 icon-preview.png
+
+# QuantOKX
+quant-okx-ios/build/
+quant-okx-ios/Payload/
+quant-okx-ios/*.ipa
+quant-okx-ios/icon-preview.png
+quant-okx-ios/*.xcodeproj/
+quant-okx-ios/QuantOKX/Info.plist
