@@ -105,7 +105,7 @@ struct FeedView: View {
                             .foregroundStyle(isOn ? Color.white : Color.primary)
                         Text("\(count) 帖")
                             .font(.system(size: 9))
-                            .foregroundStyle(isOn ? Color.white.opacity(0.8) : Color.tertiary)
+                            .foregroundStyle(isOn ? Color.white.opacity(0.8) : Color.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)

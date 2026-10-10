@@ -96,7 +96,7 @@ struct ShopView: View {
                 Spacer()
                 Text("\(item.sold) 人购买")
                     .font(.system(size: 9))
-                    .foregroundStyle(Color.tertiary)
+                    .foregroundStyle(.tertiary)
             }
 
             Button {
