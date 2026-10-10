@@ -5,7 +5,7 @@ struct CommunityApp: App {
     @StateObject private var store = CommunityStore()
     @State private var tab: Tab = .feed
 
-    enum Tab: Hashable { case feed, compose, messages, me }
+    enum Tab: Hashable { case feed, compose, messages, shop, me }
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +22,10 @@ struct CommunityApp: App {
                     .tabItem { Label("消息", systemImage: "bell.fill") }
                     .tag(Tab.messages)
                     .badge(store.notices.isEmpty ? 0 : min(store.notices.count, 99))
+
+                ShopView()
+                    .tabItem { Label("商店", systemImage: "bag.fill") }
+                    .tag(Tab.shop)
 
                 ProfileView()
                     .tabItem { Label("我的", systemImage: "person.fill") }
@@ -41,7 +45,7 @@ struct Avatar: View {
 
     private var gradient: LinearGradient {
         let palette: [Color] = [.indigo, .teal, .orange, .pink, .blue, .purple, .mint]
-        let idx = abs(name.hashValue) % palette.count
+        let idx = abs(name.unicodeScalars.reduce(0) { $0 &+ Int($1.value) }) % palette.count
         return LinearGradient(colors: [palette[idx].opacity(0.85), palette[idx]],
                               startPoint: .topLeading, endPoint: .bottomTrailing)
     }

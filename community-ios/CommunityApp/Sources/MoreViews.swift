@@ -22,7 +22,7 @@ struct MessagesView: View {
                                 .fixedSize(horizontal: false, vertical: true)
                             Text(n.at, format: .relative(presentation: .named))
                                 .font(.caption2)
-                                .foregroundStyle(Color.tertiary)
+                                .foregroundStyle(.tertiary)
                         }
                         .padding(.vertical, 2)
                     }

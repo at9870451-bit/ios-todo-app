@@ -1,83 +1,161 @@
 import SwiftUI
 
+enum HomeFilter: Equatable {
+    case recommend
+    case follow
+    case tag(String)
+}
+
 struct FeedView: View {
     @EnvironmentObject private var store: CommunityStore
     var goCompose: () -> Void
 
     @State private var selected: Post?
-    @State private var filterTag: String?
+    @State private var filter: HomeFilter = .recommend
+
+    static let followed = ["老王聊交易", "K线少女", "节气养生"]
+    private let cats: [(String, String, String)] = [
+        ("闲聊", "message.fill", "bubble.left.and.bubble.right.fill"),
+        ("行情", "chart.line.uptrend.xyaxis", "chart.line.uptrend.xyaxis"),
+        ("策略", "target", "target"),
+        ("干货", "book.fill", "text.book.closed.fill"),
+        ("求助", "hand.raised.fill", "hand.raised.fill"),
+    ]
 
     private var shown: [Post] {
-        if let t = filterTag { return store.posts.filter { $0.tag == t } }
-        return store.posts
+        switch filter {
+        case .recommend:
+            return store.posts.sorted { $0.likeCount > $1.likeCount }
+        case .follow:
+            return store.posts.filter { Self.followed.contains($0.authorName) }
+        case .tag(let t):
+            return store.posts.filter { $0.tag == t }
+        }
+    }
+
+    private var filterLabel: String {
+        switch filter {
+        case .recommend: return "推荐"
+        case .follow: return "关注"
+        case .tag(let t): return t
+        }
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if shown.isEmpty {
-                    ContentUnavailableView("这里还空着",
-                                           systemImage: "tray",
-                                           description: Text("点底部「发布」说点什么吧"))
-                } else {
-                    List {
-                        Section {
-                            tagBar
-                        }
-                        .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    categoryGrid
+                    chipsRow
 
+                    Text("\(filterLabel) · \(shown.count) 帖")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.secondary)
+                        .padding(.leading, 4)
+
+                    if shown.isEmpty {
+                        emptyCard
+                    } else {
                         ForEach(shown) { p in
                             PostRow(post: p) { store.toggleLike(p.id) }
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(uiColor: .secondarySystemGroupedBackground),
+                                            in: RoundedRectangle(cornerRadius: 16))
                                 .contentShape(Rectangle())
                                 .onTapGesture { selected = p }
-                                .listRowSeparator(.hidden)
                         }
                     }
-                    .listStyle(.plain)
                 }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 20)
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle("社区")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        goCompose()
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                    }
+                    Button(action: goCompose) { Image(systemName: "square.and.pencil") }
                 }
             }
             .sheet(item: $selected) { p in
                 PostDetailView(postID: p.id)
                     .environmentObject(store)
             }
-            .refreshable { }
         }
     }
 
-    private var tagBar: some View {
+    // MARK: 分区宫格
+
+    private var categoryGrid: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("分区")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Color.secondary)
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 5), spacing: 8) {
+                ForEach(cats, id: \.0) { cat in
+                    let count = store.posts.filter { $0.tag == cat.0 }.count
+                    let isOn = filter == .tag(cat.0)
+                    VStack(spacing: 6) {
+                        Image(systemName: cat.2)
+                            .font(.body)
+                            .foregroundStyle(isOn ? Color.white : Color.indigo)
+                        Text(cat.0)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(isOn ? Color.white : Color.primary)
+                        Text("\(count) 帖")
+                            .font(.system(size: 9))
+                            .foregroundStyle(isOn ? Color.white.opacity(0.8) : Color.tertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(isOn ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground),
+                                in: RoundedRectangle(cornerRadius: 12))
+                    .onTapGesture { filter = isOn ? .recommend : .tag(cat.0) }
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(uiColor: .secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    // MARK: 快捷筛选条
+
+    private var chipsRow: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                TagChip(text: "全部")
-                    .onTapGesture { filterTag = nil }
-                ForEach(["闲聊", "行情", "策略", "干货", "求助"], id: \.self) { t in
-                    HStack(spacing: 4) {
-                        if filterTag == t { Image(systemName: "checkmark").font(.caption2) }
-                        Text(t)
-                    }
-                    .font(.caption2.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(filterTag == t ? Color.indigo : Color.indigo.opacity(0.12),
-                                in: Capsule())
-                    .foregroundStyle(filterTag == t ? Color.white : Color.indigo)
-                    .onTapGesture { filterTag = (filterTag == t) ? nil : t }
-                }
+                chip("推荐", .recommend)
+                chip("关注", .follow)
             }
             .padding(.vertical, 2)
         }
+    }
+
+    private func chip(_ title: String, _ f: HomeFilter) -> some View {
+        let isOn = filter == f
+        return Text(title)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isOn ? Color.indigo : Color(uiColor: .secondarySystemGroupedBackground),
+                        in: Capsule())
+            .foregroundStyle(isOn ? Color.white : Color.primary)
+            .onTapGesture { filter = f }
+    }
+
+    private var emptyCard: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "tray")
+                .font(.largeTitle)
+                .foregroundStyle(Color.secondary)
+            Text("这个分区还没有帖子")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
     }
 }
 
@@ -123,7 +201,6 @@ struct PostRow: View {
                 Spacer()
             }
         }
-        .padding(.vertical, 4)
     }
 }
 
@@ -178,7 +255,7 @@ struct PostDetailView: View {
                                                 Spacer()
                                                 Text(c.createdAt, format: .relative(presentation: .named))
                                                     .font(.caption2)
-                                                    .foregroundStyle(Color.tertiary)
+                                                    .foregroundStyle(Color.secondary)
                                             }
                                             Text(c.text).font(.subheadline)
                                         }
@@ -203,7 +280,9 @@ struct PostDetailView: View {
                         .padding(12)
                         .background(.bar)
                     }
-                    .onAppear { DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { focused = true } }
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { focused = true }
+                    }
                 } else {
                     ContentUnavailableView("帖子不存在", systemImage: "questionmark.folder")
                 }

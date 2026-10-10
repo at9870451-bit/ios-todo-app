@@ -30,7 +30,7 @@ struct ComposeView: View {
                                 if text.isEmpty {
                                     Text("分享点什么…（行情观点、学习笔记、踩坑经历都可以）")
                                         .font(.subheadline)
-                                        .foregroundStyle(Color.tertiary)
+                                        .foregroundStyle(.tertiary)
                                         .padding(18)
                                         .allowsHitTesting(false)
                                 }
