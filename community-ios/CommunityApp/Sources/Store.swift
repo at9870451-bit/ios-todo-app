@@ -49,8 +49,9 @@ final class CommunityStore: ObservableObject {
             me = s.me
             posts = s.posts
         } else {
-            me = User(id: UUID(), name: "我", bio: "这个人很懒，什么都没写")
-            posts = Self.seed(myId: me.id, myName: me.name)
+            let user = User(id: UUID(), name: "我", bio: "这个人很懒，什么都没写")
+            me = user
+            posts = Self.seed(myId: user.id, myName: user.name)
             persist()
         }
     }
