@@ -2,7 +2,7 @@ package com.quantokx.engine;
 
 import com.quantokx.model.TimeFormat;
 import com.quantokx.model.TradeLogEntry;
-import org.springframework.stereotype.Component;
+
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.UUID;
  * 交易日志（内存环形存储，最新在前）。
  * 与 iOS 端 TradingEngine.logs 行为一致：最多保留 300 条，新条目插到最前面。
  */
-@Component
+
 public class TradeLogStore {
 
     /** 上限（与 iOS 的 300 条一致） */

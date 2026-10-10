@@ -26,6 +26,18 @@ public class QuantOkxProperties {
     /** @Scheduled 调度心跳（毫秒），引擎据此判断是否到了下一轮轮询 */
     private long pollPulseMillis = 1000L;
 
+    /** 对外可访问的基础地址（拼易支付 notify/return 回调用） */
+    private String serverBaseUrl = "http://127.0.0.1:8080";
+
+    /** 易支付网关地址（如 https://pay.example.com），空 = 未配置，订阅走演示直通 */
+    private String epayApiUrl = "";
+
+    /** 易支付商户 PID */
+    private String epayPid = "";
+
+    /** 易支付商户密钥 */
+    private String epayKey = "";
+
     public String getAuthToken() {
         return authToken;
     }
@@ -64,5 +76,37 @@ public class QuantOkxProperties {
 
     public void setPollPulseMillis(long pollPulseMillis) {
         this.pollPulseMillis = pollPulseMillis;
+    }
+
+    public String getServerBaseUrl() {
+        return serverBaseUrl;
+    }
+
+    public void setServerBaseUrl(String serverBaseUrl) {
+        this.serverBaseUrl = serverBaseUrl;
+    }
+
+    public String getEpayApiUrl() {
+        return epayApiUrl;
+    }
+
+    public void setEpayApiUrl(String epayApiUrl) {
+        this.epayApiUrl = epayApiUrl;
+    }
+
+    public String getEpayPid() {
+        return epayPid;
+    }
+
+    public void setEpayPid(String epayPid) {
+        this.epayPid = epayPid;
+    }
+
+    public String getEpayKey() {
+        return epayKey;
+    }
+
+    public void setEpayKey(String epayKey) {
+        this.epayKey = epayKey;
     }
 }

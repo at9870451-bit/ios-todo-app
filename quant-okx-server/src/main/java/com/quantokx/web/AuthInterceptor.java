@@ -1,7 +1,7 @@
 package com.quantokx.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.quantokx.config.QuantOkxProperties;
+import com.quantokx.auth.SessionStore;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -10,36 +10,36 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import java.io.IOException;
 
 /**
- * 鉴权拦截器：除 /api/health 外，所有接口都必须携带 X-Auth-Token 请求头。
- * token 来自 application.yml 的 quantokx.auth-token（默认 changeme，
- * 可用环境变量 QUANT_OKX_AUTH_TOKEN 覆盖）。
- * <p>
- * 401 响应同样使用统一信封：{"code":401,"msg":"未授权：...","data":null}
+ * 会话鉴权：除 /api/health、/api/pay/notify、/api/pay/return 外，
+ * 所有接口都必须携带 X-Auth-Token（登录/注册签发的会话令牌）。
+ * 校验通过后把 userId 放进 request attribute，控制器据此定位该用户的引擎与配置。
  */
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
 
-    private static final String HEADER = "X-Auth-Token";
-    private static final String UNAUTHORIZED_MSG = "未授权：X-Auth-Token 缺失或无效";
+    /** 请求属性名：当前登录用户 id */
+    public static final String ATTR_USER_ID = "userId";
 
-    private final QuantOkxProperties properties;
+    private static final String HEADER = "X-Auth-Token";
+    private static final String UNAUTHORIZED_MSG = "未授权：请先登录（X-Auth-Token 缺失或已过期）";
+
+    private final SessionStore sessions;
     private final ObjectMapper mapper;
 
-    public AuthInterceptor(QuantOkxProperties properties, ObjectMapper mapper) {
-        this.properties = properties;
+    public AuthInterceptor(SessionStore sessions, ObjectMapper mapper) {
+        this.sessions = sessions;
         this.mapper = mapper;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws IOException {
-        // CORS 预检请求不带自定义头，直接放行
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             return true;
         }
-        String expected = properties.getAuthToken();
-        String provided = request.getHeader(HEADER);
-        if (expected != null && !expected.isEmpty() && expected.equals(provided)) {
+        String userId = sessions.resolve(request.getHeader(HEADER));
+        if (userId != null) {
+            request.setAttribute(ATTR_USER_ID, userId);
             return true;
         }
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);

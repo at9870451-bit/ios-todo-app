@@ -28,6 +28,12 @@ quantokx:
   # 这样 PUT /api/config 修改 pollSeconds 后，下一轮立即生效（热更新）。
   poll-pulse-millis: 1000
 
+  server-base-url: ${SERVER_BASE_URL:http://127.0.0.1:8080}
+  epay:
+    api-url: ${EPAY_API_URL:}
+    pid: ${EPAY_PID:}
+    key: ${EPAY_KEY:}
+
 logging:
   level:
     root: info

@@ -19,14 +19,12 @@ import com.quantokx.model.Ticker;
 import com.quantokx.model.TimeFormat;
 import com.quantokx.okx.OkxClient;
 import com.quantokx.okx.OkxException;
-import com.quantokx.model.MembershipPlan;
+import com.quantokx.auth.UserStore;
 import com.quantokx.store.ConfigStore;
-import com.quantokx.store.MembershipStore;
 import com.quantokx.strategy.StrategyContext;
 import com.quantokx.strategy.StrategyEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -51,7 +49,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>
  * 配置热更新：每轮从 ConfigStore 读最新快照，PUT /api/config 后下一轮立即生效。
  */
-@Component
+
 public class TradingEngine {
 
     private static final Logger log = LoggerFactory.getLogger(TradingEngine.class);
@@ -61,13 +59,14 @@ public class TradingEngine {
     /** AI 决策等待上限（AiClient 内部 HTTP 超时 45s） */
     private static final long AI_TIMEOUT_SECONDS = 60;
 
-    private final OkxClient okx;
     private final ConfigStore configStore;
     private final TradeLogStore logStore;
     private final AiClient aiClient;
     private final RiskManager riskManager;
     private final SecretScrubber scrubber;
-    private final MembershipStore membershipStore;
+    private final String userId;
+    private final UserStore userStore;
+    private final OkxClient okx;
     private final ExecutorService aiExecutor;
 
     // ---- 对外状态 ----
@@ -90,14 +89,16 @@ public class TradingEngine {
                          AiClient aiClient,
                          RiskManager riskManager,
                          SecretScrubber scrubber,
-                         MembershipStore membershipStore) {
+                         UserStore userStore,
+                         String userId) {
         this.okx = okx;
         this.configStore = configStore;
         this.logStore = logStore;
         this.aiClient = aiClient;
         this.riskManager = riskManager;
         this.scrubber = scrubber;
-        this.membershipStore = membershipStore;
+        this.userId = userId;
+        this.userStore = userStore;
         this.aiExecutor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "ai-decider");
             t.setDaemon(true);
@@ -144,23 +145,19 @@ public class TradingEngine {
     // ------------------------------------------------------------------ 主循环
 
     /**
-     * 调度心跳：@Scheduled 的 SpEL 在注册时只解析一次（见 ConfigStore#getPollMillis），
-     * 所以这里用短心跳 + 每轮读取「当前」pollSeconds 的方式实现轮询间隔热更新。
+     * 心跳由 EngineRegistry 驱动（每引擎按自身 pollSeconds 节流，含会员权益钳制）。
      */
-    @Scheduled(fixedDelayString = "#{@configStore.pollMillis}")
-    public void scheduledTick() {
+    public void heartbeat(long nowMs) {
         if (!running.get()) {
             return;
         }
         AppConfig cfg = configStore.get();
-        // 会员权益钳制：实际轮询间隔 = max(配置值, 套餐下限)
-        int pollSeconds = Math.max(membershipStore.effectiveBenefits().minPollSeconds(),
+        int pollSeconds = Math.max(userStore.benefitsOf(userId).minPollSeconds(),
                 Math.max(5, cfg.getPollSeconds()));
-        long now = System.currentTimeMillis();
-        if (lastTickStartedAtMs != 0 && now - lastTickStartedAtMs < pollSeconds * 1000L) {
+        if (lastTickStartedAtMs != 0 && nowMs - lastTickStartedAtMs < pollSeconds * 1000L) {
             return; // 还没到下一轮
         }
-        lastTickStartedAtMs = now;
+        lastTickStartedAtMs = nowMs;
         tick();
     }
 
@@ -227,7 +224,7 @@ public class TradingEngine {
             // 5. 策略（风控未命中时才跑）
             if (signal == null) {
                 if (cfg.getActiveStrategy() == StrategyKind.AI) {
-                    if (cfg.isAiEnabled() && !membershipStore.effectiveBenefits().aiEnabled()) {
+                    if (cfg.isAiEnabled() && !userStore.benefitsOf(userId).aiEnabled()) {
                         // 防御性门控：PUT /api/config 已拦截，这里兜底（例如降级后遗留的配置）
                         tradeLog(instId, "AI 决策未生效", "跳过", tk.lastDouble(), 0,
                                 "AI 为会员功能，请到会员中心升级", false);

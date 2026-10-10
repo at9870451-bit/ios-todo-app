@@ -1,6 +1,6 @@
 package com.quantokx.config;
 
-import com.quantokx.store.ConfigStore;
+
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,10 +14,10 @@ public class SecretScrubber {
 
     private static final String MASK = "****";
 
-    private final ConfigStore configStore;
+    private final SecretRegistry registry;
 
-    public SecretScrubber(ConfigStore configStore) {
-        this.configStore = configStore;
+    public SecretScrubber(SecretRegistry registry) {
+        this.registry = registry;
     }
 
     public String scrub(String message) {
@@ -25,7 +25,7 @@ public class SecretScrubber {
             return message;
         }
         String out = message;
-        List<String> secrets = configStore.secretCandidates();
+        List<String> secrets = registry.all();
         for (String s : secrets) {
             if (out.contains(s)) {
                 out = out.replace(s, MASK);

@@ -1,37 +1,33 @@
 package com.quantokx.store;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.quantokx.config.QuantOkxProperties;
+import com.quantokx.config.SecretRegistry;
 import com.quantokx.model.ApiModels.ConfigUpdate;
 import com.quantokx.model.ApiModels.ConfigView;
 import com.quantokx.model.AppConfig;
-import com.quantokx.model.MembershipPlan;
 import com.quantokx.model.StrategyKind;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 配置存储：
- * - 内存快照（AtomicReference&lt;AppConfig&gt;，写新对象、不原地改，保证引擎每轮读到一致快照）；
- * - 持久化到 ./data/config.json（权限 600）；
- * - 密钥读取优先级：环境变量 OKX_API_KEY / OKX_API_SECRET / OKX_PASSPHRASE &gt; config.json；
- * - 对外只暴露掩码视图（GET /api/config 绝不返回明文）。
+ * 每用户配置存储（多租户）：
+ * - 每个用户一个实例，目录由 EngineRegistry 传入（data/users/{userId}/）；
+ * - 内存快照 AtomicReference&lt;AppConfig&gt;，写新对象不原地改，保证引擎每轮读到一致快照；
+ * - 持久化到 {userDir}/config.json（权限 600）；
+ * - 密钥只存在本用户目录，且会注册到 SecretRegistry 供日志脱敏；
+ * - 对外只暴露掩码视图（绝不返回明文）。
  */
-@Component
 public class ConfigStore {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigStore.class);
@@ -45,35 +41,22 @@ public class ConfigStore {
     private final ObjectMapper mapper;
     private final Path dataDir;
     private final Path configFile;
-    private final long pollPulseMillis;
+    private final SecretRegistry secrets;
     private final AtomicReference<AppConfig> ref = new AtomicReference<>(new AppConfig());
-    private final MembershipStore membershipStore;
 
-    /** 环境变量来源的密钥（null 表示未设置） */
-    private volatile String envApiKey;
-    private volatile String envApiSecret;
-    private volatile String envPassphrase;
-
-    public ConfigStore(ObjectMapper mapper, QuantOkxProperties properties,
-                       MembershipStore membershipStore) {
+    public ConfigStore(ObjectMapper mapper, Path userDir, SecretRegistry secrets) {
         this.mapper = mapper;
-        this.dataDir = Paths.get(properties.getDataDir());
-        this.configFile = this.dataDir.resolve("config.json");
-        this.membershipStore = membershipStore;
-        long pulse = properties.getPollPulseMillis();
-        this.pollPulseMillis = pulse > 0 ? pulse : 1000L;
+        this.dataDir = userDir;
+        this.configFile = userDir.resolve("config.json");
+        this.secrets = secrets;
     }
 
     @PostConstruct
     void init() {
-        envApiKey = envOrNull("OKX_API_KEY");
-        envApiSecret = envOrNull("OKX_API_SECRET");
-        envPassphrase = envOrNull("OKX_PASSPHRASE");
-
         try {
             Files.createDirectories(dataDir);
         } catch (IOException e) {
-            log.warn("创建数据目录 {} 失败：{}", dataDir, e.getMessage());
+            log.warn("创建数据目录失败：{}", e.getMessage());
         }
 
         AppConfig loaded = null;
@@ -81,7 +64,7 @@ public class ConfigStore {
             try {
                 loaded = mapper.readValue(configFile.toFile(), AppConfig.class);
             } catch (IOException e) {
-                log.warn("读取 {} 失败，回退默认配置：{}", configFile, e.getMessage());
+                log.warn("读取配置失败，回退默认：{}", e.getMessage());
             }
         }
         if (loaded == null) {
@@ -90,41 +73,18 @@ public class ConfigStore {
         loaded.sanitize();
         ref.set(loaded);
 
-        log.info("配置目录：{}（文件：{}）", dataDir.toAbsolutePath().normalize(), configFile.getFileName());
-        if (envApiKey != null || envApiSecret != null || envPassphrase != null) {
-            log.info("检测到 OKX 凭据环境变量（OKX_API_KEY / OKX_API_SECRET / OKX_PASSPHRASE），将优先于 config.json 使用");
-        }
+        // 让日志脱敏器知道这个用户的密钥
+        secrets.register(loaded.getOkxApiKey());
+        secrets.register(loaded.getOkxApiSecret());
+        secrets.register(loaded.getOkxPassphrase());
+        secrets.register(loaded.getAiKey());
+
+        log.info("用户配置目录：{}", dataDir.toAbsolutePath().normalize());
     }
 
-    /**
-     * @Scheduled(fixedDelayString = "#{@configStore.pollMillis}") 取用的心跳间隔。
-     * 说明：SpEL 在注册定时任务时只会解析一次，所以这里固定返回一个较短的心跳，
-     * 真正的轮询间隔由 TradingEngine 每轮读取 pollSeconds 判断 —— 这样 PUT /api/config
-     * 修改 pollSeconds 后，下一轮立即生效（热更新）。
-     */
-    public long getPollMillis() {
-        return pollPulseMillis;
-    }
-
-    /**
-     * 当前生效配置（含环境变量覆盖）。返回的是快照副本，调用方不应修改。
-     */
+    /** 当前生效配置（快照副本，调用方不应修改） */
     public AppConfig get() {
-        AppConfig cur = ref.get();
-        if (envApiKey == null && envApiSecret == null && envPassphrase == null) {
-            return cur;
-        }
-        AppConfig overlay = cur.copy();
-        if (envApiKey != null) {
-            overlay.setOkxApiKey(envApiKey);
-        }
-        if (envApiSecret != null) {
-            overlay.setOkxApiSecret(envApiSecret);
-        }
-        if (envPassphrase != null) {
-            overlay.setOkxPassphrase(envPassphrase);
-        }
-        return overlay;
+        return ref.get();
     }
 
     /** 掩码视图（GET /api/config、PUT /api/config 的返回） */
@@ -153,23 +113,12 @@ public class ConfigStore {
 
     /**
      * 更新配置（部分更新）：null/省略 = 不改；密钥字段 ""=清空、含 "****" 视为掩码回显忽略。
-     * 校验失败抛 IllegalArgumentException（由 GlobalExceptionHandler 转成 code=400）。
+     * 会员权益校验在 ApiController 层完成（那里才有用户上下文）。
      */
     public synchronized void update(ConfigUpdate req) {
         if (req == null) {
             throw new IllegalArgumentException("请求体不能为空");
         }
-
-        // 会员权益校验：按本次请求的目标值判断（校验不过直接拒绝，不做静默钳制）
-        MembershipPlan.Benefits benefits = membershipStore.effectiveBenefits();
-        if (req.pollSeconds() != null && req.pollSeconds() < benefits.minPollSeconds()) {
-            throw new IllegalArgumentException("当前会员最低轮询间隔 "
-                    + benefits.minPollSeconds() + "s，请到会员中心升级");
-        }
-        if (Boolean.TRUE.equals(req.aiEnabled()) && !benefits.aiEnabled()) {
-            throw new IllegalArgumentException("AI 决策为会员功能，请先升级会员");
-        }
-
         AppConfig next = ref.get().copy();
 
         next.setOkxApiKey(applySecret(req.okxApiKey(), next.getOkxApiKey()));
@@ -216,7 +165,6 @@ public class ConfigStore {
             next.setLeverage(lev);
         }
         if (req.pollSeconds() != null) {
-            // 与 iOS 引擎 max(5, pollSeconds) 的行为对齐：这里直接收敛到 [5, 3600]
             int p = Math.max(5, Math.min(3600, req.pollSeconds()));
             next.setPollSeconds(p);
         }
@@ -253,41 +201,33 @@ public class ConfigStore {
         next.sanitize();
         ref.set(next);
         persist(next);
-        log.info("配置已更新：instId={} bar={} strategy={} demo={} poll={}s",
-                next.getInstId(), next.getBar(), next.getActiveStrategy().wire(), next.isDemoTrading(), next.getPollSeconds());
-    }
 
-    /** 供脱敏器使用的候选密钥列表（内存 + 环境变量，去重、长度 &gt;= 4） */
-    public List<String> secretCandidates() {
-        AppConfig c = ref.get();
-        List<String> out = new ArrayList<>();
-        addSecret(out, c.getOkxApiKey());
-        addSecret(out, c.getOkxApiSecret());
-        addSecret(out, c.getOkxPassphrase());
-        addSecret(out, c.getAiKey());
-        addSecret(out, envApiKey);
-        addSecret(out, envApiSecret);
-        addSecret(out, envPassphrase);
-        return out;
+        secrets.register(next.getOkxApiKey());
+        secrets.register(next.getOkxApiSecret());
+        secrets.register(next.getOkxPassphrase());
+        secrets.register(next.getAiKey());
+
+        log.info("配置已更新：instId={} bar={} strategy={} demo={} poll={}s",
+                next.getInstId(), next.getBar(), next.getActiveStrategy().wire(),
+                next.isDemoTrading(), next.getPollSeconds());
     }
 
     // ------------------------------------------------------------------ 内部工具
 
-    private static void addSecret(List<String> out, String v) {
+    private static void addSecret(java.util.List<String> out, String v) {
         if (v != null && v.length() >= 4 && !out.contains(v)) {
             out.add(v);
         }
     }
 
-    /** 密钥字段应用规则 */
     private static String applySecret(String incoming, String current) {
         if (incoming == null) {
-            return current;                 // 省略 / null：不改
+            return current;
         }
         if (incoming.contains("****")) {
-            return current;                 // 前端把掩码回传了：忽略，避免把 "abcd****wxyz" 存成密钥
+            return current;
         }
-        return incoming;                    // ""：清空；其他：覆盖
+        return incoming;
     }
 
     private static double requireRange(String name, double value, double min, double max) {
@@ -311,11 +251,6 @@ public class ConfigStore {
         return v != null && !v.isEmpty();
     }
 
-    private static String envOrNull(String name) {
-        String v = System.getenv(name);
-        return (v == null || v.isEmpty()) ? null : v;
-    }
-
     private void persist(AppConfig config) {
         Path tmp = dataDir.resolve("config.json.tmp");
         try {
@@ -329,11 +264,10 @@ public class ConfigStore {
             try {
                 Files.setPosixFilePermissions(configFile, PosixFilePermissions.fromString("rw-------"));
             } catch (UnsupportedOperationException | IOException e) {
-                log.warn("无法把 {} 权限设置为 600：{}", configFile, e.getMessage());
+                log.warn("无法设置权限 600：{}", e.getMessage());
             }
         } catch (IOException e) {
-            // 配置已在本进程生效；只有落盘失败时提示（重启后会丢失）
-            log.error("配置持久化失败（内存中已生效，重启会丢失）：{}", e.getMessage());
+            log.error("配置持久化失败（内存中已生效）：{}", e.getMessage());
         }
     }
 }

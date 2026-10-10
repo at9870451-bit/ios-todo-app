@@ -1,6 +1,6 @@
 package com.quantokx.engine;
 
-import org.springframework.stereotype.Component;
+
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -15,7 +15,7 @@ import java.util.Locale;
  * - 只有真正下单成功才调用 recordTrade() 占用配额；
  * - 持仓上限只用「真实名义价值（USDT）」比较，超出即拒绝。
  */
-@Component
+
 public class RiskManager {
 
     private static final long WINDOW_MS = 3600_000L;

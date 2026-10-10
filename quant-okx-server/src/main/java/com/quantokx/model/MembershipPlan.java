@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * 会员套餐（固定 4 档，硬编码）。单租户系统：会员相当于账号套餐等级。
- * 生效权益由 MembershipStore#effectiveBenefits 计算（付费档未过期才生效）。
+ * 生效权益由 UserStore#benefitsOf 计算（付费档未过期才生效）。
  */
 public record MembershipPlan(
         String id,
