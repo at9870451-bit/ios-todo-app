@@ -256,7 +256,7 @@ struct StatTile: View {
                 .contentTransition(.numericText())
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            if let sub { Text(sub).font(.caption2).foregroundStyle(Color.tertiary) }
+            if let sub { Text(sub).font(.caption2).foregroundStyle(.tertiary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
