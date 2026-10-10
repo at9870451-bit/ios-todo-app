@@ -1,0 +1,73 @@
+name: Build Community iOS
+
+on:
+  push:
+    branches: [main]
+    tags: ["community-v*"]
+    paths: ["community-ios/**", ".github/workflows/community-ios.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Community ipa
+    runs-on: macos-26
+    timeout-minutes: 30
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成工程
+        working-directory: community-ios
+        run: |
+          xcodegen generate --spec project.yml
+          ls -la
+
+      - name: 编译
+        working-directory: community-ios
+        run: |
+          set -o pipefail
+          xcodebuild -project CommunityApp.xcodeproj -scheme CommunityApp \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            2>&1 | tee build.log | tail -25
+
+      - name: 打包 ipa
+        working-directory: community-ios
+        run: |
+          APP=$(find build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          [ -n "$APP" ] || { echo '产物缺失'; exit 1; }
+          echo "APP=$APP"
+          mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry CommunityApp.ipa Payload
+          unzip -l CommunityApp.ipa | grep -q 'Payload/.*\.app/Info.plist' || { echo 'ipa 结构异常'; exit 1; }
+          echo '=== 产物 ==='
+          ls -lh CommunityApp.ipa
+          shasum -a 256 CommunityApp.ipa
+
+      - name: 上传 ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: CommunityApp-ipa
+          path: community-ios/CommunityApp.ipa
+
+      - name: 发 Release
+        if: startsWith(github.ref, 'refs/tags/community-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: community-ios/CommunityApp.ipa
+
+      - name: 上传构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: community-build-log
+          path: community-ios/build.log
