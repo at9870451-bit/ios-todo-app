@@ -28,6 +28,7 @@ import com.quantokx.model.TradeLogEntry;
 import com.quantokx.okx.OkxClient;
 import com.quantokx.okx.OkxException;
 import com.quantokx.store.ConfigStore;
+import com.quantokx.store.MembershipStore;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -58,19 +59,22 @@ public class ApiController {
     private final TradeLogStore logStore;
     private final SecretScrubber scrubber;
     private final QuantOkxProperties properties;
+    private final MembershipStore membershipStore;
 
     public ApiController(TradingEngine engine,
                          ConfigStore configStore,
                          OkxClient okx,
                          TradeLogStore logStore,
                          SecretScrubber scrubber,
-                         QuantOkxProperties properties) {
+                         QuantOkxProperties properties,
+                         MembershipStore membershipStore) {
         this.engine = engine;
         this.configStore = configStore;
         this.okx = okx;
         this.logStore = logStore;
         this.scrubber = scrubber;
         this.properties = properties;
+        this.membershipStore = membershipStore;
     }
 
     // ------------------------------------------------------------------ 系统
@@ -219,6 +223,43 @@ public class ApiController {
             list.add(new StrategyInfo(k.wire(), k.title(), k.detail()));
         }
         return ApiResponse.ok(list);
+    }
+
+    // ------------------------------------------------------------------ 会员
+
+    /** GET /api/membership/plans */
+    @GetMapping("/membership/plans")
+    public ApiResponse<List<MembershipStore.PlanView>> membershipPlans() {
+        return ApiResponse.ok(membershipStore.plans());
+    }
+
+    /** GET /api/membership/status */
+    @GetMapping("/membership/status")
+    public ApiResponse<MembershipStore.StatusView> membershipStatus() {
+        return ApiResponse.ok(membershipStore.statusView());
+    }
+
+    /** POST /api/membership/subscribe（演示环境：付款即开通，不接真实支付） */
+    @PostMapping("/membership/subscribe")
+    public ApiResponse<MembershipStore.SubscribeView> subscribe(
+            @RequestBody(required = false) SubscribeRequest body) {
+        if (body == null || body.planId() == null || body.planId().isBlank()) {
+            throw new IllegalArgumentException("planId 不能为空");
+        }
+        if (body.months() == null) {
+            throw new IllegalArgumentException("months 不能为空");
+        }
+        return ApiResponse.ok(membershipStore.subscribe(body.planId().trim(), body.months()));
+    }
+
+    /** GET /api/membership/orders */
+    @GetMapping("/membership/orders")
+    public ApiResponse<List<MembershipStore.OrderView>> membershipOrders() {
+        return ApiResponse.ok(membershipStore.orders());
+    }
+
+    /** 订阅请求体 */
+    public record SubscribeRequest(String planId, Integer months) {
     }
 
     // ------------------------------------------------------------------ 内部工具

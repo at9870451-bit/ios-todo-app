@@ -5,6 +5,7 @@ import com.quantokx.config.QuantOkxProperties;
 import com.quantokx.model.ApiModels.ConfigUpdate;
 import com.quantokx.model.ApiModels.ConfigView;
 import com.quantokx.model.AppConfig;
+import com.quantokx.model.MembershipPlan;
 import com.quantokx.model.StrategyKind;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -46,16 +47,19 @@ public class ConfigStore {
     private final Path configFile;
     private final long pollPulseMillis;
     private final AtomicReference<AppConfig> ref = new AtomicReference<>(new AppConfig());
+    private final MembershipStore membershipStore;
 
     /** 环境变量来源的密钥（null 表示未设置） */
     private volatile String envApiKey;
     private volatile String envApiSecret;
     private volatile String envPassphrase;
 
-    public ConfigStore(ObjectMapper mapper, QuantOkxProperties properties) {
+    public ConfigStore(ObjectMapper mapper, QuantOkxProperties properties,
+                       MembershipStore membershipStore) {
         this.mapper = mapper;
         this.dataDir = Paths.get(properties.getDataDir());
         this.configFile = this.dataDir.resolve("config.json");
+        this.membershipStore = membershipStore;
         long pulse = properties.getPollPulseMillis();
         this.pollPulseMillis = pulse > 0 ? pulse : 1000L;
     }
@@ -155,6 +159,17 @@ public class ConfigStore {
         if (req == null) {
             throw new IllegalArgumentException("请求体不能为空");
         }
+
+        // 会员权益校验：按本次请求的目标值判断（校验不过直接拒绝，不做静默钳制）
+        MembershipPlan.Benefits benefits = membershipStore.effectiveBenefits();
+        if (req.pollSeconds() != null && req.pollSeconds() < benefits.minPollSeconds()) {
+            throw new IllegalArgumentException("当前会员最低轮询间隔 "
+                    + benefits.minPollSeconds() + "s，请到会员中心升级");
+        }
+        if (Boolean.TRUE.equals(req.aiEnabled()) && !benefits.aiEnabled()) {
+            throw new IllegalArgumentException("AI 决策为会员功能，请先升级会员");
+        }
+
         AppConfig next = ref.get().copy();
 
         next.setOkxApiKey(applySecret(req.okxApiKey(), next.getOkxApiKey()));

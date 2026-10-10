@@ -19,7 +19,9 @@ import com.quantokx.model.Ticker;
 import com.quantokx.model.TimeFormat;
 import com.quantokx.okx.OkxClient;
 import com.quantokx.okx.OkxException;
+import com.quantokx.model.MembershipPlan;
 import com.quantokx.store.ConfigStore;
+import com.quantokx.store.MembershipStore;
 import com.quantokx.strategy.StrategyContext;
 import com.quantokx.strategy.StrategyEngine;
 import org.slf4j.Logger;
@@ -65,6 +67,7 @@ public class TradingEngine {
     private final AiClient aiClient;
     private final RiskManager riskManager;
     private final SecretScrubber scrubber;
+    private final MembershipStore membershipStore;
     private final ExecutorService aiExecutor;
 
     // ---- 对外状态 ----
@@ -86,13 +89,15 @@ public class TradingEngine {
                          TradeLogStore logStore,
                          AiClient aiClient,
                          RiskManager riskManager,
-                         SecretScrubber scrubber) {
+                         SecretScrubber scrubber,
+                         MembershipStore membershipStore) {
         this.okx = okx;
         this.configStore = configStore;
         this.logStore = logStore;
         this.aiClient = aiClient;
         this.riskManager = riskManager;
         this.scrubber = scrubber;
+        this.membershipStore = membershipStore;
         this.aiExecutor = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "ai-decider");
             t.setDaemon(true);
@@ -148,7 +153,9 @@ public class TradingEngine {
             return;
         }
         AppConfig cfg = configStore.get();
-        int pollSeconds = Math.max(5, cfg.getPollSeconds());
+        // 会员权益钳制：实际轮询间隔 = max(配置值, 套餐下限)
+        int pollSeconds = Math.max(membershipStore.effectiveBenefits().minPollSeconds(),
+                Math.max(5, cfg.getPollSeconds()));
         long now = System.currentTimeMillis();
         if (lastTickStartedAtMs != 0 && now - lastTickStartedAtMs < pollSeconds * 1000L) {
             return; // 还没到下一轮
@@ -220,7 +227,14 @@ public class TradingEngine {
             // 5. 策略（风控未命中时才跑）
             if (signal == null) {
                 if (cfg.getActiveStrategy() == StrategyKind.AI) {
-                    signal = evaluateAi(ctx, cfg);
+                    if (cfg.isAiEnabled() && !membershipStore.effectiveBenefits().aiEnabled()) {
+                        // 防御性门控：PUT /api/config 已拦截，这里兜底（例如降级后遗留的配置）
+                        tradeLog(instId, "AI 决策未生效", "跳过", tk.lastDouble(), 0,
+                                "AI 为会员功能，请到会员中心升级", false);
+                        signal = Signal.hold("AI 未开通（会员功能）", StrategyKind.AI, tk.lastDouble());
+                    } else {
+                        signal = evaluateAi(ctx, cfg);
+                    }
                 } else {
                     signal = StrategyEngine.evaluate(cfg.getActiveStrategy(), ctx);
                 }
