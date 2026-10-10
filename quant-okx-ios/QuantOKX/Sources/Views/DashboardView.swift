@@ -43,6 +43,9 @@ struct DashboardView: View {
             .refreshable { await store.refreshAll() }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    DrawerMenuButton()
+                }
+                ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 5) {
                         Circle()
                             .fill(store.connected ? Color.green : Color.orange)

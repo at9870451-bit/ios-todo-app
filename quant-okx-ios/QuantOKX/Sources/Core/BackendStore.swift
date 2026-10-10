@@ -33,6 +33,15 @@ final class BackendStore: ObservableObject {
     // MARK: - 交互
     @Published private(set) var busy = false
     @Published var toast: String?
+    @Published var drawerOpen = false
+
+    // MARK: - 会员
+    @Published private(set) var membership: MembershipStatusDTO?
+    @Published private(set) var plans: [MembershipPlanDTO] = []
+    @Published private(set) var memOrders: [MembershipOrderDTO] = []
+
+    var minPoll: Int { membership?.benefits.minPollSeconds ?? 30 }
+    var aiAllowed: Bool { membership?.benefits.aiEnabled ?? false }
 
     private let client = BackendClient()
     private var pollTask: Task<Void, Never>?
@@ -104,6 +113,25 @@ final class BackendStore: ObservableObject {
         }
         if let l = try? await client.logs(limit: 200) { logs = l }
         if let s = try? await client.strategies() { strategies = s }
+        if let m = try? await client.membershipStatus() { membership = m }
+    }
+
+    /// 拉取会员中心全量数据
+    func loadMembership() async {
+        await syncClient()
+        if let s = try? await client.membershipStatus() { membership = s }
+        if let p = try? await client.membershipPlans() { plans = p }
+        if let o = try? await client.membershipOrders() { memOrders = o }
+    }
+
+    /// 演示环境订阅：后端直接开通
+    func subscribe(planId: String, months: Int) async {
+        await perform {
+            let r = try await self.client.subscribe(planId: planId, months: months)
+            let until = r.expiresAt.map { String($0.prefix(10)) } ?? "—"
+            self.toast = "✅ 已开通 \(r.planName)，有效期至 \(until)"
+            await self.loadMembership()
+        }
     }
 
     private func applyStatus(_ s: StatusResp) {

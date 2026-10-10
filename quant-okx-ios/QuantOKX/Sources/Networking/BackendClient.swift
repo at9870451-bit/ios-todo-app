@@ -50,7 +50,7 @@ actor BackendClient {
 
     // MARK: - 底层请求
 
-    private func send<T: Decodable>(
+    func send<T: Decodable>(
         _ method: String,
         _ path: String,
         query: [String: String] = [:],

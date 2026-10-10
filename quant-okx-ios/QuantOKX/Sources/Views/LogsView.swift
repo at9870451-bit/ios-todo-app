@@ -29,6 +29,9 @@ struct LogsView: View {
             .refreshable { await store.refreshAll() }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
+                    DrawerMenuButton()
+                }
+                ToolbarItem(placement: .topBarLeading) {
                     Toggle(isOn: $filterFailed) {
                         Image(systemName: "exclamationmark.triangle")
                     }

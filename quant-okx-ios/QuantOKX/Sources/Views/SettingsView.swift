@@ -133,6 +133,11 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("设置")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    DrawerMenuButton()
+                }
+            }
             .onAppear {
                 url = config.backendURL
                 token = config.authToken

@@ -74,6 +74,9 @@ struct StrategyView: View {
             }
             .navigationTitle("策略与参数")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    DrawerMenuButton()
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("保存") { Task { await save() } }
                         .fontWeight(.semibold)
@@ -139,6 +142,12 @@ struct StrategyView: View {
     private var aiSection: some View {
         Section {
             Toggle("启用 AI 决策", isOn: $aiEnabled)
+                .disabled(!store.aiAllowed)
+            if !store.aiAllowed {
+                Text("🔒 AI 决策为会员功能，请到「会员中心」升级")
+                    .font(.caption2)
+                    .foregroundStyle(Color.orange)
+            }
             TextField("接口地址", text: $aiBaseURL)
                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                 .font(.caption.monospaced())
@@ -169,7 +178,12 @@ struct StrategyView: View {
                 Text("USDT").font(.caption).foregroundStyle(.secondary)
             }
             Stepper("杠杆 \(leverage)x", value: $leverage, in: 1...20)
-            Stepper("轮询间隔 \(pollSeconds) 秒", value: $pollSeconds, in: 5...300, step: 5)
+            Stepper("轮询间隔 \(pollSeconds) 秒", value: $pollSeconds, in: max(5, store.minPoll)...300, step: 5)
+            if store.minPoll > 5 {
+                Text("当前会员最低轮询间隔 \(store.minPoll) 秒")
+                    .font(.caption2)
+                    .foregroundStyle(Color.orange)
+            }
         } header: {
             Text("交易参数")
         } footer: {

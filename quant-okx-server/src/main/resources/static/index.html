@@ -74,7 +74,7 @@ input:focus{outline:0;border-color:var(--blue)}
 <div id="tabs" class="tabs hidden">
   <button class="on" data-t="dash">交易台</button>
   <button data-t="cfg">配置</button>
-  <button data-t="log">日志</button>
+  <button data-t="log">日志</button><button data-t="vip">会员</button>
 </div>
 
 <!-- 交易台 -->
@@ -164,6 +164,21 @@ input:focus{outline:0;border-color:var(--blue)}
   </div>
 </div>
 
+<!-- 会员 -->
+<div id="t-vip" class="tab hidden">
+  <div class="card"><h2>当前状态</h2><div id="v-status" class="hint">加载中…</div></div>
+  <div class="card"><h2>订阅时长</h2>
+    <select id="v-months" style="max-width:240px">
+      <option value="1">1 个月</option>
+      <option value="3">3 个月</option>
+      <option value="12">12 个月（8 折）</option>
+    </select>
+    <h2 style="margin-top:14px">套餐</h2>
+    <div id="v-plans">加载中…</div>
+  </div>
+  <div class="card"><h2>订单记录</h2><div id="v-orders" class="hint">暂无订单</div></div>
+</div>
+
 <div id="toast" class="pill hidden" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#000"></div>
 
 <script>
@@ -202,10 +217,11 @@ async function enter(){$('gate').classList.add('hidden');$('tabs').classList.rem
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');
-  ['dash','cfg','log'].forEach(t=>$('t-'+t).classList.add('hidden'));
+  ['dash','cfg','log','vip'].forEach(t=>$('t-'+t).classList.add('hidden'));
   $('t-'+b.dataset.t).classList.remove('hidden');
   if(b.dataset.t==='cfg')loadConfig();
   if(b.dataset.t==='log')loadLogs();
+  if(b.dataset.t==='vip')loadVip();
 });
 
 // 状态刷新
@@ -300,7 +316,41 @@ async function loadLogs(){
 }
 async function clearLogs(){try{await api('DELETE','/api/logs');toast('已清空');loadLogs();}catch(e){toast(e.message)}}
 
+// 会员
+async function loadVip(){
+  try{
+    const s=await api('GET','/api/membership/status');
+    $('v-status').innerHTML=
+      '<div class="row"><span class="k">当前套餐</span><span class="v">'+s.planName+
+      (s.active?'（生效中，剩 '+s.daysLeft+' 天）':'（未开通付费）')+'</span></div>'+
+      '<div class="row"><span class="k">轮询下限</span><span class="v">'+s.benefits.minPollSeconds+' 秒</span></div>'+
+      '<div class="row"><span class="k">AI 决策</span><span class="v">'+(s.benefits.aiEnabled?'已解锁':'未开通')+'</span></div>';
+    const ps=await api('GET','/api/membership/plans');
+    $('v-plans').innerHTML=ps.map(p=>
+      '<div class="row"><span class="k">'+p.name+(p.badge?' · '+p.badge:'')+
+      '<br><span style="font-size:11px;color:var(--muted)">'+p.features.join(' / ')+'</span></span>'+
+      '<span class="v">'+(p.pricePerMonth===0?'免费':'¥'+p.pricePerMonth+'/月')+
+      ' <button style="width:auto;padding:6px 12px;font-size:12px"'+
+      ((p.id==='free'||p.id===s.level)?' disabled':'')+
+      ' onclick="sub(\''+p.id+'\')">'+(p.id===s.level?'当前':'开通')+'</button></span></div>').join('');
+    const os=await api('GET','/api/membership/orders');
+    $('v-orders').innerHTML=os.length?os.map(o=>
+      '<div class="row"><span class="k">'+o.planName+' · '+o.months+'个月 · '+
+      String(o.createdAt).slice(0,16).replace('T',' ')+'</span><span class="v">¥'+o.total+'</span></div>').join('')
+      :'暂无订单';
+  }catch(e){$('v-status').textContent='加载失败：'+e.message}
+}
+async function sub(id){
+  const m=+document.getElementById('v-months').value;
+  try{
+    const r=await api('POST','/api/membership/subscribe',{planId:id,months:m});
+    toast('✅ 已开通 '+r.planName+'，至 '+String(r.expiresAt||'').slice(0,10));
+    loadVip();
+  }catch(e){toast('❌ '+e.message)}
+}
+
 boot();
+
 </script>
 </body>
 </html>
