@@ -217,7 +217,7 @@ public class MembershipStore {
             orders = new ArrayList<>(orders.subList(0, 100));
         }
         state = new State(plan.id(), newExp.toString(), List.copyOf(orders));
-        persist();
+        persist(state);
 
         log.info("会员订阅：{} × {} 个月，总价 {}，到期 {}", plan.name(), months, total, newExp);
         return new SubscribeView(orderId, state.level(), plan.name(), newExp.toString(), total);

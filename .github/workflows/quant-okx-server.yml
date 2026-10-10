@@ -35,7 +35,7 @@ jobs:
 
       - name: 编译打包
         working-directory: quant-okx-server
-        run: mvn -B package -DskipTests 2>&1 | tee /tmp/mvn.log | tail -50
+        run: set -o pipefail; mvn -B package -DskipTests 2>&1 | tee /tmp/mvn.log | tail -50
 
       - name: 收集产物
         working-directory: quant-okx-server
