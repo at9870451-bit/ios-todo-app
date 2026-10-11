@@ -41,6 +41,28 @@ struct StrategyHomeView: View {
                         }
                         .buttonStyle(.plain)
 
+                        NavigationLink {
+                            StrategyAnalyzeView()
+                        } label: {
+                            HStack(spacing: 13) {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.teal.opacity(0.18)).frame(width: 40, height: 40)
+                                    Image(systemName: "waveform.path.ecg")
+                                        .font(.system(size: 17)).foregroundStyle(.teal)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("信号分析").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    Text("对当前行情运行策略，输出即时信号").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.white.opacity(0.25))
+                            }
+                            .padding(14)
+                            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15))
+                        }
+                        .buttonStyle(.plain)
+
                         // 运行监控
                         if let automation = store.automation {
                             Card(padding: 13) {
@@ -66,9 +88,16 @@ struct StrategyHomeView: View {
                                 Text("策略列表").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
                                 Spacer()
                                 Text("\(store.strategies.count) 个").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                NavigationLink {
+                                    StrategyEditView(existing: nil)
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                                }
                             }
                             if store.strategies.isEmpty {
-                                EmptyHint(icon: "chart.xyaxis.line", text: "暂无策略\n请先在网页端创建策略")
+                                EmptyHint(icon: "chart.xyaxis.line", text: "暂无策略\n点右上角 + 创建")
                             } else {
                                 ForEach(store.strategies) { s in
                                     strategyCard(s)
@@ -140,6 +169,14 @@ struct StrategyHomeView: View {
                                 .frame(maxWidth: .infinity).padding(.vertical, 8)
                                 .background(Color.green.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                         }
+                    }
+                    NavigationLink {
+                        StrategyEditView(existing: s)
+                    } label: {
+                        Text("编辑")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.blue)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                     }
                     Button {
                         Task { await store.deleteStrategy(s.id) }

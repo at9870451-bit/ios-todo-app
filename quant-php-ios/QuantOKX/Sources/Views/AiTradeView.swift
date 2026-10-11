@@ -62,9 +62,20 @@ struct AiTradeView: View {
 
                             // 配置列表
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("AI 配置").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                HStack {
+                                    Text("AI 配置").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                    Spacer()
+                                    Text("\(state.configs.count) 个").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                    NavigationLink {
+                                        AiConfigEditView(existingId: nil)
+                                    } label: {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                                    }
+                                }
                                 if state.configs.isEmpty {
-                                    EmptyHint(icon: "cpu", text: "暂无 AI 自动交易配置\n请先在网页端创建，或等待平台免费 AI 配置")
+                                    EmptyHint(icon: "cpu", text: "暂无 AI 自动交易配置\n点右上角 + 创建，或使用平台免费 AI")
                                 } else {
                                     ForEach(state.configs) { c in
                                         aiConfigCard(c)
@@ -155,6 +166,14 @@ struct AiTradeView: View {
                             .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                             .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                    NavigationLink {
+                        AiConfigEditView(existingId: c.id)
+                    } label: {
+                        Text("编辑")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.blue)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                     }
                 }
             }

@@ -34,6 +34,25 @@ struct OkxOrdersView: View {
                     Spacer()
                     Text("\(store.orders.count) 条").font(.caption).foregroundStyle(.white.opacity(0.4))
                 }
+                // 对账工具
+                HStack(spacing: 10) {
+                    Button {
+                        Task { store.toast = await store.reconcileOrders() }
+                    } label: {
+                        Text("一键对账")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.teal)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.teal.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                    Button {
+                        Task { store.toast = await store.explainOrders() }
+                    } label: {
+                        Text("看不到单？自检")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.orange)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.orange.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                }
                 if store.orders.isEmpty {
                     EmptyHint(icon: "tray", text: "暂无订单")
                 } else {

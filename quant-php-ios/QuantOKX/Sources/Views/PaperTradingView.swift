@@ -26,8 +26,27 @@ struct PaperTradingView: View {
                             Spacer()
                             StatusBadge(text: st.configured ? "已配置" : "未配置",
                                         color: st.configured ? .green : .gray)
-                            StatusBadge(text: st.localTradingEnabled ? "本地交易开" : "本地交易关",
-                                        color: st.localTradingEnabled ? .green : .gray)
+                        }
+                        // 本地交易开关 + 重置
+                        HStack(spacing: 10) {
+                            Button {
+                                Task { await store.setLocalTrading(!st.localTradingEnabled) }
+                            } label: {
+                                Text(st.localTradingEnabled ? "关闭本地交易" : "开启本地交易")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(st.localTradingEnabled ? .orange : Color(red: 0.25, green: 0.85, blue: 0.5))
+                                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                    .background((st.localTradingEnabled ? Color.orange : Color.green).opacity(0.13),
+                                                in: RoundedRectangle(cornerRadius: 9))
+                            }
+                            Button {
+                                Task { await store.resetPaper(includePaper: true) }
+                            } label: {
+                                Text("重置本地记录")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.red)
+                                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                    .background(Color.red.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                            }
                         }
                         if st.configured {
                             HStack(spacing: 10) {

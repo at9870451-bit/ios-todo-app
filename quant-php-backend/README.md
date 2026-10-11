@@ -1,30 +1,30 @@
-# QuantOKX PHP 后端（iOS 适配增量）
+# QuantOKX PHP 后端（iOS 版：纯 API）
 
 完整后端源码 = 用户提供的 `quant-okx-v37-bottom-nav.zip`（ThinkPHP 8.1 + PHP 8.2 + MySQL 5.7.44）。
-本目录仅存放为 iOS 客户端新增/修改的文件，部署时覆盖到完整源码对应路径即可。
+本目录存放为「iOS App 版」新增/修改的文件，部署时覆盖到完整源码对应路径即可。
 
-## 增量文件
+## v2 变更：网页前端全部移除
 
-| 文件 | 说明 |
-| --- | --- |
-| `app/controller/api/Ios.php` | 新增：iOS JSON 接口（login/register/me/logout/ping） |
-| `app/middleware/Auth.php` | 修改：iOS 登录前接口加入鉴权豁免 |
-| `route/app.php` | 修改：注册 5 条 iOS 路由 |
+- **route/app.php**：删除全部网页页面路由（登录/注册/控制台/OKX/策略/AI/风控/台账/会员/管理端页面），
+  只保留 `/api/*` + `/install`（部署向导）+ `Route::miss` 兜底（返回 WEB_UI_REMOVED 提示）。
+- **app/middleware/Auth.php**：兜底从「redirect /login」改为返回 JSON 提示。
+- **app/middleware/InstallGuard.php**：已安装后访问 /install 返回 JSON 提示。
 
-## iOS 接口
+所有原网页功能（包括管理端）全部迁移至 iOS App 客户端。
+
+## iOS 接口（v1 已有）
 
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
 | GET | `/api/ios/ping` | 连通性自检（免登录），下发 CSRF token |
-| POST | `/api/ios/login` | JSON 登录 `{username,password}`，返回用户+CSRF |
-| POST | `/api/ios/register` | JSON 注册 `{username,password,password_confirmation,email?}` |
-| GET | `/api/ios/me` | 当前用户+会员徽章+CSRF（需登录） |
-| POST | `/api/ios/logout` | 退出（需登录+CSRF） |
+| POST | `/api/ios/login` | JSON 登录 |
+| POST | `/api/ios/register` | JSON 注册 |
+| GET | `/api/ios/me` | 当前用户+会员徽章+CSRF |
+| POST | `/api/ios/logout` | 退出 |
 
-## 部署（已在 64.83.22.85 完成）
+写操作需带 `X-CSRF-TOKEN` 头；会话 Cookie 名 `QBSESSID`；统一响应 `{"code":0,"message":"...","data":{}}`。
 
-- 站点目录：`/www/wwwroot/quant-okx`（nginx root 指向 `public/`）
-- 数据库：`quant` / 用户 `quant`（凭据在服务器 `/root/.mysql-app-pw`）
-- 管理账号：`admin`（密码在服务器部署时设置）
-- 写操作需带 `X-CSRF-TOKEN` 头（值来自 login/me/ping 响应）
-- 会话 Cookie 名：`QBSESSID`
+## 管理端 API（iOS 内管理界面使用）
+
+`/api/admin/{stats,users,user/update,orders,order/mark-paid,plans,plans/save,free-ai,free-ai/save,payment,payment/save,settings,settings/save}`
+—— 需 role=admin 的账号会话（iOS App 里用管理员登录后自动可用）。

@@ -62,7 +62,7 @@ struct MoreView: View {
 
                         // 功能导航
                         VStack(spacing: 10) {
-                            NavCard(icon: "shield.checkered", title: "风控参数", desc: "仓位 / 止损 / 杠杆 / 交易次数限制", color: Color(red: 0.4, green: 0.8, blue: 0.8)) {
+                            NavCard(icon: "shield.lefthalf.filled", title: "风控参数", desc: "仓位 / 止损 / 杠杆 / 交易次数限制", color: Color(red: 0.4, green: 0.8, blue: 0.8)) {
                                 RiskView()
                             }
                             NavCard(icon: "clock.arrow.circlepath", title: "收益统计", desc: "已实现盈亏曲线与资产快照", color: Color(red: 0.25, green: 0.85, blue: 0.5)) {
@@ -79,6 +79,12 @@ struct MoreView: View {
                             }
                             NavCard(icon: "crown.fill", title: "会员中心", desc: "套餐权益 · 在线购买", color: Color(red: 1.0, green: 0.78, blue: 0.25)) {
                                 MembershipView()
+                            }
+                            // 管理端（仅管理员可见）
+                            if config.role == "admin" {
+                                NavCard(icon: "person.badge.key.fill", title: "管理端", desc: "用户 · 订单 · 套餐 · 支付 · 站点设置", color: Color(red: 0.9, green: 0.4, blue: 0.5)) {
+                                    AdminHomeView()
+                                }
                             }
                             NavCard(icon: "gearshape.fill", title: "设置", desc: "服务器地址 · 账号 · 关于", color: .gray) {
                                 SettingsView()

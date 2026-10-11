@@ -6,74 +6,22 @@ use app\middleware\Csrf;
 
 /*
 |--------------------------------------------------------------------------
-| 路由规则
+| 路由规则（iOS App 版：网页前端已全部移除，只保留 JSON API）
 |--------------------------------------------------------------------------
 | route_complete_match 已开启，父路径（如 api/positions）不会抢占子路径
 | （如 api/positions/local）。新增接口一律显式声明，避免隐式匹配。
+|
+| 说明：本版本已移除全部网页页面路由（登录/注册/控制台/OKX/策略/AI/
+| 风控/台账/会员/管理端页面）。所有功能统一由 iOS App 客户端 + /api 提供。
 */
 
-/* 安装向导 */
+/* 安装向导（仅首次部署时使用） */
 Route::get('install', 'Install/index');
 Route::post('install', 'Install/save')->middleware(Csrf::class);
 
-/* 登录 / 注册 */
-Route::get('login', 'Auth/login');
-Route::post('login', 'Auth/login')->middleware(Csrf::class);
-Route::get('register', 'Auth/register');
-Route::post('register', 'Auth/register')->middleware(Csrf::class);
-Route::post('logout', 'Auth/logout')->middleware([Auth::class, Csrf::class]);
-
-/* 管理端独立登录（与用户端分离） */
-Route::get('admin/login', 'Admin/login');
-Route::post('admin/login', 'Admin/login')->middleware(Csrf::class);
-Route::post('admin/logout', 'Admin/logout')->middleware([AdminAuth::class, Csrf::class]);
-
-/* 控制台 */
-Route::get('dashboard', 'Dashboard/index')->middleware(Auth::class);
-
-/* 会员中心 */
-Route::get('member/pricing', 'Member/pricing')->middleware(Auth::class);
-Route::get('member/orders', 'Member/orders')->middleware(Auth::class);
-
-/* 管理后台（仅管理员） */
-Route::get('admin', 'Admin/index')->middleware(AdminAuth::class);
-Route::group('admin', function () {
-    Route::get('users', 'Admin/users');
-    Route::get('orders', 'Admin/orders');
-    Route::get('plans', 'Admin/plans');
-    Route::get('free-ai', 'Admin/freeAi');
-    Route::get('payment', 'Admin/payment');
-})->middleware(AdminAuth::class);
-
-/* OKX 专区分区 */
-Route::group('okx', function () {
-    Route::get('config', 'Okx/config');
-    Route::get('account', 'Okx/account');
-    Route::get('market', 'Okx/market');
-    Route::get('orders', 'Okx/orders');
-    Route::get('positions', 'Okx/positions');
-})->middleware(Auth::class);
-
-/* 模拟盘交易台 */
-Route::get('paper', 'Paper/index')->middleware(Auth::class);
-
-/* 策略 / AI / 风控 / 台账 / 系统 */
-Route::get('strategy', 'Strategy/index')->middleware(Auth::class);
-Route::get('strategy/backtest', 'Strategy/backtest')->middleware(Auth::class);
-Route::get('strategy/runner', 'Strategy/runner')->middleware(Auth::class);
-Route::get('ai/config', 'Ai/config')->middleware(Auth::class);
-Route::get('ai/auto', 'Ai/auto')->middleware(Auth::class);
-Route::get('risk', 'Risk/index')->middleware(Auth::class);
-Route::get('trade', 'Ledger/trade')->middleware(Auth::class);
-Route::get('profit', 'Ledger/profit')->middleware(Auth::class);
-Route::get('logs/trading', 'Ledger/logsTrading')->middleware(Auth::class);
-Route::get('logs/system', 'Ledger/logsSystem')->middleware(Auth::class);
-Route::get('system/menus', 'System/menus')->middleware(Auth::class);
-Route::get('system/features', 'Features/index')->middleware(Auth::class);
-
-/* API */
+/* API（全部功能入口） */
 Route::group('api', function () {
-    /* ---------------- iOS 客户端 JSON 接口（增量） ---------------- */
+    /* ---------------- iOS 客户端 JSON 接口 ---------------- */
     Route::post('ios/login', 'api.Ios/login');
     Route::post('ios/register', 'api.Ios/register');
     Route::get('ios/ping', 'api.Ios/ping');
@@ -159,6 +107,7 @@ Route::group('api', function () {
     Route::get('ai/get', 'api.Ai/get');
     Route::post('ai/config', 'api.Ai/saveConfig')->middleware(Csrf::class);
     Route::delete('ai/delete', 'api.Ai/delete')->middleware(Csrf::class);
+    Route::post('ai/delete', 'api.Ai/delete')->middleware(Csrf::class);
     Route::post('ai/test', 'api.Ai/testConnection')->middleware(Csrf::class);
     Route::get('ai/diagnose', 'api.Ai/diagnose');
     Route::post('ai/enable', 'api.Ai/enable')->middleware(Csrf::class);
@@ -185,7 +134,7 @@ Route::group('api', function () {
     Route::post('pay/notify', 'api.Pay/notify');
     Route::get('pay/return', 'api.Pay/return');
 
-    /* ---------------- 管理后台（仅管理员） ---------------- */
+    /* ---------------- 管理后台（仅管理员，iOS App 内提供界面） ---------------- */
     Route::get('admin/stats', 'api.Admin/stats')->middleware(AdminAuth::class);
     Route::get('admin/users', 'api.Admin/users')->middleware(AdminAuth::class);
     Route::post('admin/user/update', 'api.Admin/userUpdate')->middleware([AdminAuth::class, Csrf::class]);
@@ -200,11 +149,7 @@ Route::group('api', function () {
     Route::get('admin/settings', 'api.Admin/settings')->middleware(AdminAuth::class);
     Route::post('admin/settings/save', 'api.Admin/settingsSave')->middleware([AdminAuth::class, Csrf::class]);
 
-    /* 菜单与系统 */
-    Route::get('menus', 'api.System/menus');
-    Route::post('menus', 'api.System/createMenu')->middleware(Csrf::class);
-    Route::put('menus/:id', 'api.System/updateMenu')->middleware(Csrf::class);
-    Route::delete('menus/:id', 'api.System/deleteMenu')->middleware(Csrf::class);
+    /* 系统 */
     Route::post('system/emergency-stop', 'api.System/emergencyStop')->middleware(Csrf::class);
     Route::post('system/live-trading', 'api.System/toggleLiveTrading')->middleware(Csrf::class);
     Route::post('system/refresh', 'api.System/refresh')->middleware(Csrf::class);
@@ -214,3 +159,12 @@ Route::group('api', function () {
     Route::post('risk/config', 'api.System/saveRiskConfig')->middleware(Csrf::class);
     Route::get('system/features', 'api.System/features');
 })->middleware(Auth::class);
+
+/* 兜底：网页前端已移除，非 API 路径统一返回提示 */
+Route::miss(function () {
+    return json([
+        'code' => 'WEB_UI_REMOVED',
+        'message' => '网页前端已移除，全部功能已迁移至 iOS App（QuantOKX）。请打开 App 连接本服务器。',
+        'data' => [],
+    ], 404);
+});

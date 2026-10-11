@@ -5,7 +5,7 @@ use Closure;
 use app\service\ApiResponse;
 use think\facade\Session;
 
-/** 登录保护：后台页面与 /api 统一要求已登录。 */
+/** 登录保护：/api 统一要求已登录（网页前端已移除，仅保留 API）。 */
 class Auth
 {
     public function handle($request, Closure $next)
@@ -26,6 +26,7 @@ class Auth
         if (str_starts_with($path, 'api/')) {
             return ApiResponse::error('未登录或会话已过期', 'UNAUTHORIZED', 401);
         }
-        return redirect('/login');
+        /* 网页前端已移除：非 API 路径统一提示使用 iOS App */
+        return ApiResponse::error('网页前端已移除，请使用 iOS App 客户端（QuantOKX）', 'WEB_UI_REMOVED', 404);
     }
 }

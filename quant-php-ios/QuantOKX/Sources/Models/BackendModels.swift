@@ -610,3 +610,297 @@ struct PaperStatus: Decodable {
         case unrealizedPnl = "unrealized_pnl"
     }
 }
+
+// MARK: - 管理端（iOS 管理功能）
+
+struct AdminStats: Decodable {
+    let userTotal: Int
+    let userToday: Int
+    let orderTotal: Int
+    let orderPaid: Int
+    let orderPending: Int
+    let incomeTotal: String
+    let incomeToday: String
+
+    enum CodingKeys: String, CodingKey {
+        case userTotal = "user_total"
+        case userToday = "user_today"
+        case orderTotal = "order_total"
+        case orderPaid = "order_paid"
+        case orderPending = "order_pending"
+        case incomeTotal = "income_total"
+        case incomeToday = "income_today"
+    }
+}
+
+struct AdminUsersData: Decodable {
+    let items: [AdminUserRow]
+    let total: Int
+    let page: Int
+    let size: Int
+}
+
+struct AdminUserRow: Decodable, Identifiable {
+    let id: Int
+    let username: String
+    let nickname: String
+    let email: String?
+    let role: String
+    let status: Int
+    let membershipLevel: String
+    let membershipName: String
+    let membershipExpireAt: String?
+    let daysLeft: Int?
+    let liveTradingEnabled: Int?
+    let lastLoginAt: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, username, nickname, email, role, status
+        case membershipLevel = "membership_level"
+        case membershipName = "membership_name"
+        case membershipExpireAt = "membership_expire_at"
+        case daysLeft = "days_left"
+        case liveTradingEnabled = "live_trading_enabled"
+        case lastLoginAt = "last_login_at"
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminOrdersData: Decodable {
+    let items: [AdminOrderRow]
+    let total: Int
+    let page: Int
+    let size: Int
+}
+
+struct AdminOrderRow: Decodable, Identifiable {
+    let id: Int
+    let tradeNo: String
+    let userId: Int
+    let username: String
+    let level: String
+    let levelName: String
+    let months: Int
+    let amount: FlexString
+    let channel: String
+    let status: String
+    let paidAt: String?
+    let paidSource: String?
+    let createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, username, level, months, amount, channel, status
+        case tradeNo = "trade_no"
+        case userId = "user_id"
+        case levelName = "level_name"
+        case paidAt = "paid_at"
+        case paidSource = "paid_source"
+        case createdAt = "created_at"
+    }
+}
+
+struct AdminPlansData: Decodable {
+    let plans: [AdminPlanRow]
+    let levelNames: [String: String]?
+
+    enum CodingKeys: String, CodingKey {
+        case plans
+        case levelNames = "level_names"
+    }
+}
+
+struct AdminPlanRow: Decodable, Identifiable {
+    var id: String { level }
+    let level: String
+    let name: String
+    let priceMonth: FlexString
+    let priceQuarter: FlexString
+    let priceYear: FlexString
+    let strategyLimit: Int
+    let aiConfigLimit: Int
+    let accountLimit: Int
+    let maxLeverage: Int
+    let backtestDaily: Int
+    let aiDaily: Int
+    let multiSymbolLimit: Int
+    let autoTrade: Int
+    let liveTrade: Int
+    let features: String?
+    let sort: Int
+    let enabled: Int
+
+    enum CodingKeys: String, CodingKey {
+        case level, name, features, sort, enabled
+        case priceMonth = "price_month"
+        case priceQuarter = "price_quarter"
+        case priceYear = "price_year"
+        case strategyLimit = "strategy_limit"
+        case aiConfigLimit = "ai_config_limit"
+        case accountLimit = "account_limit"
+        case maxLeverage = "max_leverage"
+        case backtestDaily = "backtest_daily"
+        case aiDaily = "ai_daily"
+        case multiSymbolLimit = "multi_symbol_limit"
+        case autoTrade = "auto_trade"
+        case liveTrade = "live_trade"
+    }
+}
+
+struct FreeAiData: Decodable {
+    let config: FreeAiConfig
+    let configured: Bool
+}
+
+struct FreeAiConfig: Decodable {
+    let name: String
+    let providerType: String?
+    let model: String?
+    let apiUrl: String?
+    let temperature: Double?
+    let maxTokens: Int?
+    let strategyNote: String?
+    let enabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case name, model, enabled, temperature
+        case providerType = "provider_type"
+        case apiUrl = "api_url"
+        case maxTokens = "max_tokens"
+        case strategyNote = "strategy_note"
+    }
+}
+
+struct PaymentConfigData: Decodable {
+    let config: PaymentConfig
+    let channels: [String: String]?
+    let configured: Bool
+}
+
+struct PaymentConfig: Decodable {
+    let apiUrl: String?
+    let pid: String?
+    let key: String?
+    let enabled: Int
+    let channels: [String]?
+    let siteName: String?
+    let notifyBase: String?
+
+    enum CodingKeys: String, CodingKey {
+        case pid, enabled, channels, key
+        case apiUrl = "api_url"
+        case siteName = "site_name"
+        case notifyBase = "notify_base"
+    }
+}
+
+struct SiteSettingsData: Decodable {
+    let site: SiteSettings
+}
+
+struct SiteSettings: Decodable {
+    let registerEnabled: Int
+    let registerNeedEmail: Int
+    let siteName: String
+    let announcement: String
+
+    enum CodingKeys: String, CodingKey {
+        case announcement
+        case registerEnabled = "register_enabled"
+        case registerNeedEmail = "register_need_email"
+        case siteName = "site_name"
+    }
+}
+
+// MARK: - 策略元数据（动态参数表单）
+
+struct StrategyMetaData: Decodable {
+    let strategies: [String: StrategyMetaItem]
+    let groups: [String: String]?
+    let markets: [String: String]?
+    let directionModes: [String: String]?
+    let modes: [String: String]?
+    let intervals: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case strategies, groups, markets, intervals, modes
+        case directionModes = "direction_modes"
+    }
+}
+
+struct StrategyMetaItem: Decodable {
+    let name: String
+    let group: String?
+    let markets: [String]?
+    let desc: String?
+    let params: [StrategyParamDef]?
+}
+
+struct StrategyParamDef: Decodable, Identifiable {
+    var id: String { key }
+    let key: String
+    let label: String
+    let type: String
+    let defaultValue: FlexString?
+    let min: Double?
+    let max: Double?
+    let step: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case key, label, type, min, max, step
+        case defaultValue = "default"
+    }
+}
+
+// MARK: - AI 配置详情（用于编辑）
+
+struct AiConfigDetail: Decodable {
+    let id: Int
+    let name: String
+    let providerType: String?
+    let apiStyle: String?
+    let apiUrl: String?
+    let model: String?
+    let temperature: Double?
+    let maxTokens: Int?
+    let mode: String
+    let enabled: Bool
+    let tradeMode: String?
+    let leverage: Int?
+    let autoSymbol: String?
+    let autoSymbols: String?
+    let autoMarketType: String?
+    let directionMode: String?
+    let autoInterval: String?
+    let autoPeriodSeconds: Int?
+    let autoQuantity: String?
+    let autoPositionPercent: Double?
+    let capitalUsdt: Double?
+    let minConfidence: Double?
+    let testStatus: String?
+    let testMessage: String?
+    let strategyNote: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, model, mode, enabled, leverage
+        case providerType = "provider_type"
+        case apiStyle = "api_style"
+        case apiUrl = "api_url"
+        case temperature
+        case maxTokens = "max_tokens"
+        case tradeMode = "trade_mode"
+        case autoSymbol = "auto_symbol"
+        case autoSymbols = "auto_symbols"
+        case autoMarketType = "auto_market_type"
+        case directionMode = "direction_mode"
+        case autoInterval = "auto_interval"
+        case autoPeriodSeconds = "auto_period_seconds"
+        case autoQuantity = "auto_quantity"
+        case autoPositionPercent = "auto_position_percent"
+        case capitalUsdt = "capital_usdt"
+        case minConfidence = "min_confidence"
+        case testStatus = "test_status"
+        case testMessage = "test_message"
+        case strategyNote = "strategy_note"
+    }
+}

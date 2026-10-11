@@ -62,6 +62,11 @@ struct OkxMarketView: View {
                 }
             }
 
+            // K 线走势
+            if ticker != nil {
+                KlineSection(symbol: symbol.uppercased(), market: market)
+            }
+
             // 行情列表
             VStack(alignment: .leading, spacing: 8) {
                 HStack {

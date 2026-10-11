@@ -431,4 +431,230 @@ final class BackendStore: ObservableObject {
             return nil
         }
     }
+
+    // MARK: - 管理端（仅管理员）
+
+    @Published var adminStats: AdminStats?
+    @Published var adminUsers: AdminUsersData?
+    @Published var adminOrders: AdminOrdersData?
+    @Published var adminPlans: [AdminPlanRow] = []
+    @Published var adminFreeAi: FreeAiData?
+    @Published var adminPayment: PaymentConfigData?
+    @Published var adminSettings: SiteSettings?
+
+    func loadAdminStats() async {
+        do { adminStats = try await client.get("/api/admin/stats", as: AdminStats.self) }
+        catch { handle(error) }
+    }
+
+    func loadAdminUsers(keyword: String = "", page: Int = 1) async {
+        do {
+            var q = ["page": "\(page)", "size": "20"]
+            if !keyword.isEmpty { q["keyword"] = keyword }
+            adminUsers = try await client.get("/api/admin/users", query: q, as: AdminUsersData.self)
+        } catch { handle(error) }
+    }
+
+    /// 管理员更新用户（action: set_level / extend / toggle_status / set_role / reset_password / update_profile）
+    func adminUserUpdate(id: Int, fields: [String: Any]) async {
+        do {
+            var body = fields
+            body["id"] = id
+            _ = try await client.post("/api/admin/user/update", body: body, as: EmptyData.self)
+            toast = "用户已更新"
+            await loadAdminUsers()
+        } catch { handle(error) }
+    }
+
+    func loadAdminOrders(status: String = "", keyword: String = "", page: Int = 1) async {
+        do {
+            var q = ["page": "\(page)", "size": "20"]
+            if !status.isEmpty { q["status"] = status }
+            if !keyword.isEmpty { q["keyword"] = keyword }
+            adminOrders = try await client.get("/api/admin/orders", query: q, as: AdminOrdersData.self)
+        } catch { handle(error) }
+    }
+
+    func adminMarkOrderPaid(_ id: Int) async {
+        do {
+            _ = try await client.post("/api/admin/order/mark-paid", body: ["id": id], as: EmptyData.self)
+            toast = "已标记支付"
+            await loadAdminOrders()
+        } catch { handle(error) }
+    }
+
+    func loadAdminPlans() async {
+        do { adminPlans = try await client.get("/api/admin/plans", as: AdminPlansData.self).plans }
+        catch { handle(error) }
+    }
+
+    func adminSavePlans(_ plans: [String: [String: Any]]) async {
+        do {
+            _ = try await client.post("/api/admin/plans/save", body: ["plans": plans], as: EmptyData.self)
+            toast = "会员计划已保存"
+            await loadAdminPlans()
+        } catch { handle(error) }
+    }
+
+    func loadAdminFreeAi() async {
+        do { adminFreeAi = try await client.get("/api/admin/free-ai", as: FreeAiData.self) }
+        catch { handle(error) }
+    }
+
+    func adminSaveFreeAi(_ body: [String: Any]) async {
+        do {
+            _ = try await client.post("/api/admin/free-ai/save", body: body, as: EmptyData.self)
+            toast = "平台免费 AI 设置已保存"
+            await loadAdminFreeAi()
+        } catch { handle(error) }
+    }
+
+    func loadAdminPayment() async {
+        do { adminPayment = try await client.get("/api/admin/payment", as: PaymentConfigData.self) }
+        catch { handle(error) }
+    }
+
+    func adminSavePayment(_ body: [String: Any]) async {
+        do {
+            _ = try await client.post("/api/admin/payment/save", body: body, as: EmptyData.self)
+            toast = "支付设置已保存"
+            await loadAdminPayment()
+        } catch { handle(error) }
+    }
+
+    func loadAdminSettings() async {
+        do { adminSettings = try await client.get("/api/admin/settings", as: SiteSettingsData.self).site }
+        catch { handle(error) }
+    }
+
+    func adminSaveSettings(_ body: [String: Any]) async {
+        do {
+            _ = try await client.post("/api/admin/settings/save", body: body, as: EmptyData.self)
+            toast = "站点设置已保存"
+            await loadAdminSettings()
+        } catch { handle(error) }
+    }
+
+    // MARK: - 策略创建 / 编辑
+
+    @Published var strategyMeta: StrategyMetaData?
+
+    func loadStrategyMeta() async {
+        do { strategyMeta = try await client.get("/api/strategy/meta", as: StrategyMetaData.self) }
+        catch { handle(error) }
+    }
+
+    func saveStrategy(_ body: [String: Any]) async -> Bool {
+        do {
+            let isUpdate = (body["id"] as? Int ?? 0) > 0
+            _ = try await client.post(isUpdate ? "/api/strategy/update" : "/api/strategy/create", body: body, as: EmptyData.self)
+            toast = isUpdate ? "策略已更新" : "策略已创建"
+            await loadStrategies()
+            return true
+        } catch {
+            handle(error)
+            return false
+        }
+    }
+
+    // MARK: - AI 配置创建 / 编辑
+
+    func loadAiConfig(id: Int) async -> AiConfigDetail? {
+        do { return try await client.get("/api/ai/get", query: ["id": "\(id)"], as: AiConfigDetail.self) }
+        catch { handle(error); return nil }
+    }
+
+    func saveAiConfig(_ body: [String: Any]) async -> Bool {
+        do {
+            _ = try await client.post("/api/ai/config", body: body, as: EmptyData.self)
+            toast = "AI 配置已保存"
+            await loadAiConfigs()
+            await loadAiAutoState()
+            return true
+        } catch {
+            handle(error)
+            return false
+        }
+    }
+
+    func deleteAiConfig(id: Int) async -> Bool {
+        do {
+            _ = try await client.post("/api/ai/delete", body: ["id": id], as: EmptyData.self)
+            toast = "AI 配置已删除"
+            await loadAiConfigs()
+            await loadAiAutoState()
+            return true
+        } catch {
+            handle(error)
+            return false
+        }
+    }
+
+    func testAiConfig(id: Int) async -> String {
+        do {
+            struct TestData: Decodable { let success: Bool?; let message: String?; let reply: String? }
+            let r: TestData = try await client.post("/api/ai/test", body: ["id": id], as: TestData.self)
+            return r.message ?? r.reply ?? "连接测试成功"
+        } catch {
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
+
+    // MARK: - 订单对账 / 自检
+
+    func reconcileOrders() async -> String {
+        do {
+            struct ReconcileData: Decodable { let checked: Int?; let updated: Int?; let missing: [String]? }
+            let r: ReconcileData = try await client.post("/api/okx/reconcile", body: [:], as: ReconcileData.self)
+            await loadOrders()
+            return "对账完成：检查 \(r.checked ?? 0) 单，更新 \(r.updated ?? 0) 单"
+        } catch {
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
+
+    func explainOrders() async -> String {
+        do {
+            struct ExplainData: Decodable { let summary: String?; let reasons: [String]? }
+            let r: ExplainData = try await client.get("/api/okx/explain", as: ExplainData.self)
+            return r.summary ?? "自检完成"
+        } catch {
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
+
+    // MARK: - 模拟盘开关 / 重置
+
+    func setLocalTrading(_ enabled: Bool) async {
+        do {
+            _ = try await client.post("/api/paper/local-trading", body: ["enabled": enabled], as: EmptyData.self)
+            toast = enabled ? "本地交易已开启" : "本地交易已关闭"
+            await loadPaperStatus()
+        } catch { handle(error) }
+    }
+
+    func resetPaper(includePaper: Bool) async {
+        do {
+            _ = try await client.post("/api/paper/reset", body: ["include_paper": includePaper], as: EmptyData.self)
+            toast = "本地模拟记录已重置"
+            await loadPaperStatus()
+        } catch { handle(error) }
+    }
+
+    // MARK: - 杠杆 / 仓位模式
+
+    func setLeverage(symbol: String, marketType: String, leverage: Int, tdMode: String = "cross") async -> String {
+        do {
+            _ = try await client.post("/api/okx/leverage", body: [
+                "symbol": symbol, "market_type": marketType, "leverage": leverage, "td_mode": tdMode,
+            ], as: EmptyData.self)
+            return "杠杆已设置为 \(leverage)x"
+        } catch {
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
 }
