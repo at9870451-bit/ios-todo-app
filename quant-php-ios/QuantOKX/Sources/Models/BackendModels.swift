@@ -580,13 +580,17 @@ struct AutomationStatus: Decodable {
 }
 
 struct AutomationLane: Decodable {
-    let lastRunAt: String?
-    let status: String?
-    let source: String?
+    let state: String?          // running / finished / dead / never
+    let startedAt: String?
+    let finishedAt: String?
+    let runs: Int?
+    let lastError: String?
 
     enum CodingKeys: String, CodingKey {
-        case status, source
-        case lastRunAt = "last_run_at"
+        case state, runs
+        case startedAt = "started_at"
+        case finishedAt = "finished_at"
+        case lastError = "last_error"
     }
 }
 
@@ -817,16 +821,17 @@ struct SiteSettings: Decodable {
 
 struct StrategyMetaData: Decodable {
     let strategies: [String: StrategyMetaItem]
-    let groups: [String: String]?
     let markets: [String: String]?
     let directionModes: [String: String]?
     let modes: [String: String]?
     let intervals: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case strategies, groups, markets, intervals, modes
+        case strategies, markets, intervals, modes
         case directionModes = "direction_modes"
     }
+    /* 注意：后端 groups 是嵌套字典 {"趋势":{"ma":"双均线交叉 MA"}}，UI 未使用该字段，
+       故不解码（此前声明成 [String:String] 导致整个 meta 响应解码失败）。 */
 }
 
 struct StrategyMetaItem: Decodable {

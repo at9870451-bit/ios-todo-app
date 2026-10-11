@@ -73,12 +73,12 @@ struct StrategyHomeView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text("后台自动化").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     HStack {
-                                        InfoRow(label: "策略任务", value: automation.strategy.status ?? "未运行",
-                                                valueColor: automation.strategy.status == "running" ? .green : .gray)
-                                        InfoRow(label: "AI 任务", value: automation.ai.status ?? "未运行",
-                                                valueColor: automation.ai.status == "running" ? .green : .gray)
+                                        InfoRow(label: "策略任务", value: automation.strategy.state ?? "未运行",
+                                                valueColor: automation.strategy.state == "running" ? .green : .gray)
+                                        InfoRow(label: "AI 任务", value: automation.ai.state ?? "未运行",
+                                                valueColor: automation.ai.state == "running" ? .green : .gray)
                                     }
-                                    if let last = automation.strategy.lastRunAt {
+                                    if let last = automation.strategy.startedAt {
                                         Text("策略最近执行：\(Fmt.time(last))")
                                             .font(.caption2).foregroundStyle(.secondary)
                                     }
