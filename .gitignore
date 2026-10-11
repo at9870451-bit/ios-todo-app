@@ -23,3 +23,11 @@ quant-okx-ios/*.ipa
 quant-okx-ios/icon-preview.png
 quant-okx-ios/*.xcodeproj/
 quant-okx-ios/QuantOKX/Info.plist
+
+# QuantOKX PHP iOS
+quant-php-ios/build/
+quant-php-ios/Payload/
+quant-php-ios/*.ipa
+quant-php-ios/icon-preview.png
+quant-php-ios/*.xcodeproj/
+quant-php-ios/QuantOKX/Info.plist

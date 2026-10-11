@@ -1,0 +1,192 @@
+import SwiftUI
+
+/// AI 交易：自动交易状态 + 配置列表 + 信号记录
+struct AiTradeView: View {
+    @EnvironmentObject var store: BackendStore
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("AI 交易")
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Text("自动分析 · 自动下单 · 风控护航")
+                                .font(.footnote).foregroundStyle(.white.opacity(0.45))
+                        }
+                        .padding(.top, 6)
+
+                        if let state = store.aiAutoState {
+                            // 状态卡
+                            Card {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack {
+                                        Image(systemName: state.running ? "cpu.fill" : "cpu")
+                                            .foregroundStyle(state.running ? Color(red: 0.25, green: 0.85, blue: 0.5) : .gray)
+                                        Text(state.running ? "自动交易运行中" : "自动交易未运行")
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(.white)
+                                        Spacer()
+                                        StatusBadge(text: "\(state.runningCount)/\(state.autoConfigCount) 运行",
+                                                    color: state.running ? .green : .gray)
+                                    }
+                                    HStack(spacing: 10) {
+                                        StatTile(title: "本地交易", value: state.localTradingEnabled ? "开启" : "关闭",
+                                                 color: state.localTradingEnabled ? Color(red: 0.25, green: 0.85, blue: 0.5) : .gray)
+                                        StatTile(title: "实盘开关", value: state.liveTradingEnabled ? "开启" : "关闭",
+                                                 color: state.liveTradingEnabled ? .orange : .gray)
+                                        StatTile(title: "杠杆上限", value: "\(state.maxLeverage)x")
+                                    }
+                                    if state.emergencyStop {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "exclamationmark.octagon.fill").foregroundStyle(.red)
+                                            Text("全局紧急停止已开启，所有开仓被禁止")
+                                                .font(.caption).foregroundStyle(.red.opacity(0.9))
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 一键执行
+                            HStack(spacing: 10) {
+                                PrimaryButton(title: "执行一轮", icon: "play.circle.fill") {
+                                    Task { await store.runAiOnce(0) }
+                                }
+                                PrimaryButton(title: "刷新状态", icon: "arrow.clockwise", color: Color.white.opacity(0.12)) {
+                                    Task { await store.loadAiAutoState() }
+                                }
+                            }
+
+                            // 配置列表
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("AI 配置").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                if state.configs.isEmpty {
+                                    EmptyHint(icon: "cpu", text: "暂无 AI 自动交易配置\n请先在网页端创建，或等待平台免费 AI 配置")
+                                } else {
+                                    ForEach(state.configs) { c in
+                                        aiConfigCard(c)
+                                    }
+                                }
+                            }
+
+                            // 最近信号
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("最近信号").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                if state.recentSignals.isEmpty {
+                                    EmptyHint(icon: "waveform.path.ecg", text: "暂无 AI 信号")
+                                } else {
+                                    ForEach(state.recentSignals) { s in
+                                        signalCard(s)
+                                    }
+                                }
+                            }
+                        } else {
+                            LoadingHint()
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+                }
+                .refreshable { await store.loadAiAutoState() }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .task { await store.loadAiAutoState() }
+        }
+    }
+
+    private func aiConfigCard(_ c: AiConfigRow) -> some View {
+        Card(padding: 13) {
+            VStack(spacing: 9) {
+                HStack {
+                    Text(c.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    StatusBadge(text: c.mode, color: c.mode == "auto" ? .purple : .gray)
+                    if c.running == true {
+                        StatusBadge(text: "运行中", color: Color(red: 0.25, green: 0.85, blue: 0.5))
+                    }
+                    Spacer()
+                    if let last = c.lastSignal, !last.isEmpty {
+                        StatusBadge(text: last, color: last == "BUY" ? .green : (last == "SELL" ? .red : .gray))
+                    }
+                }
+                HStack {
+                    InfoRow(label: "模型", value: c.model ?? "--")
+                    InfoRow(label: "交易对", value: c.autoSymbol ?? "--", mono: true)
+                }
+                HStack {
+                    InfoRow(label: "周期", value: c.autoInterval ?? "--")
+                    InfoRow(label: "杠杆", value: "\(c.leverage ?? 1)x")
+                    InfoRow(label: "资金", value: "\(Int(c.capitalUsdt ?? 0)) U")
+                }
+                HStack {
+                    Text("运行 \(c.runCount ?? 0) · 交易 \(c.tradeCount ?? 0)")
+                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                    Spacer()
+                    if let err = c.errorMessage, !err.isEmpty {
+                        Text(err).font(.caption2).foregroundStyle(.orange).lineLimit(1)
+                    }
+                }
+                HStack(spacing: 10) {
+                    if c.running == true {
+                        Button {
+                            Task { await store.stopAi(c.id) }
+                        } label: {
+                            Text("停止")
+                                .font(.caption.weight(.semibold)).foregroundStyle(.red)
+                                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                .background(Color.red.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                        }
+                    } else {
+                        Button {
+                            Task { await store.startAi(c.id) }
+                        } label: {
+                            Text("启动")
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color(red: 0.25, green: 0.85, blue: 0.5))
+                                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                .background(Color.green.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                        }
+                    }
+                    Button {
+                        Task { await store.runAiOnce(c.id) }
+                    } label: {
+                        Text("执行一轮")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                }
+            }
+        }
+    }
+
+    private func signalCard(_ s: AiSignalRow) -> some View {
+        Card(padding: 12) {
+            VStack(spacing: 6) {
+                HStack {
+                    Text(s.symbol).font(.subheadline.monospaced()).foregroundStyle(.white)
+                    StatusBadge(text: s.signal, color: s.signal == "BUY" ? .green : (s.signal == "SELL" ? .red : .gray))
+                    Spacer()
+                    Text("置信 \(String(format: "%.0f%%", s.confidence.doubleValue * 100))")
+                        .font(.caption.monospaced()).foregroundStyle(.white.opacity(0.6))
+                    if s.executed == 1 {
+                        StatusBadge(text: "已执行", color: .blue)
+                    }
+                }
+                if let reason = s.reason, !reason.isEmpty {
+                    Text(reason)
+                        .font(.caption).foregroundStyle(.white.opacity(0.55))
+                        .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3)
+                }
+                HStack {
+                    Text(Fmt.time(s.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                    Spacer()
+                    if let e = s.entry?.value, !e.isEmpty {
+                        Text("入场 \(Fmt.price(e))").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+            }
+        }
+    }
+}
