@@ -116,6 +116,30 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: 账号
+
+                Section {
+                    HStack {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(Color.indigo)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(config.username.isEmpty ? "已登录" : config.username)
+                                .font(.subheadline.weight(.semibold))
+                            Text("会话令牌保存在本机 Keychain")
+                                .font(.caption2)
+                                .foregroundStyle(Color.secondary)
+                        }
+                        Spacer()
+                        Button("退出登录", role: .destructive) {
+                            store.logout()
+                        }
+                        .font(.footnote)
+                    }
+                } header: {
+                    Text("账号")
+                }
+
                 // MARK: 关于
                 Section {
                     HStack {

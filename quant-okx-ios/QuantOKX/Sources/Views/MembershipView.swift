@@ -50,6 +50,18 @@ struct SubscribeResultDTO: Decodable {
     let planName: String
     let expiresAt: String?
     let total: Double
+    let payUrl: String?
+    let demo: Bool
+}
+
+struct AuthDataDTO: Decodable {
+    let token: String
+    let userId: String
+    let username: String
+    let level: String
+    let planName: String
+    let active: Bool
+    let daysLeft: Int
 }
 
 // MARK: - API
@@ -72,6 +84,22 @@ extension BackendClient {
 
     func membershipOrders() async throws -> [MembershipOrderDTO] {
         try await send("GET", "/api/membership/orders", as: [MembershipOrderDTO].self)
+    }
+
+    // MARK: - 认证
+
+    func register(username: String, password: String) async throws -> AuthDataDTO {
+        struct Body: Encodable { let username: String; let password: String }
+        return try await send("POST", "/api/auth/register",
+                              body: Body(username: username, password: password),
+                              as: AuthDataDTO.self, auth: false)
+    }
+
+    func login(username: String, password: String) async throws -> AuthDataDTO {
+        struct Body: Encodable { let username: String; let password: String }
+        return try await send("POST", "/api/auth/login",
+                              body: Body(username: username, password: password),
+                              as: AuthDataDTO.self, auth: false)
     }
 }
 

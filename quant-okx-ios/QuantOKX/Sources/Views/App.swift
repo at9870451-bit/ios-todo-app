@@ -54,6 +54,7 @@ enum SidebarSection: String, CaseIterable, Identifiable {
 
 struct DrawerRoot: View {
     @EnvironmentObject private var store: BackendStore
+    @EnvironmentObject private var config: AppConfig
     @State private var section: SidebarSection = .dashboard
 
     private let groups: [(String, [SidebarSection])] = [
@@ -63,6 +64,15 @@ struct DrawerRoot: View {
     ]
 
     var body: some View {
+        if !config.loggedIn {
+            LoginView()
+                .transition(.opacity)
+        } else {
+            drawerBody
+        }
+    }
+
+    private var drawerBody: some View {
         ZStack(alignment: .leading) {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

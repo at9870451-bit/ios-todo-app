@@ -60,11 +60,17 @@ input:focus{outline:0;border-color:var(--blue)}
 
 <!-- 令牌门 -->
 <div id="gate" class="card gate hidden">
-  <h2>访问令牌</h2>
-  <p class="hint" style="margin-bottom:12px">首次使用请填入后端的访问令牌（保存在本地，不上传）</p>
-  <input id="tokIn" type="password" placeholder="X-Auth-Token">
+  <h2>登录 QuantOKX</h2>
+  <p class="hint" style="margin-bottom:12px">没有账号？填好信息后点「注册」自动创建</p>
+  <input id="userIn" placeholder="用户名（3-20 位字母/数字/下划线）" autocomplete="username">
   <label></label>
-  <button onclick="saveToken()">进入控制台</button>
+  <input id="passIn" type="password" placeholder="密码（至少 6 位）" autocomplete="current-password">
+  <label></label>
+  <div style="display:flex;gap:8px">
+    <button onclick="doLogin()">登录</button>
+    <button class="btn-ghost" onclick="doRegister()">注册</button>
+  </div>
+  <div id="gateErr" class="err hidden" style="margin-top:10px"></div>
 </div>
 
 <!-- 警告 -->
@@ -191,8 +197,12 @@ async function api(method,path,body){
   const opt={method,headers:{'Content-Type':'application/json'}};
   if(TOKEN)opt.headers['X-Auth-Token']=TOKEN;
   if(body)opt.body=JSON.stringify(body);
-  const r=await fetch(BASE+path,opt);
-  const j=await r.json();
+  const r = await fetch(BASE+path,opt);
+  const j = await r.json();
+  if(r.status===401){TOKEN='';localStorage.removeItem('qtoken');
+    $('gate').classList.remove('hidden');$('tabs').classList.add('hidden');
+    ['dash','cfg','log','vip'].forEach(t=>{const x=$('t-'+t);if(x)x.classList.add('hidden')});
+    throw new Error(j.msg||'未授权');}
   if(!r.ok||j.code!==0)throw new Error(j.msg||('HTTP '+r.status));
   return j.data;
 }
@@ -209,7 +219,21 @@ async function boot(){
   if(!TOKEN){$('gate').classList.remove('hidden');return}
   enter();
 }
-function saveToken(){TOKEN=$('tokIn').value.trim();localStorage.setItem('qtoken',TOKEN);enter()}
+async function authCall(path){
+  const u=$('userIn').value.trim(), p=$('passIn').value;
+  const e=$('gateErr');
+  try{
+    const r=await fetch(BASE+path,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:u,password:p})});
+    const j=await r.json();
+    if(!r.ok||j.code!==0){e.textContent=j.msg||('HTTP '+r.status);e.classList.remove('hidden');return}
+    TOKEN=j.data.token;localStorage.setItem('qtoken',TOKEN);
+    localStorage.setItem('quser',j.data.username);
+    e.classList.add('hidden');enter();
+  }catch(ex){e.textContent='连接失败：'+ex.message;e.classList.remove('hidden')}
+}
+function doLogin(){authCall('/api/auth/login')}
+function doRegister(){authCall('/api/auth/register')}
 async function enter(){$('gate').classList.add('hidden');$('tabs').classList.remove('hidden');
   loadStrategies();refresh();setInterval(refresh,5000);}
 

@@ -40,6 +40,9 @@ final class BackendStore: ObservableObject {
     @Published private(set) var plans: [MembershipPlanDTO] = []
     @Published private(set) var memOrders: [MembershipOrderDTO] = []
 
+    // MARK: - 账号
+    @Published private(set) var authError: String?
+
     var minPoll: Int { membership?.benefits.minPollSeconds ?? 30 }
     var aiAllowed: Bool { membership?.benefits.aiEnabled ?? false }
 
@@ -103,6 +106,7 @@ final class BackendStore: ObservableObject {
         } catch {
             connected = false
             lastError = describe(error)
+            handle401(error)
             return
         }
 
@@ -124,12 +128,68 @@ final class BackendStore: ObservableObject {
         if let o = try? await client.membershipOrders() { memOrders = o }
     }
 
-    /// 演示环境订阅：后端直接开通
+    // MARK: - 认证
+
+    func login(username: String, password: String) async {
+        busy = true
+        defer { busy = false }
+        await syncClient()
+        do {
+            let a = try await client.login(username: username, password: password)
+            config?.applyAuth(token: a.token, username: a.username)
+            await syncClient()
+            authError = nil
+            toast = "✅ 欢迎回来，\(a.username)"
+            await refreshAll()
+        } catch {
+            authError = describe(error)
+        }
+    }
+
+    func register(username: String, password: String) async {
+        busy = true
+        defer { busy = false }
+        await syncClient()
+        do {
+            let a = try await client.register(username: username, password: password)
+            config?.applyAuth(token: a.token, username: a.username)
+            await syncClient()
+            authError = nil
+            toast = "✅ 注册成功，欢迎 \(a.username)"
+            await refreshAll()
+        } catch {
+            authError = describe(error)
+        }
+    }
+
+    func logout() {
+        config?.clearAuth()
+        membership = nil
+        memOrders = []
+        running = false
+        connected = false
+        toast = "已退出登录"
+    }
+
+    /// 401 → 会话过期，自动回到登录界面
+    private func handle401(_ error: Error) {
+        if case BackendError.api(401, _) = error {
+            config?.clearAuth()
+            connected = false
+        }
+    }
+
+    /// 订阅：易支付已配置时跳转收银台；未配置时演示直通
     func subscribe(planId: String, months: Int) async {
         await perform {
             let r = try await self.client.subscribe(planId: planId, months: months)
-            let until = r.expiresAt.map { String($0.prefix(10)) } ?? "—"
-            self.toast = "✅ 已开通 \(r.planName)，有效期至 \(until)"
+            if let urlStr = r.payUrl, let url = URL(string: urlStr) {
+                self.toast = "🔗 已打开支付页面，支付完成后回到会员中心刷新"
+                UIApplication.shared.open(url)
+            } else {
+                let until = r.expiresAt.map { String($0.prefix(10)) } ?? "—"
+                self.toast = "✅ 已开通 \(r.planName)，有效期至 \(until)"
+            }
             await self.loadMembership()
         }
     }

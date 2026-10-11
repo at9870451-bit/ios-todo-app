@@ -9,6 +9,10 @@ final class AppConfig: ObservableObject {
     @Published var backendURL: String = ""
     @Published var authToken: String = ""
 
+    // MARK: - 账号会话
+    @Published var loggedIn: Bool = false
+    @Published var username: String = ""
+
     /// 本地缓存的远端配置（由 BackendStore 同步回来）
     @Published var demo: Bool = true
     @Published var instId: String = "BTC-USDT-SWAP"
@@ -38,6 +42,8 @@ final class AppConfig: ObservableObject {
     func load() {
         backendURL = defaults.string(forKey: "backendURL") ?? ""
         authToken = Keychain.get("backend.token") ?? ""
+        loggedIn = Keychain.get("auth.token") != nil
+        username = Keychain.get("auth.user") ?? ""
         demo = defaults.object(forKey: "demo") as? Bool ?? true
         instId = defaults.string(forKey: "instId") ?? instId
         bar = defaults.string(forKey: "bar") ?? bar
@@ -69,5 +75,24 @@ final class AppConfig: ObservableObject {
     func clearToken() {
         authToken = ""
         Keychain.delete("backend.token")
+    }
+
+    // MARK: - 会话
+
+    /// 登录/注册成功后调用：令牌进 Keychain
+    func applyAuth(token: String, username: String) {
+        authToken = token
+        self.username = username
+        loggedIn = true
+        Keychain.set(token, for: "auth.token")
+        Keychain.set(username, for: "auth.user")
+        save()
+    }
+
+    func clearAuth() {
+        loggedIn = false
+        username = ""
+        Keychain.delete("auth.token")
+        Keychain.delete("auth.user")
     }
 }
