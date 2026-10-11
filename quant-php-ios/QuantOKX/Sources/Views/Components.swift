@@ -8,13 +8,13 @@ struct PageScaffold<Content: View>: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.orange)
                         if let subtitle {
                             Text(subtitle).font(.footnote).foregroundStyle(.secondary)
                         }
@@ -105,7 +105,7 @@ struct InfoRow: View {
 struct PrimaryButton: View {
     let title: String
     var icon: String? = nil
-    var color: Color = .accentColor
+    var color: Color = .blue
     var disabled: Bool = false
     let action: () -> Void
 

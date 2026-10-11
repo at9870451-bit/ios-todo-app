@@ -7,13 +7,13 @@ struct OkxHomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("OKX")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(.orange)
                             Text("账户 · 行情 · 交易")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }

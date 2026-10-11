@@ -10,7 +10,7 @@ struct QuantOKXApp: App {
                 .environmentObject(store)
                 .environmentObject(store.config)
                 .preferredColorScheme(.light)
-                .tint(.blue)
+                .tint(.orange)
                 .task { await store.bootstrap() }
         }
     }

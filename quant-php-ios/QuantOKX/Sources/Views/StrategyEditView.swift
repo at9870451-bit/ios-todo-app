@@ -29,7 +29,7 @@ struct StrategyEditView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(existing == nil ? "创建策略" : "编辑策略")
@@ -296,7 +296,7 @@ struct AiConfigEditView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(existingId == nil ? "新建 AI 配置" : "编辑 AI 配置")

@@ -7,13 +7,13 @@ struct AiTradeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("AI 交易")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(.orange)
                             Text("自动分析 · 自动下单 · 风控护航")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }

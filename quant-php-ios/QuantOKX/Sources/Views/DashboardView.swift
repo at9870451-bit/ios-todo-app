@@ -8,7 +8,7 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         header
@@ -56,7 +56,7 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("你好，\(config.nickname.isEmpty ? config.username : config.nickname)")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                .foregroundStyle(.orange)
             HStack(spacing: 8) {
                 StatusBadge(text: config.membershipLevel.uppercased(), color: memberColor)
                 if let d = store.dashboard {

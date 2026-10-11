@@ -17,7 +17,7 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(spacing: 20) {
                     // 品牌
@@ -32,7 +32,7 @@ struct LoginView: View {
                         }
                         Text("QuantOKX")
                             .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(.orange)
                         Text("OKX 现货与永续量化控制台")
                             .font(.footnote)
                             .foregroundStyle(.secondary)

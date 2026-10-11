@@ -9,13 +9,13 @@ struct MoreView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("更多")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(.orange)
                             Text("台账 · 风控 · 会员 · 设置")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }

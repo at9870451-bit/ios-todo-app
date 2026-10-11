@@ -154,7 +154,7 @@ struct AdminUsersView: View {
 
     private func editSheet(_ u: AdminUserRow) -> some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("编辑用户 #\(u.id) · \(u.username)")
@@ -417,7 +417,7 @@ struct AdminPlansView: View {
 
     private func planSheet(_ plan: AdminPlanRow) -> some View {
         ZStack {
-            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("编辑 \(plan.name)").font(.headline).foregroundStyle(.primary).padding(.top, 8)
