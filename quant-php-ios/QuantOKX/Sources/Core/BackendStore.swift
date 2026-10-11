@@ -441,6 +441,10 @@ final class BackendStore: ObservableObject {
     @Published var adminFreeAi: FreeAiData?
     @Published var adminPayment: PaymentConfigData?
     @Published var adminSettings: SiteSettings?
+    @Published var aiDiagnose: AiDiagnoseResult?
+    @Published var aiReviews: [AiReviewRow] = []
+    @Published var strategyMonitor: [StrategyMonitorRow] = []
+    @Published var positionMode: PositionModeData?
 
     func loadAdminStats() async {
         do { adminStats = try await client.get("/api/admin/stats", as: AdminStats.self) }
@@ -652,6 +656,48 @@ final class BackendStore: ObservableObject {
                 "symbol": symbol, "market_type": marketType, "leverage": leverage, "td_mode": tdMode,
             ], as: EmptyData.self)
             return "杠杆已设置为 \(leverage)x"
+        } catch {
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
+
+    // MARK: - AI 诊断 / 复盘 / 策略监控 / 持仓模式（对齐网页端）
+
+    func runAiDiagnose(id: Int) async -> String {
+        do {
+            let r = try await client.get("/api/ai/diagnose", query: ["id": String(id)], as: AiDiagnoseResult.self)
+            aiDiagnose = r
+            return ""
+        } catch {
+            aiDiagnose = nil
+            if let apiErr = error as? APIError { return apiErr.message }
+            return error.localizedDescription
+        }
+    }
+
+    func loadAiReviews() async {
+        do { aiReviews = try await client.get("/api/ai/reviews", query: ["limit": "50"], as: [AiReviewRow].self) }
+        catch { handle(error) }
+    }
+
+    func loadStrategyMonitor() async {
+        do { strategyMonitor = try await client.get("/api/strategy/monitor", as: [StrategyMonitorRow].self) }
+        catch { handle(error) }
+    }
+
+    func loadPositionMode(market: String) async {
+        do { positionMode = try await client.get("/api/okx/position-mode", query: ["market_type": market], as: PositionModeData.self) }
+        catch { handle(error) }
+    }
+
+    func setPositionMode(market: String, mode: String) async -> String {
+        do {
+            _ = try await client.post("/api/okx/position-mode", body: [
+                "market_type": market, "pos_mode": mode,
+            ], as: EmptyData.self)
+            await loadPositionMode(market: market)
+            return mode == "long_short_mode" ? "已切换为双向持仓（long_short_mode）" : "已切换为单向持仓（net_mode）"
         } catch {
             if let apiErr = error as? APIError { return apiErr.message }
             return error.localizedDescription

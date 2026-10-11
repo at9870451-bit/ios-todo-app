@@ -5,6 +5,7 @@ struct OkxPositionsView: View {
     @EnvironmentObject var store: BackendStore
     @State private var source: String = "local"
     @State private var market: String = "swap"
+    @State private var modeMsg: String = ""
 
     var body: some View {
         PageScaffold(title: "持仓管理", subtitle: "本地模拟与交易所持仓") {
@@ -20,7 +21,51 @@ struct OkxPositionsView: View {
                 Text("现货").tag("spot")
             }
             .pickerStyle(.segmented)
-            .onChange(of: market) { _, _ in reload() }
+            .onChange(of: market) { _, _ in reload(); Task { await store.loadPositionMode(market: market) } }
+
+            // 持仓模式（交易所账户级设置）
+            Card(padding: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("持仓模式").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Spacer()
+                        if let pm = store.positionMode {
+                            if pm.configured {
+                                StatusBadge(text: pm.hedged ? "双向持仓" : "单向持仓", color: pm.hedged ? .purple : .blue)
+                            } else {
+                                Text("未配置 OKX 账户").font(.caption).foregroundStyle(.white.opacity(0.4))
+                            }
+                        } else {
+                            ProgressView().controlSize(.small).tint(.white.opacity(0.5))
+                        }
+                    }
+                    if let pm = store.positionMode, pm.configured {
+                        Text("当前：\(pm.hedged ? "long_short_mode 双向" : "net_mode 单向") · 账户等级 \(pm.acctLv ?? "--")")
+                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                        HStack(spacing: 10) {
+                            Button {
+                                Task { modeMsg = await store.setPositionMode(market: market, mode: "net_mode") }
+                            } label: {
+                                Text("切换为单向")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.blue)
+                                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                    .background(Color.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                            }
+                            Button {
+                                Task { modeMsg = await store.setPositionMode(market: market, mode: "long_short_mode") }
+                            } label: {
+                                Text("切换为双向")
+                                    .font(.caption.weight(.semibold)).foregroundStyle(.purple)
+                                    .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                    .background(Color.purple.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                            }
+                        }
+                        if !modeMsg.isEmpty {
+                            Text(modeMsg).font(.caption2).foregroundStyle(.white.opacity(0.55))
+                        }
+                    }
+                }
+            }
 
             if source == "local" {
                 if store.positions.isEmpty {
@@ -89,7 +134,10 @@ struct OkxPositionsView: View {
         }
         .navigationTitle("持仓管理")
         .navigationBarTitleDisplayMode(.inline)
-        .task { reload() }
+        .task {
+            reload()
+            await store.loadPositionMode(market: market)
+        }
     }
 
     private func reload() {

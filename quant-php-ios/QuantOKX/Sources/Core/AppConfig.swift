@@ -19,7 +19,7 @@ final class AppConfig: ObservableObject {
     var csrfToken: String = ""
 
     private init() {
-        self.serverURL = UserDefaults.standard.string(forKey: "server_url") ?? "http://64.83.22.85"
+        self.serverURL = UserDefaults.standard.string(forKey: "server_url") ?? "http://[2404:8c80:85:8001::be]"
         if let u = Keychain.read("auth.username") { username = u; loggedIn = true }
         if let n = Keychain.read("auth.nickname") { nickname = n }
         if let r = Keychain.read("auth.role") { role = r }

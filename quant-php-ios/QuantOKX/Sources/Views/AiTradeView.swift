@@ -60,6 +60,10 @@ struct AiTradeView: View {
                                 }
                             }
 
+                            NavCard(icon: "checklist.bounce", title: "AI 交易复盘", desc: "每笔 AI 交易的出入场与盈亏回顾", color: .purple) {
+                                AiReviewsView()
+                            }
+
                             // 配置列表
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
@@ -174,6 +178,16 @@ struct AiTradeView: View {
                             .font(.caption.weight(.semibold)).foregroundStyle(.blue)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                             .background(Color.blue.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                    }
+                }
+                HStack(spacing: 10) {
+                    NavigationLink {
+                        AiDiagnoseView(configId: c.id)
+                    } label: {
+                        Text("连接诊断")
+                            .font(.caption.weight(.semibold)).foregroundStyle(.cyan)
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(Color.cyan.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                     }
                 }
             }

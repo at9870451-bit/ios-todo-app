@@ -63,6 +63,10 @@ struct StrategyHomeView: View {
                         }
                         .buttonStyle(.plain)
 
+                        NavCard(icon: "waveform.path", title: "运行监控", desc: "每个策略最近一轮执行状态", color: .indigo) {
+                            StrategyMonitorView()
+                        }
+
                         // 运行监控
                         if let automation = store.automation {
                             Card(padding: 13) {
