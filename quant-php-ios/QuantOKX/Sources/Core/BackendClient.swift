@@ -127,6 +127,16 @@ actor BackendClient {
             throw APIError(message: env.message, code: "\(env.code.value)", status: status)
         }
 
+        // data 形状与模型不匹配时，退回裸 envelope，保住后端真实错误信息
+        if let bare = try? decoder.decode(APIEnvelope<EmptyData>.self, from: data) {
+            if !bare.success {
+                if status == 401 || status == 419 {
+                    throw APIError(message: "未登录或会话已过期", code: "UNAUTHORIZED", status: status)
+                }
+                throw APIError(message: bare.message, code: "\(bare.code.value)", status: status)
+            }
+        }
+
         // 非标准响应（HTML 错误页等）
         let text = String(data: data, encoding: .utf8) ?? ""
         if status == 401 || status == 419 {

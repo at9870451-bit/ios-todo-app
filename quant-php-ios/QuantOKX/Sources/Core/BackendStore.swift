@@ -425,6 +425,11 @@ final class BackendStore: ObservableObject {
             }
             let r: PayData = try await client.post("/api/member/pay", body: ["level": level, "months": months, "channel": channel], as: PayData.self)
             await loadMemberOrders()
+            if r.payUrl.isEmpty {
+                toast = "已直接开通（演示模式）"
+            } else {
+                toast = "正在跳转支付"
+            }
             return r.payUrl
         } catch {
             handle(error)
