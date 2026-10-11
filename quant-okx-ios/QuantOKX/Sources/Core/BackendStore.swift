@@ -186,7 +186,7 @@ final class BackendStore: ObservableObject {
             let r = try await self.client.subscribe(planId: planId, months: months)
             if let urlStr = r.payUrl, let url = URL(string: urlStr) {
                 self.toast = "🔗 已打开支付页面，支付完成后回到会员中心刷新"
-                UIApplication.shared.open(url)
+                _ = try? await UIApplication.shared.open(url)
             } else {
                 let until = r.expiresAt.map { String($0.prefix(10)) } ?? "—"
                 self.toast = "✅ 已开通 \(r.planName)，有效期至 \(until)"
