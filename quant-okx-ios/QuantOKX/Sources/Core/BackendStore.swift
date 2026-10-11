@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 /// App 与 Java 后台之间的唯一桥梁。
 /// 交易逻辑全在后台，这里只做：拉状态、下发指令、维护 UI 数据。
@@ -136,7 +137,7 @@ final class BackendStore: ObservableObject {
         await syncClient()
         do {
             let a = try await client.login(username: username, password: password)
-            config?.applyAuth(token: a.token, username: a.username)
+            appConfig?.applyAuth(token: a.token, username: a.username)
             await syncClient()
             authError = nil
             toast = "✅ 欢迎回来，\(a.username)"
@@ -152,7 +153,7 @@ final class BackendStore: ObservableObject {
         await syncClient()
         do {
             let a = try await client.register(username: username, password: password)
-            config?.applyAuth(token: a.token, username: a.username)
+            appConfig?.applyAuth(token: a.token, username: a.username)
             await syncClient()
             authError = nil
             toast = "✅ 注册成功，欢迎 \(a.username)"
@@ -163,7 +164,7 @@ final class BackendStore: ObservableObject {
     }
 
     func logout() {
-        config?.clearAuth()
+        appConfig?.clearAuth()
         membership = nil
         memOrders = []
         running = false
@@ -174,7 +175,7 @@ final class BackendStore: ObservableObject {
     /// 401 → 会话过期，自动回到登录界面
     private func handle401(_ error: Error) {
         if case BackendError.api(401, _) = error {
-            config?.clearAuth()
+            appConfig?.clearAuth()
             connected = false
         }
     }

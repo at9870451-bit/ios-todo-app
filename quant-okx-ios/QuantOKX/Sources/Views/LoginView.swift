@@ -8,6 +8,7 @@ struct LoginView: View {
     @State private var username = ""
     @State private var password = ""
     @State private var password2 = ""
+    @State private var localError: String?
     @FocusState private var focusedField: Int?
 
     private var canSubmit: Bool {
@@ -117,7 +118,7 @@ struct LoginView: View {
 
     @ViewBuilder
     private var errorCard: some View {
-        if let e = store.authError {
+        if let e = localError ?? store.authError {
             Text(e)
                 .font(.footnote)
                 .foregroundStyle(Color.white)
@@ -130,9 +131,10 @@ struct LoginView: View {
     private func submit() {
         guard canSubmit else { return }
         guard !config.backendURL.trimmingCharacters(in: .whitespaces).isEmpty else {
-            store.authError = "请先填写后台地址"
+            localError = "请先填写后台地址"
             return
         }
+        localError = nil
         config.save()
         let u = username.trimmingCharacters(in: .whitespaces)
         if mode == 0 {
