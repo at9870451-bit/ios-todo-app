@@ -383,15 +383,16 @@ struct RiskConfig: Decodable {
 
 struct MembershipPlansData: Decodable {
     let plans: [MembershipPlanRow]
-    let periods: [String: [Int]]?
     let badge: BadgeInfo?
     let limits: MembershipLimits?
     let usage: MembershipUsage?
     let payment: PaymentInfo?
 
     enum CodingKeys: String, CodingKey {
-        case plans, periods, badge, limits, usage, payment
+        case plans, badge, limits, usage, payment
     }
+    /* 注意：后端 periods 是对象数组 [{"months":1,"label":"1 个月","discount":""}]，
+       UI 未使用该字段，故不解码（此前声明成 [String:[Int]] 导致整个套餐响应解码失败）。 */
 }
 
 struct MembershipPlanRow: Decodable, Identifiable {
