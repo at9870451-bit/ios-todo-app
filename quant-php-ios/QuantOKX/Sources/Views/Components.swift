@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 页面容器：统一背景、标题、下拉刷新
+/// 页面容器：分组浅灰背景 + 标题 + 下拉刷新（Apple 风格）
 struct PageScaffold<Content: View>: View {
     let title: String
     var subtitle: String? = nil
@@ -8,15 +8,15 @@ struct PageScaffold<Content: View>: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
                         if let subtitle {
-                            Text(subtitle).font(.footnote).foregroundStyle(.white.opacity(0.45))
+                            Text(subtitle).font(.footnote).foregroundStyle(.secondary)
                         }
                     }
                     .padding(.top, 6)
@@ -29,7 +29,7 @@ struct PageScaffold<Content: View>: View {
     }
 }
 
-/// 卡片容器
+/// 卡片容器：纯白圆角卡片、无描边
 struct Card<Content: View>: View {
     var padding: CGFloat = 16
     @ViewBuilder var content: () -> Content
@@ -38,9 +38,7 @@ struct Card<Content: View>: View {
         content()
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.07), lineWidth: 1))
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -48,24 +46,24 @@ struct Card<Content: View>: View {
 struct StatTile: View {
     let title: String
     let value: String
-    var color: Color = .white
+    var color: Color = .primary
     var sub: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(title).font(.caption).foregroundStyle(.white.opacity(0.45))
+            Text(title).font(.caption).foregroundStyle(.secondary)
             Text(value)
                 .font(.system(size: 17, weight: .semibold, design: .rounded))
                 .foregroundStyle(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             if let sub {
-                Text(sub).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                Text(sub).font(.caption2).foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 13))
+        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -80,7 +78,7 @@ struct StatusBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.15), in: Capsule())
+            .background(color.opacity(0.14), in: Capsule())
     }
 }
 
@@ -88,13 +86,13 @@ struct StatusBadge: View {
 struct InfoRow: View {
     let label: String
     let value: String
-    var valueColor: Color = .white
+    var valueColor: Color = .primary
     var mono: Bool = false
 
     var body: some View {
-        HStack {
-            Text(label).font(.footnote).foregroundStyle(.white.opacity(0.5))
-            Spacer()
+        HStack(alignment: .firstTextBaseline) {
+            Text(label).font(.footnote).foregroundStyle(.secondary)
+            Spacer(minLength: 8)
             Text(value)
                 .font(mono ? .system(.footnote, design: .monospaced) : .footnote)
                 .foregroundStyle(valueColor)
@@ -103,11 +101,11 @@ struct InfoRow: View {
     }
 }
 
-/// 主按钮样式
+/// 主按钮：系统蓝、白字、圆角
 struct PrimaryButton: View {
     let title: String
     var icon: String? = nil
-    var color: Color = Color(red: 0.29, green: 0.56, blue: 1.0)
+    var color: Color = .accentColor
     var disabled: Bool = false
     let action: () -> Void
 
@@ -119,7 +117,7 @@ struct PrimaryButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(disabled ? color.opacity(0.3) : color, in: RoundedRectangle(cornerRadius: 12))
+            .background(disabled ? color.opacity(0.3) : color, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .foregroundStyle(.white)
         }
         .disabled(disabled)
@@ -133,8 +131,9 @@ struct EmptyHint: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.white.opacity(0.2))
-            Text(text).font(.footnote).foregroundStyle(.white.opacity(0.35))
+            Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.quaternary)
+            Text(text).font(.footnote).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 30)
@@ -144,7 +143,7 @@ struct EmptyHint: View {
 /// 加载中
 struct LoadingHint: View {
     var body: some View {
-        HStack { Spacer(); ProgressView().tint(.white.opacity(0.6)); Spacer() }
+        HStack { Spacer(); ProgressView().tint(.secondary); Spacer() }
             .padding(.vertical, 30)
     }
 }
@@ -178,8 +177,8 @@ enum Fmt {
     }
 
     static func pnlColor(_ s: String?) -> Color {
-        guard let s, let d = Double(s) else { return .white.opacity(0.6) }
-        return d >= 0 ? Color(red: 0.25, green: 0.85, blue: 0.5) : Color(red: 1.0, green: 0.36, blue: 0.36)
+        guard let s, let d = Double(s) else { return .secondary }
+        return d >= 0 ? Color.green : Color.red
     }
 
     static func time(_ s: String?) -> String {

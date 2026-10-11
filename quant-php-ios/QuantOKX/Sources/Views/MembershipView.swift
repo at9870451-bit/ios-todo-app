@@ -16,8 +16,8 @@ struct MembershipView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Image(systemName: "crown.fill").foregroundStyle(Color(red: 1.0, green: 0.78, blue: 0.25))
-                            Text(badge.name).font(.headline).foregroundStyle(.white)
+                            Image(systemName: "crown.fill").foregroundStyle(Color.orange)
+                            Text(badge.name).font(.headline).foregroundStyle(.primary)
                             Spacer()
                             if let days = badge.daysLeft {
                                 StatusBadge(text: "剩 \(days) 天", color: days > 7 ? .green : .orange)
@@ -29,7 +29,7 @@ struct MembershipView: View {
                             InfoRow(label: "到期时间", value: exp)
                         }
                         if let limits = store.memberPlans?.limits {
-                            Divider().overlay(Color.white.opacity(0.08))
+                            Divider().overlay(Color(uiColor: .systemGray6))
                             HStack(spacing: 10) {
                                 StatTile(title: "策略上限", value: "\(limits.strategyLimit)")
                                 StatTile(title: "AI 配置", value: "\(limits.aiConfigLimit)")
@@ -57,7 +57,7 @@ struct MembershipView: View {
 
             // 购买时长
             VStack(alignment: .leading, spacing: 8) {
-                Text("购买时长").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("购买时长").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 Picker("时长", selection: $months) {
                     Text("1 个月").tag(1)
                     Text("3 个月").tag(3)
@@ -75,7 +75,7 @@ struct MembershipView: View {
 
             // 套餐卡
             VStack(alignment: .leading, spacing: 8) {
-                Text("选择套餐").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("选择套餐").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 if let plans = store.memberPlans?.plans {
                     ForEach(plans.filter { $0.level != "free" }) { plan in
                         planCard(plan)
@@ -88,12 +88,12 @@ struct MembershipView: View {
             // 订单
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("我的订单").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                    Text("我的订单").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     Spacer()
                     Button {
                         Task { await store.loadMemberOrders() }
                     } label: {
-                        Image(systemName: "arrow.clockwise").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Image(systemName: "arrow.clockwise").font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 if store.memberOrders.isEmpty {
@@ -104,16 +104,16 @@ struct MembershipView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     HStack(spacing: 6) {
-                                        Text(o.levelName).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                        Text(o.levelName).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                         StatusBadge(text: statusText(o.status), color: statusColor(o.status))
                                     }
-                                    Text("\(o.tradeNo)").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.3))
-                                    Text(Fmt.time(o.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                                    Text("\(o.tradeNo)").font(.caption2.monospaced()).foregroundStyle(.tertiary)
+                                    Text(Fmt.time(o.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 3) {
-                                    Text("¥\(o.amount.value)").font(.subheadline.monospaced()).foregroundStyle(.white)
-                                    Text("\(o.months) 个月").font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                    Text("¥\(o.amount.value)").font(.subheadline.monospaced()).foregroundStyle(.primary)
+                                    Text("\(o.months) 个月").font(.caption2).foregroundStyle(.secondary)
                                     if o.status == "pending", let url = o.payUrl, !url.isEmpty {
                                         Button {
                                             openPay(url)
@@ -148,12 +148,12 @@ struct MembershipView: View {
         return Card(padding: 13) {
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
-                    Text(plan.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text(plan.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     if isCurrent { StatusBadge(text: "当前", color: .green) }
                     Spacer()
                     Text("¥\(price)")
                         .font(.system(size: 19, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color(red: 1.0, green: 0.78, blue: 0.25))
+                        .foregroundStyle(Color.orange)
                 }
                 if let features = plan.features, !features.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
@@ -161,7 +161,7 @@ struct MembershipView: View {
                             HStack(alignment: .top, spacing: 5) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10)).foregroundStyle(.green.opacity(0.8)).padding(.top, 2)
-                                Text(f).font(.caption).foregroundStyle(.white.opacity(0.65))
+                                Text(f).font(.caption).foregroundStyle(.secondary)
                             }
                         }
                     }

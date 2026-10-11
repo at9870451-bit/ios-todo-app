@@ -9,22 +9,22 @@ struct MoreView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("更多")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("台账 · 风控 · 会员 · 设置")
-                                .font(.footnote).foregroundStyle(.white.opacity(0.45))
+                                .font(.footnote).foregroundStyle(.secondary)
                         }
                         .padding(.top, 6)
 
                         // 全局控制
                         Card {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("全局控制").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text("全局控制").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 HStack(spacing: 10) {
                                     Button {
                                         Task { await store.emergencyStop(!(store.dashboard?.emergencyStop ?? false)) }
@@ -56,33 +56,33 @@ struct MoreView: View {
                                     }
                                 }
                                 Text("紧急停止会禁止所有非模拟盘新订单；开启实盘需要二次确认。")
-                                    .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                    .font(.caption2).foregroundStyle(.secondary)
                             }
                         }
 
                         // 功能导航
                         VStack(spacing: 10) {
-                            NavCard(icon: "shield.lefthalf.filled", title: "风控参数", desc: "仓位 / 止损 / 杠杆 / 交易次数限制", color: Color(red: 0.4, green: 0.8, blue: 0.8)) {
+                            NavCard(icon: "shield.lefthalf.filled", title: "风控参数", desc: "仓位 / 止损 / 杠杆 / 交易次数限制", color: Color.teal) {
                                 RiskView()
                             }
-                            NavCard(icon: "clock.arrow.circlepath", title: "收益统计", desc: "已实现盈亏曲线与资产快照", color: Color(red: 0.25, green: 0.85, blue: 0.5)) {
+                            NavCard(icon: "clock.arrow.circlepath", title: "收益统计", desc: "已实现盈亏曲线与资产快照", color: Color.green) {
                                 ProfitView()
                             }
-                            NavCard(icon: "list.clipboard.fill", title: "交易历史", desc: "成交明细与统计", color: Color(red: 0.55, green: 0.75, blue: 1.0)) {
+                            NavCard(icon: "list.clipboard.fill", title: "交易历史", desc: "成交明细与统计", color: Color.blue) {
                                 TradeHistoryView()
                             }
-                            NavCard(icon: "doc.text.magnifyingglass", title: "交易日志", desc: "引擎运行记录", color: Color(red: 0.75, green: 0.65, blue: 1.0)) {
+                            NavCard(icon: "doc.text.magnifyingglass", title: "交易日志", desc: "引擎运行记录", color: Color.purple) {
                                 TradingLogView()
                             }
                             NavCard(icon: "doc.plaintext", title: "系统日志", desc: "服务端系统事件", color: .gray) {
                                 SystemLogView()
                             }
-                            NavCard(icon: "crown.fill", title: "会员中心", desc: "套餐权益 · 在线购买", color: Color(red: 1.0, green: 0.78, blue: 0.25)) {
+                            NavCard(icon: "crown.fill", title: "会员中心", desc: "套餐权益 · 在线购买", color: Color.orange) {
                                 MembershipView()
                             }
                             // 管理端（仅管理员可见）
                             if config.role == "admin" {
-                                NavCard(icon: "person.badge.key.fill", title: "管理端", desc: "用户 · 订单 · 套餐 · 支付 · 站点设置", color: Color(red: 0.9, green: 0.4, blue: 0.5)) {
+                                NavCard(icon: "person.badge.key.fill", title: "管理端", desc: "用户 · 订单 · 套餐 · 支付 · 站点设置", color: Color.pink) {
                                     AdminHomeView()
                                 }
                             }
@@ -137,7 +137,7 @@ struct RiskView: View {
 
             Card {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("参数设置").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text("参数设置").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     FieldRow(icon: "1.circle", placeholder: "单笔仓位上限 %（0.1-100）", text: $singlePosition).keyboardType(.decimalPad)
                     FieldRow(icon: "2.circle", placeholder: "总仓位上限 %（0.1-100）", text: $maxTotal).keyboardType(.decimalPad)
                     FieldRow(icon: "3.circle", placeholder: "单笔止损 %（0.1-50）", text: $singleLoss).keyboardType(.decimalPad)
@@ -194,29 +194,29 @@ struct ProfitView: View {
             if let p = store.profit {
                 Card {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("近 \(p.days) 天累计盈亏").font(.footnote).foregroundStyle(.white.opacity(0.5))
+                        Text("近 \(p.days) 天累计盈亏").font(.footnote).foregroundStyle(.secondary)
                         Text(String(format: "%+.4f", p.totalPnl))
                             .font(.system(size: 30, weight: .bold, design: .rounded))
-                            .foregroundStyle(p.totalPnl >= 0 ? Color(red: 0.25, green: 0.85, blue: 0.5) : Color(red: 1.0, green: 0.36, blue: 0.36))
+                            .foregroundStyle(p.totalPnl >= 0 ? Color.green : Color.red)
                     }
                 }
 
                 // 每日盈亏列表
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("每日盈亏").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                    Text("每日盈亏").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     if p.curve.isEmpty {
                         EmptyHint(icon: "chart.bar", text: "暂无盈亏数据")
                     } else {
                         ForEach(p.curve.reversed(), id: \.time) { pt in
                             Card(padding: 11) {
                                 HStack {
-                                    Text(pt.time).font(.caption.monospaced()).foregroundStyle(.white.opacity(0.7))
+                                    Text(pt.time).font(.caption.monospaced()).foregroundStyle(.secondary)
                                     Spacer()
                                     Text(String(format: "%+.4f", pt.daily ?? 0))
                                         .font(.caption.monospaced())
-                                        .foregroundStyle((pt.daily ?? 0) >= 0 ? Color(red: 0.25, green: 0.85, blue: 0.5) : Color(red: 1.0, green: 0.36, blue: 0.36))
+                                        .foregroundStyle((pt.daily ?? 0) >= 0 ? Color.green : Color.red)
                                     Text("累计 \(String(format: "%.2f", pt.value))")
-                                        .font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.35))
+                                        .font(.caption2.monospaced()).foregroundStyle(.tertiary)
                                 }
                             }
                         }
@@ -226,21 +226,21 @@ struct ProfitView: View {
                 // 资产快照
                 if let assets = p.assets?.okx {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("资产快照").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                        Text("资产快照").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         ForEach(Array(assets.keys.sorted()), id: \.self) { key in
                             if let a = assets[key] {
                                 Card(padding: 12) {
                                     HStack {
                                         Text(key == "spot" ? "现货" : "永续")
-                                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                         Spacer()
                                         if a.configured {
                                             VStack(alignment: .trailing, spacing: 2) {
-                                                Text("总资产 \(Fmt.money(a.totalAssets))").font(.caption.monospaced()).foregroundStyle(.white)
-                                                Text("可用 \(Fmt.money(a.availableBalance))").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.4))
+                                                Text("总资产 \(Fmt.money(a.totalAssets))").font(.caption.monospaced()).foregroundStyle(.primary)
+                                                Text("可用 \(Fmt.money(a.availableBalance))").font(.caption2.monospaced()).foregroundStyle(.secondary)
                                             }
                                         } else {
-                                            Text("未配置").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                            Text("未配置").font(.caption).foregroundStyle(.secondary)
                                         }
                                     }
                                 }
@@ -267,8 +267,8 @@ struct TradeHistoryView: View {
             if let stats = store.tradeStats {
                 HStack(spacing: 10) {
                     StatTile(title: "总成交", value: "\(stats.total)")
-                    StatTile(title: "买入", value: "\(stats.buyCount)", color: Color(red: 0.25, green: 0.85, blue: 0.5))
-                    StatTile(title: "卖出", value: "\(stats.sellCount)", color: Color(red: 1.0, green: 0.36, blue: 0.36))
+                    StatTile(title: "买入", value: "\(stats.buyCount)", color: Color.green)
+                    StatTile(title: "卖出", value: "\(stats.sellCount)", color: Color.red)
                 }
                 HStack(spacing: 10) {
                     StatTile(title: "成交额", value: Fmt.money(String(stats.volume)))
@@ -277,7 +277,7 @@ struct TradeHistoryView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("成交明细").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("成交明细").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 if store.trades.isEmpty {
                     EmptyHint(icon: "list.clipboard", text: "暂无成交记录")
                 } else {
@@ -286,17 +286,17 @@ struct TradeHistoryView: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
                                     HStack(spacing: 6) {
-                                        Text(t.symbol).font(.subheadline.monospaced()).foregroundStyle(.white)
+                                        Text(t.symbol).font(.subheadline.monospaced()).foregroundStyle(.primary)
                                         StatusBadge(text: t.side, color: t.side == "BUY" ? .green : .red)
                                     }
-                                    Text(Fmt.time(t.tradeTime)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                                    Text(Fmt.time(t.tradeTime)).font(.caption2).foregroundStyle(.tertiary)
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 3) {
                                     Text("\(Fmt.price(t.price.value)) × \(t.quantity.value)")
-                                        .font(.caption.monospaced()).foregroundStyle(.white.opacity(0.8))
+                                        .font(.caption.monospaced()).foregroundStyle(.primary)
                                     Text("手续费 \(t.fee?.value ?? "0")")
-                                        .font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.35))
+                                        .font(.caption2.monospaced()).foregroundStyle(.tertiary)
                                 }
                             }
                         }
@@ -326,7 +326,7 @@ struct TradingLogView: View {
                     Card(padding: 11) {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
-                                if let s = log.symbol { Text(s).font(.caption.monospaced()).foregroundStyle(.white) }
+                                if let s = log.symbol { Text(s).font(.caption.monospaced()).foregroundStyle(.primary) }
                                 if let sig = log.signal {
                                     StatusBadge(text: sig, color: sig == "BUY" ? .green : (sig == "SELL" ? .red : .gray))
                                 }
@@ -339,9 +339,9 @@ struct TradingLogView: View {
                                 }
                             }
                             HStack {
-                                Text(log.result ?? "--").font(.caption2).foregroundStyle(.white.opacity(0.5))
+                                Text(log.result ?? "--").font(.caption2).foregroundStyle(.secondary)
                                 Spacer()
-                                Text(Fmt.time(log.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.3))
+                                Text(Fmt.time(log.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                             }
                         }
                     }
@@ -370,10 +370,10 @@ struct SystemLogView: View {
                                 StatusBadge(text: log.level, color: log.level == "error" ? .red : (log.level == "warning" ? .orange : .blue))
                                 StatusBadge(text: log.channel, color: .gray)
                                 Spacer()
-                                Text(Fmt.time(log.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.3))
+                                Text(Fmt.time(log.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                             }
                             Text(log.message)
-                                .font(.caption).foregroundStyle(.white.opacity(0.75))
+                                .font(.caption).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }

@@ -22,7 +22,7 @@ struct PaperTradingView: View {
                     VStack(alignment: .leading, spacing: 9) {
                         HStack {
                             Text(st.accountName?.isEmpty == false ? st.accountName! : "未配置账号")
-                                .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                             Spacer()
                             StatusBadge(text: st.configured ? "已配置" : "未配置",
                                         color: st.configured ? .green : .gray)
@@ -34,7 +34,7 @@ struct PaperTradingView: View {
                             } label: {
                                 Text(st.localTradingEnabled ? "关闭本地交易" : "开启本地交易")
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(st.localTradingEnabled ? .orange : Color(red: 0.25, green: 0.85, blue: 0.5))
+                                    .foregroundStyle(st.localTradingEnabled ? .orange : Color.green)
                                     .frame(maxWidth: .infinity).padding(.vertical, 8)
                                     .background((st.localTradingEnabled ? Color.orange : Color.green).opacity(0.13),
                                                 in: RoundedRectangle(cornerRadius: 9))
@@ -65,21 +65,21 @@ struct PaperTradingView: View {
                 // 持仓
                 if let positions = st.positions, !positions.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("模拟持仓").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                        Text("模拟持仓").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         ForEach(positions) { p in
                             Card(padding: 11) {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 3) {
-                                        Text(p.symbol).font(.subheadline.monospaced()).foregroundStyle(.white)
+                                        Text(p.symbol).font(.subheadline.monospaced()).foregroundStyle(.primary)
                                         Text("开仓 \(Fmt.price(p.entryPrice.value)) · \(p.leverage.value)x")
-                                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                            .font(.caption2).foregroundStyle(.secondary)
                                     }
                                     Spacer()
                                     VStack(alignment: .trailing, spacing: 3) {
                                         Text(Fmt.pnl(p.unrealizedProfit.value))
                                             .font(.subheadline.monospaced())
                                             .foregroundStyle(Fmt.pnlColor(p.unrealizedProfit.value))
-                                        Text("量 \(p.positionAmt.value)").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.4))
+                                        Text("量 \(p.positionAmt.value)").font(.caption2.monospaced()).foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -93,7 +93,7 @@ struct PaperTradingView: View {
             // 下单表单
             Card {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("模拟下单").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text("模拟下单").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
 
                     Picker("市场", selection: $market) {
                         Text("永续").tag("swap")
@@ -136,13 +136,13 @@ struct PaperTradingView: View {
 
                     PrimaryButton(title: placing ? "提交中…" : "模拟下单",
                                   icon: "paperplane.fill",
-                                  color: side == "BUY" ? Color(red: 0.16, green: 0.55, blue: 0.35) : Color(red: 0.7, green: 0.25, blue: 0.25),
+                                  color: side == "BUY" ? Color.green : Color.red,
                                   disabled: placing) {
                         Task { await place() }
                     }
 
                     Text("「OKX 模拟盘」需要 Demo Trading 凭据；「本地模拟」仅记录本地状态。")
-                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
             }
         }

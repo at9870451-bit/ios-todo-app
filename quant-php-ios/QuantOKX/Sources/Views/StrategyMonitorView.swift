@@ -13,7 +13,7 @@ struct StrategyMonitorView: View {
                     Card(padding: 12) {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(m.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text(m.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 StatusBadge(text: m.enabled ? "已启用" : "已停用", color: m.enabled ? .green : .gray)
                                 Spacer()
                                 StatusBadge(text: statusText(m.status), color: statusColor(m.status))
@@ -59,7 +59,7 @@ struct StrategyMonitorView: View {
 
     private func statusColor(_ s: String) -> Color {
         switch s {
-        case "SUCCESS": return Color(red: 0.25, green: 0.85, blue: 0.5)
+        case "SUCCESS": return Color.green
         case "ERROR": return .red
         case "RUNNING": return .blue
         default: return .gray

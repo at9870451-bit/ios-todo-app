@@ -27,13 +27,13 @@ struct OkxPositionsView: View {
             Card(padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("持仓模式").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Text("持仓模式").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         Spacer()
                         if let pm = store.positionMode {
                             if pm.configured {
                                 StatusBadge(text: pm.hedged ? "双向持仓" : "单向持仓", color: pm.hedged ? .purple : .blue)
                             } else {
-                                Text("未配置 OKX 账户").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                Text("未配置 OKX 账户").font(.caption).foregroundStyle(.secondary)
                             }
                         } else {
                             ProgressView().controlSize(.small).tint(.white.opacity(0.5))
@@ -41,7 +41,7 @@ struct OkxPositionsView: View {
                     }
                     if let pm = store.positionMode, pm.configured {
                         Text("当前：\(pm.hedged ? "long_short_mode 双向" : "net_mode 单向") · 账户等级 \(pm.acctLv ?? "--")")
-                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                            .font(.caption2).foregroundStyle(.secondary)
                         HStack(spacing: 10) {
                             Button {
                                 Task { modeMsg = await store.setPositionMode(market: market, mode: "net_mode") }
@@ -61,7 +61,7 @@ struct OkxPositionsView: View {
                             }
                         }
                         if !modeMsg.isEmpty {
-                            Text(modeMsg).font(.caption2).foregroundStyle(.white.opacity(0.55))
+                            Text(modeMsg).font(.caption2).foregroundStyle(.secondary)
                         }
                     }
                 }
@@ -75,7 +75,7 @@ struct OkxPositionsView: View {
                         Card(padding: 13) {
                             VStack(spacing: 9) {
                                 HStack {
-                                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     StatusBadge(text: p.positionSide.uppercased(), color: p.positionSide.uppercased() == "SHORT" ? .red : .green)
                                     Spacer()
                                     Text(Fmt.pnl(p.unrealizedPnl.value))
@@ -89,7 +89,7 @@ struct OkxPositionsView: View {
                                 }
                                 HStack {
                                     Text("\(p.leverage)x · \(p.marketType)")
-                                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                        .font(.caption2).foregroundStyle(.secondary)
                                     Spacer()
                                     Button {
                                         Task { await store.closePosition(symbol: p.symbol, marketType: p.marketType) }
@@ -114,7 +114,7 @@ struct OkxPositionsView: View {
                         Card(padding: 13) {
                             VStack(spacing: 9) {
                                 HStack {
-                                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     StatusBadge(text: p.positionSide.uppercased(), color: .purple)
                                     Spacer()
                                     Text(Fmt.pnl(p.unrealizedProfit.value))

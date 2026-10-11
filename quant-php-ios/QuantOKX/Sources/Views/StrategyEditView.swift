@@ -29,11 +29,11 @@ struct StrategyEditView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.07, blue: 0.11).ignoresSafeArea()
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(existing == nil ? "创建策略" : "编辑策略")
-                        .font(.headline).foregroundStyle(.white)
+                        .font(.headline).foregroundStyle(.primary)
                         .padding(.top, 8)
 
                     Card {
@@ -41,7 +41,7 @@ struct StrategyEditView: View {
                             FieldRow(icon: "tag.fill", placeholder: "策略名称", text: $name)
 
                             VStack(alignment: .leading, spacing: 5) {
-                                Text("策略类型").font(.caption).foregroundStyle(.white.opacity(0.5))
+                                Text("策略类型").font(.caption).foregroundStyle(.secondary)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
                                         ForEach(metaKeys, id: \.self) { key in
@@ -51,16 +51,16 @@ struct StrategyEditView: View {
                                             } label: {
                                                 Text(metaName(key))
                                                     .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(className == key ? .white : .white.opacity(0.5))
+                                                    .foregroundStyle(className == key ? .white : .secondary)
                                                     .padding(.horizontal, 12).padding(.vertical, 6)
-                                                    .background(className == key ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                                    .background(className == key ? Color.blue : Color(uiColor: .systemGray6),
                                                                 in: Capsule())
                                             }
                                         }
                                     }
                                 }
                                 if let desc = store.strategyMeta?.strategies[className]?.desc {
-                                    Text(desc).font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                    Text(desc).font(.caption2).foregroundStyle(.secondary)
                                 }
                             }
 
@@ -85,7 +85,7 @@ struct StrategyEditView: View {
                                 .autocorrectionDisabled()
 
                             VStack(alignment: .leading, spacing: 5) {
-                                Text("K 线周期").font(.caption).foregroundStyle(.white.opacity(0.5))
+                                Text("K 线周期").font(.caption).foregroundStyle(.secondary)
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
                                         ForEach(intervals, id: \.self) { i in
@@ -94,9 +94,9 @@ struct StrategyEditView: View {
                                             } label: {
                                                 Text(i)
                                                     .font(.caption.weight(.semibold))
-                                                    .foregroundStyle(interval == i ? .white : .white.opacity(0.5))
+                                                    .foregroundStyle(interval == i ? .white : .secondary)
                                                     .padding(.horizontal, 12).padding(.vertical, 6)
-                                                    .background(interval == i ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                                    .background(interval == i ? Color.blue : Color(uiColor: .systemGray6),
                                                                 in: Capsule())
                                             }
                                         }
@@ -141,22 +141,22 @@ struct StrategyEditView: View {
                     if let params = store.strategyMeta?.strategies[className]?.params, !params.isEmpty {
                         Card {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("策略参数").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text("策略参数").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 ForEach(params) { p in
                                     HStack {
-                                        Text(p.label).font(.footnote).foregroundStyle(.white.opacity(0.6))
+                                        Text(p.label).font(.footnote).foregroundStyle(.secondary)
                                             .frame(width: 130, alignment: .leading)
                                         TextField("", text: Binding(
                                             get: { paramValues[p.key] ?? p.defaultValue?.value ?? "" },
                                             set: { paramValues[p.key] = $0 }
                                         ))
                                         .font(.footnote.monospaced())
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .multilineTextAlignment(.trailing)
                                         .keyboardType(.numbersAndPunctuation)
                                     }
                                     .padding(10)
-                                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
+                                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 9))
                                 }
                             }
                         }
@@ -170,7 +170,7 @@ struct StrategyEditView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Text("取消").font(.subheadline).foregroundStyle(.white.opacity(0.6))
+                        Text("取消").font(.subheadline).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }
@@ -296,17 +296,17 @@ struct AiConfigEditView: View {
 
     var body: some View {
         ZStack {
-            Color(red: 0.06, green: 0.07, blue: 0.11).ignoresSafeArea()
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(existingId == nil ? "新建 AI 配置" : "编辑 AI 配置")
-                        .font(.headline).foregroundStyle(.white)
+                        .font(.headline).foregroundStyle(.primary)
                         .padding(.top, 8)
 
                     // 模型设置
                     Card {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("模型").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            Text("模型").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                             FieldRow(icon: "tag.fill", placeholder: "配置名称", text: $name)
                             Picker("提供商", selection: $providerType) {
                                 Text("OpenAI").tag("openai")
@@ -331,26 +331,26 @@ struct AiConfigEditView: View {
                     // 运行设置
                     Card {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("运行").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            Text("运行").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                             HStack {
-                                Text("模式").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                                Text("模式").font(.footnote).foregroundStyle(.secondary)
                                 Spacer()
                                 StatusBadge(text: "自动交易（服务端统一）", color: .purple)
                             }
                             HStack {
-                                Text("启用").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                                Text("启用").font(.footnote).foregroundStyle(.secondary)
                                 Spacer()
                                 Toggle("", isOn: $enabled).tint(.green).labelsHidden()
                             }
                             Text("分析/确认模式请直接用 OKX 页的「AI 分析」或策略回测；本配置用于自动交易。")
-                                .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                .font(.caption2).foregroundStyle(.secondary)
                         }
                     }
 
                     // 自动交易
                     Card {
                             VStack(alignment: .leading, spacing: 12) {
-                                Text("自动交易").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text("自动交易").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
 
                                 Picker("交易环境", selection: $tradeMode) {
                                     Text("模拟盘 Demo").tag("demo")
@@ -375,7 +375,7 @@ struct AiConfigEditView: View {
                                 .pickerStyle(.segmented)
 
                                 VStack(alignment: .leading, spacing: 5) {
-                                    Text("K 线周期").font(.caption).foregroundStyle(.white.opacity(0.5))
+                                    Text("K 线周期").font(.caption).foregroundStyle(.secondary)
                                     ScrollView(.horizontal, showsIndicators: false) {
                                         HStack(spacing: 8) {
                                             ForEach(intervals, id: \.self) { i in
@@ -384,9 +384,9 @@ struct AiConfigEditView: View {
                                                 } label: {
                                                     Text(i)
                                                         .font(.caption.weight(.semibold))
-                                                        .foregroundStyle(autoInterval == i ? .white : .white.opacity(0.5))
+                                                        .foregroundStyle(autoInterval == i ? .white : .secondary)
                                                         .padding(.horizontal, 12).padding(.vertical, 6)
-                                                        .background(autoInterval == i ? Color.purple.opacity(0.6) : Color.white.opacity(0.07),
+                                                        .background(autoInterval == i ? Color.purple.opacity(0.6) : Color(uiColor: .systemGray6),
                                                                     in: Capsule())
                                                 }
                                             }
@@ -413,7 +413,7 @@ struct AiConfigEditView: View {
 
                     if !testMsg.isEmpty {
                         Card(padding: 12) {
-                            Text(testMsg).font(.caption).foregroundStyle(.white.opacity(0.8))
+                            Text(testMsg).font(.caption).foregroundStyle(.primary)
                         }
                     }
 
@@ -423,10 +423,10 @@ struct AiConfigEditView: View {
 
                     if let id = existingId, id > 0, !isFreeAi {
                         PrimaryButton(title: "测试连接", icon: "antenna.radiowaves.left.and.right",
-                                      color: Color(red: 0.16, green: 0.55, blue: 0.35)) {
+                                      color: Color.green) {
                             Task { testMsg = await store.testAiConfig(id: id) }
                         }
-                        PrimaryButton(title: "删除配置", icon: "trash.fill", color: Color(red: 0.6, green: 0.2, blue: 0.2)) {
+                        PrimaryButton(title: "删除配置", icon: "trash.fill", color: Color.red) {
                             Task {
                                 if await store.deleteAiConfig(id: id) { dismiss() }
                             }
@@ -436,7 +436,7 @@ struct AiConfigEditView: View {
                     Button {
                         dismiss()
                     } label: {
-                        Text("取消").font(.subheadline).foregroundStyle(.white.opacity(0.6))
+                        Text("取消").font(.subheadline).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }

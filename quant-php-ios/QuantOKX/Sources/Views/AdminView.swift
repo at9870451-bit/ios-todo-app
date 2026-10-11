@@ -8,36 +8,36 @@ struct AdminHomeView: View {
         PageScaffold(title: "管理端", subtitle: "用户 · 订单 · 套餐 · 站点设置") {
             if let s = store.adminStats {
                 HStack(spacing: 10) {
-                    StatTile(title: "用户总数", value: "\(s.userTotal)", color: Color(red: 0.55, green: 0.85, blue: 1.0))
-                    StatTile(title: "今日新增", value: "\(s.userToday)", color: Color(red: 0.25, green: 0.85, blue: 0.5))
+                    StatTile(title: "用户总数", value: "\(s.userTotal)", color: Color.cyan)
+                    StatTile(title: "今日新增", value: "\(s.userToday)", color: Color.green)
                 }
                 HStack(spacing: 10) {
                     StatTile(title: "订单总数", value: "\(s.orderTotal)")
-                    StatTile(title: "已支付", value: "\(s.orderPaid)", color: Color(red: 0.25, green: 0.85, blue: 0.5))
+                    StatTile(title: "已支付", value: "\(s.orderPaid)", color: Color.green)
                     StatTile(title: "待支付", value: "\(s.orderPending)", color: .orange)
                 }
                 HStack(spacing: 10) {
-                    StatTile(title: "总收入", value: "¥\(s.incomeTotal)", color: Color(red: 1.0, green: 0.78, blue: 0.25))
-                    StatTile(title: "今日收入", value: "¥\(s.incomeToday)", color: Color(red: 1.0, green: 0.78, blue: 0.25))
+                    StatTile(title: "总收入", value: "¥\(s.incomeTotal)", color: Color.orange)
+                    StatTile(title: "今日收入", value: "¥\(s.incomeToday)", color: Color.orange)
                 }
             } else {
                 LoadingHint()
             }
 
             VStack(spacing: 10) {
-                NavCard(icon: "person.2.fill", title: "用户管理", desc: "等级 / 时长 / 状态 / 密码", color: Color(red: 0.29, green: 0.56, blue: 1.0)) {
+                NavCard(icon: "person.2.fill", title: "用户管理", desc: "等级 / 时长 / 状态 / 密码", color: Color.blue) {
                     AdminUsersView()
                 }
-                NavCard(icon: "list.bullet.rectangle.portrait.fill", title: "订单管理", desc: "会员订单与手动补单", color: Color(red: 0.25, green: 0.85, blue: 0.5)) {
+                NavCard(icon: "list.bullet.rectangle.portrait.fill", title: "订单管理", desc: "会员订单与手动补单", color: Color.green) {
                     AdminOrdersView()
                 }
-                NavCard(icon: "crown.fill", title: "会员计划", desc: "价格与额度设置", color: Color(red: 1.0, green: 0.78, blue: 0.25)) {
+                NavCard(icon: "crown.fill", title: "会员计划", desc: "价格与额度设置", color: Color.orange) {
                     AdminPlansView()
                 }
-                NavCard(icon: "creditcard.fill", title: "支付设置", desc: "易支付接口配置", color: Color(red: 0.75, green: 0.65, blue: 1.0)) {
+                NavCard(icon: "creditcard.fill", title: "支付设置", desc: "易支付接口配置", color: Color.purple) {
                     AdminPaymentView()
                 }
-                NavCard(icon: "cpu.fill", title: "平台免费 AI", desc: "共享模型（用户无需自带 Key）", color: Color(red: 0.4, green: 0.8, blue: 0.8)) {
+                NavCard(icon: "cpu.fill", title: "平台免费 AI", desc: "共享模型（用户无需自带 Key）", color: Color.teal) {
                     AdminFreeAiView()
                 }
                 NavCard(icon: "gearshape.2.fill", title: "站点设置", desc: "注册开关 · 站点名 · 公告", color: .gray) {
@@ -67,20 +67,20 @@ struct AdminUsersView: View {
     var body: some View {
         PageScaffold(title: "用户管理", subtitle: "共 \(store.adminUsers?.total ?? 0) 个用户") {
             HStack(spacing: 8) {
-                TextField("", text: $keyword, prompt: Text("搜索用户名/昵称/邮箱").foregroundStyle(.white.opacity(0.3)))
+                TextField("", text: $keyword, prompt: Text("搜索用户名/昵称/邮箱").foregroundStyle(.tertiary))
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(10)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
                     .onSubmit { Task { await store.loadAdminUsers(keyword: keyword) } }
                 Button {
                     Task { await store.loadAdminUsers(keyword: keyword) }
                 } label: {
                     Image(systemName: "magnifyingglass.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                        .foregroundStyle(Color.blue)
                 }
             }
 
@@ -89,20 +89,20 @@ struct AdminUsersView: View {
                     Card(padding: 12) {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(u.username).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text(u.username).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 StatusBadge(text: u.membershipName,
                                             color: levelColor(u.membershipLevel))
                                 StatusBadge(text: u.role == "admin" ? "管理员" : "用户",
                                             color: u.role == "admin" ? .purple : .gray)
                                 if u.status != 1 { StatusBadge(text: "已禁用", color: .red) }
                                 Spacer()
-                                Text("#\(u.id)").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.3))
+                                Text("#\(u.id)").font(.caption2.monospaced()).foregroundStyle(.tertiary)
                             }
                             HStack {
-                                Text(u.email ?? "无邮箱").font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                Text(u.email ?? "无邮箱").font(.caption2).foregroundStyle(.secondary)
                                 Spacer()
                                 if let days = u.daysLeft { Text("剩 \(days) 天").font(.caption2).foregroundStyle(.orange) }
-                                Text("注册 \(Fmt.time(u.createdAt))").font(.caption2).foregroundStyle(.white.opacity(0.3))
+                                Text("注册 \(Fmt.time(u.createdAt))").font(.caption2).foregroundStyle(.tertiary)
                             }
                             HStack(spacing: 8) {
                                 Button { openEdit(u, "set_level") } label: { miniBtn("设等级", .blue) }
@@ -135,9 +135,9 @@ struct AdminUsersView: View {
 
     private func levelColor(_ l: String) -> Color {
         switch l {
-        case "ultimate": return Color(red: 1.0, green: 0.78, blue: 0.25)
-        case "diamond": return Color(red: 0.55, green: 0.85, blue: 1.0)
-        case "gold": return Color(red: 1.0, green: 0.68, blue: 0.3)
+        case "ultimate": return Color.orange
+        case "diamond": return Color.cyan
+        case "gold": return Color.orange
         default: return .gray
         }
     }
@@ -154,11 +154,11 @@ struct AdminUsersView: View {
 
     private func editSheet(_ u: AdminUserRow) -> some View {
         ZStack {
-            Color(red: 0.06, green: 0.07, blue: 0.11).ignoresSafeArea()
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
                     Text("编辑用户 #\(u.id) · \(u.username)")
-                        .font(.headline).foregroundStyle(.white)
+                        .font(.headline).foregroundStyle(.primary)
                         .padding(.top, 8)
 
                     Picker("操作", selection: $actionType) {
@@ -201,7 +201,7 @@ struct AdminUsersView: View {
                     Button {
                         editing = nil
                     } label: {
-                        Text("取消").font(.subheadline).foregroundStyle(.white.opacity(0.6))
+                        Text("取消").font(.subheadline).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }
@@ -257,19 +257,19 @@ struct AdminOrdersView: View {
             }
 
             HStack(spacing: 8) {
-                TextField("", text: $keyword, prompt: Text("搜索订单号").foregroundStyle(.white.opacity(0.3)))
+                TextField("", text: $keyword, prompt: Text("搜索订单号").foregroundStyle(.tertiary))
                     .font(.subheadline.monospaced())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(10)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
                 Button {
                     Task { await store.loadAdminOrders(status: status, keyword: keyword) }
                 } label: {
                     Image(systemName: "magnifyingglass.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                        .foregroundStyle(Color.blue)
                 }
             }
 
@@ -281,17 +281,17 @@ struct AdminOrdersView: View {
                         Card(padding: 12) {
                             VStack(spacing: 7) {
                                 HStack {
-                                    Text(o.username).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    Text(o.username).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     StatusBadge(text: o.levelName, color: .blue)
                                     StatusBadge(text: statusText(o.status), color: statusColor(o.status))
                                     Spacer()
-                                    Text("¥\(o.amount.value)").font(.subheadline.monospaced()).foregroundStyle(.white)
+                                    Text("¥\(o.amount.value)").font(.subheadline.monospaced()).foregroundStyle(.primary)
                                 }
                                 HStack {
-                                    Text(o.tradeNo).font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.3))
+                                    Text(o.tradeNo).font(.caption2.monospaced()).foregroundStyle(.tertiary)
                                     Spacer()
                                     Text("\(o.months) 个月 · \(Fmt.time(o.createdAt))")
-                                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                        .font(.caption2).foregroundStyle(.secondary)
                                 }
                                 if o.status == "pending" {
                                     Button {
@@ -305,7 +305,7 @@ struct AdminOrdersView: View {
                                 }
                                 if let paid = o.paidAt {
                                     Text("支付时间 \(Fmt.time(paid)) · 来源 \(o.paidSource ?? "-")")
-                                        .font(.caption2).foregroundStyle(.white.opacity(0.35))
+                                        .font(.caption2).foregroundStyle(.tertiary)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                             }
@@ -357,21 +357,21 @@ struct AdminPlansView: View {
                     Card(padding: 13) {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(plan.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text(plan.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 StatusBadge(text: plan.enabled == 1 ? "上架" : "下架",
                                             color: plan.enabled == 1 ? .green : .gray)
                                 Spacer()
                                 Text("¥\(plan.priceMonth.value) / 月")
-                                    .font(.subheadline.monospaced()).foregroundStyle(Color(red: 1.0, green: 0.78, blue: 0.25))
+                                    .font(.subheadline.monospaced()).foregroundStyle(Color.orange)
                             }
                             HStack {
                                 Text("策略 \(plan.strategyLimit) · AI \(plan.aiConfigLimit) · 账号 \(plan.accountLimit) · 杠杆 \(plan.maxLeverage)x")
-                                    .font(.caption2).foregroundStyle(.white.opacity(0.45))
+                                    .font(.caption2).foregroundStyle(.secondary)
                                 Spacer()
                             }
                             HStack(spacing: 8) {
                                 Text("自动交易 \(plan.autoTrade == 1 ? "✓" : "✗") · 实盘 \(plan.liveTrade == 1 ? "✓" : "✗")")
-                                    .font(.caption2).foregroundStyle(.white.opacity(0.45))
+                                    .font(.caption2).foregroundStyle(.secondary)
                                 Spacer()
                                 Button {
                                     openEdit(plan)
@@ -417,10 +417,10 @@ struct AdminPlansView: View {
 
     private func planSheet(_ plan: AdminPlanRow) -> some View {
         ZStack {
-            Color(red: 0.06, green: 0.07, blue: 0.11).ignoresSafeArea()
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("编辑 \(plan.name)").font(.headline).foregroundStyle(.white).padding(.top, 8)
+                    Text("编辑 \(plan.name)").font(.headline).foregroundStyle(.primary).padding(.top, 8)
 
                     Group {
                         planField("月付价格 ¥", "price_month")
@@ -448,7 +448,7 @@ struct AdminPlansView: View {
                         .tint(.orange)
                     }
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.primary)
 
                     Toggle("上架", isOn: Binding(
                         get: { form["enabled"] == "1" },
@@ -456,20 +456,20 @@ struct AdminPlansView: View {
                     ))
                     .tint(.green)
                     .font(.footnote)
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.primary)
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("功能说明（每行一条）").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("功能说明（每行一条）").font(.caption).foregroundStyle(.secondary)
                         TextEditor(text: Binding(
                             get: { form["features"] ?? "" },
                             set: { form["features"] = $0 }
                         ))
                         .font(.caption)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                         .scrollContentBackground(.hidden)
                         .frame(height: 120)
                         .padding(8)
-                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        .background(Color(uiColor: .systemGray5), in: RoundedRectangle(cornerRadius: 10))
                     }
 
                     PrimaryButton(title: "保存计划", icon: "checkmark.circle.fill") {
@@ -478,7 +478,7 @@ struct AdminPlansView: View {
                     Button {
                         editing = nil
                     } label: {
-                        Text("取消").font(.subheadline).foregroundStyle(.white.opacity(0.6))
+                        Text("取消").font(.subheadline).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
                     }
                 }
@@ -491,19 +491,19 @@ struct AdminPlansView: View {
 
     private func planField(_ label: String, _ key: String) -> some View {
         HStack {
-            Text(label).font(.footnote).foregroundStyle(.white.opacity(0.6))
+            Text(label).font(.footnote).foregroundStyle(.secondary)
                 .frame(width: 150, alignment: .leading)
             TextField("", text: Binding(
                 get: { form[key] ?? "" },
                 set: { form[key] = $0 }
             ))
             .font(.footnote.monospaced())
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .multilineTextAlignment(.trailing)
             .keyboardType(key.contains("price") ? .decimalPad : (key == "features" ? .default : .numbersAndPunctuation))
         }
         .padding(10)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9))
+        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 9))
     }
 
     private func save(_ plan: AdminPlanRow) async {
@@ -541,7 +541,7 @@ struct AdminPaymentView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("启用状态").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                        Text("启用状态").font(.footnote).foregroundStyle(.secondary)
                         Spacer()
                         Toggle("", isOn: $enabled).tint(.green).labelsHidden()
                     }
@@ -566,7 +566,7 @@ struct AdminPaymentView: View {
 
                     if let payload = store.adminPayment {
                         Text(payload.configured ? "支付已配置：用户可在线购买会员" : "未配置：用户购买将返回演示模式")
-                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -606,7 +606,7 @@ struct AdminFreeAiView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Text("启用").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                        Text("启用").font(.footnote).foregroundStyle(.secondary)
                         Spacer()
                         Toggle("", isOn: $enabled).tint(.green).labelsHidden()
                     }
@@ -631,7 +631,7 @@ struct AdminFreeAiView: View {
                     }
 
                     Text("会员在未添加个人 AI 配置时，将自动使用本平台共享 AI。密钥只加密存储，不回显。")
-                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
             }
         }
@@ -669,19 +669,19 @@ struct AdminSiteSettingsView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     Toggle("开放注册", isOn: $registerEnabled).tint(.green)
-                        .font(.footnote).foregroundStyle(.white.opacity(0.85))
+                        .font(.footnote).foregroundStyle(.primary)
                     Toggle("注册必填邮箱", isOn: $registerNeedEmail).tint(.green)
-                        .font(.footnote).foregroundStyle(.white.opacity(0.85))
+                        .font(.footnote).foregroundStyle(.primary)
                     FieldRow(icon: "textformat", placeholder: "站点名", text: $siteName)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("公告").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("公告").font(.caption).foregroundStyle(.secondary)
                         TextEditor(text: $announcement)
                             .font(.caption)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .scrollContentBackground(.hidden)
                             .frame(height: 100)
                             .padding(8)
-                            .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                            .background(Color(uiColor: .systemGray5), in: RoundedRectangle(cornerRadius: 10))
                     }
                     PrimaryButton(title: "保存站点设置", icon: "checkmark.circle.fill") {
                         Task {

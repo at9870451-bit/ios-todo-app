@@ -26,27 +26,27 @@ struct OkxMarketView: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        TextField("", text: $symbol, prompt: Text("BTC-USDT").foregroundStyle(.white.opacity(0.3)))
+                        TextField("", text: $symbol, prompt: Text("BTC-USDT").foregroundStyle(.tertiary))
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
                             .font(.subheadline.monospaced())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Button {
                             Task { await loadTicker() }
                         } label: {
                             Image(systemName: "magnifyingglass.circle.fill")
                                 .font(.system(size: 22))
-                                .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                                .foregroundStyle(Color.blue)
                         }
                     }
                     .padding(10)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
 
                     if let t = ticker {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text(Fmt.price(t.lastPrice))
                                 .font(.system(size: 30, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text(Fmt.pct(t.priceChangePercent))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(Fmt.pnlColor(t.priceChangePercent))
@@ -70,17 +70,17 @@ struct OkxMarketView: View {
             // 行情列表
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("行情列表").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                    Text("行情列表").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     Spacer()
-                    Text("\(store.tickers.count) 个").font(.caption).foregroundStyle(.white.opacity(0.4))
+                    Text("\(store.tickers.count) 个").font(.caption).foregroundStyle(.secondary)
                 }
-                TextField("", text: $keyword, prompt: Text("搜索币种，如 BTC").foregroundStyle(.white.opacity(0.3)))
+                TextField("", text: $keyword, prompt: Text("搜索币种，如 BTC").foregroundStyle(.tertiary))
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .padding(10)
-                    .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
                     .onSubmit { Task { await store.loadTickers(market: market, keyword: keyword) } }
 
                 ForEach(store.tickers, id: \.symbol) { t in
@@ -88,11 +88,11 @@ struct OkxMarketView: View {
                         HStack {
                             Text(t.symbol)
                                 .font(.subheadline.monospaced())
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(Fmt.price(t.lastPrice))
-                                    .font(.subheadline.monospaced()).foregroundStyle(.white)
+                                    .font(.subheadline.monospaced()).foregroundStyle(.primary)
                                 Text(Fmt.pct(t.priceChangePercent))
                                     .font(.caption.monospaced())
                                     .foregroundStyle(Fmt.pnlColor(t.priceChangePercent))

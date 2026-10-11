@@ -13,7 +13,7 @@ struct AiDiagnoseView: View {
                 Card(padding: 12) {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                        Text(message).font(.caption).foregroundStyle(.white.opacity(0.8))
+                        Text(message).font(.caption).foregroundStyle(.primary)
                     }
                 }
             }
@@ -21,11 +21,11 @@ struct AiDiagnoseView: View {
                 Card {
                     HStack(spacing: 9) {
                         Image(systemName: d.success ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                            .foregroundStyle(d.success ? Color(red: 0.25, green: 0.85, blue: 0.5) : .orange)
+                            .foregroundStyle(d.success ? Color.green : .orange)
                         Text(d.success ? "总体：连接正常" : "总体：存在问题")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         Spacer()
-                        Text("配置 #\(d.configId)").font(.caption2).foregroundStyle(.white.opacity(0.4))
+                        Text("配置 #\(d.configId)").font(.caption2).foregroundStyle(.secondary)
                     }
                 }
                 ForEach(Array(d.steps.enumerated()), id: \.offset) { _, s in
@@ -33,13 +33,13 @@ struct AiDiagnoseView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 8) {
                                 Image(systemName: s.status == "passed" ? "checkmark.circle.fill" : "xmark.octagon.fill")
-                                    .foregroundStyle(s.status == "passed" ? Color(red: 0.25, green: 0.85, blue: 0.5) : .red)
-                                Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    .foregroundStyle(s.status == "passed" ? Color.green : .red)
+                                Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 Spacer()
                                 StatusBadge(text: s.status == "passed" ? "通过" : "失败",
                                             color: s.status == "passed" ? .green : .red)
                             }
-                            Text(s.message).font(.caption).foregroundStyle(.white.opacity(0.6))
+                            Text(s.message).font(.caption).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -47,8 +47,8 @@ struct AiDiagnoseView: View {
                 if let out = d.modelOutput, !out.isEmpty {
                     Card(padding: 12) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("模型输出").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
-                            Text(out).font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.55))
+                            Text("模型输出").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            Text(out).font(.caption2.monospaced()).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -79,7 +79,7 @@ struct AiReviewsView: View {
                     Card(padding: 12) {
                         VStack(spacing: 8) {
                             HStack {
-                                Text(r.symbol.value).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                Text(r.symbol.value).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 StatusBadge(text: r.status, color: reviewColor(r.status))
                                 Spacer()
                                 Text(Fmt.pnl(r.pnl?.value))
@@ -97,7 +97,7 @@ struct AiReviewsView: View {
                                 InfoRow(label: "数量", value: r.quantity?.value ?? "--", mono: true)
                             }
                             if let txt = r.reviewText, !txt.isEmpty {
-                                Text(txt).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                Text(txt).font(.caption).foregroundStyle(.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading).lineLimit(4)
                             }
                             if let err = r.errorMessage, !err.isEmpty {
@@ -105,10 +105,10 @@ struct AiReviewsView: View {
                                     .frame(maxWidth: .infinity, alignment: .leading).lineLimit(2)
                             }
                             HStack {
-                                Text(Fmt.time(r.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                                Text(Fmt.time(r.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                                 Spacer()
                                 if let rv = r.reviewedAt, !rv.isEmpty {
-                                    Text("复盘 \(Fmt.time(rv))").font(.caption2).foregroundStyle(.white.opacity(0.3))
+                                    Text("复盘 \(Fmt.time(rv))").font(.caption2).foregroundStyle(.tertiary)
                                 }
                             }
                         }
@@ -124,7 +124,7 @@ struct AiReviewsView: View {
 
     private func reviewColor(_ s: String) -> Color {
         switch s {
-        case "SUCCESS": return Color(red: 0.25, green: 0.85, blue: 0.5)
+        case "SUCCESS": return Color.green
         case "FAILED": return .red
         default: return .orange
         }

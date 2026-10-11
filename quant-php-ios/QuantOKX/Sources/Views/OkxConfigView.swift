@@ -24,14 +24,14 @@ struct OkxConfigView: View {
 
             // 账号列表
             VStack(alignment: .leading, spacing: 8) {
-                Text("账号列表").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("账号列表").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 if let accounts = store.okxConfig?.accounts, !accounts.isEmpty {
                     ForEach(accounts) { acc in
                         Card(padding: 13) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
                                     HStack(spacing: 6) {
-                                        Text(acc.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                        Text(acc.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                         StatusBadge(text: acc.marketType == "spot" ? "现货" : "永续",
                                                     color: acc.marketType == "spot" ? .blue : .purple)
                                     }
@@ -50,7 +50,7 @@ struct OkxConfigView: View {
                                 } label: {
                                     Image(systemName: "pencil.circle.fill")
                                         .font(.system(size: 20))
-                                        .foregroundStyle(.white.opacity(0.4))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
@@ -68,7 +68,7 @@ struct OkxConfigView: View {
             if showEditor {
                 Card {
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("账号凭据").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Text("账号凭据").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
 
                         Picker("市场", selection: $editingMarket) {
                             Text("现货 Spot").tag("spot")
@@ -89,7 +89,7 @@ struct OkxConfigView: View {
                         SecureFieldRow(icon: "lock.rotation", placeholder: "Passphrase", text: $passphrase)
 
                         Text("更新时留空则保留原凭据。OKX 需要三项凭据：Key + Secret + Passphrase。")
-                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                            .font(.caption2).foregroundStyle(.secondary)
 
                         PrimaryButton(title: testing ? "测试中…" : "保存并测试", icon: "bolt.fill", disabled: testing || name.isEmpty) {
                             Task { await saveAndTest() }
@@ -99,7 +99,7 @@ struct OkxConfigView: View {
                             HStack(alignment: .top, spacing: 6) {
                                 Image(systemName: testResult.contains("成功") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                     .foregroundStyle(testResult.contains("成功") ? .green : .orange)
-                                Text(testResult).font(.caption).foregroundStyle(.white.opacity(0.8))
+                                Text(testResult).font(.caption).foregroundStyle(.primary)
                             }
                         }
                     }
@@ -109,9 +109,9 @@ struct OkxConfigView: View {
             // 连接测试
             Card {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("连接测试").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text("连接测试").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     Text("使用已保存的凭据执行只读测试（公共时间 → 账户 → 余额 → 持仓 → 挂单）")
-                        .font(.caption).foregroundStyle(.white.opacity(0.4))
+                        .font(.caption).foregroundStyle(.secondary)
                     HStack(spacing: 10) {
                         PrimaryButton(title: "测试现货", icon: "antenna.radiowaves.left.and.right") {
                             Task { testResult = await store.testOkx(marketType: "spot") }
@@ -131,14 +131,14 @@ struct OkxConfigView: View {
     private func slotCard(_ title: String, slot: OkxConfigSlot?) -> some View {
         Card(padding: 13) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(title).font(.caption).foregroundStyle(.white.opacity(0.5))
+                Text(title).font(.caption).foregroundStyle(.secondary)
                 if slot?.configured == true {
                     Text(slot?.name ?? "已配置")
-                        .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     StatusBadge(text: slot?.environment == "demo" ? "模拟盘" : "实盘",
                                 color: slot?.environment == "demo" ? .teal : .orange)
                 } else {
-                    Text("未配置").font(.subheadline).foregroundStyle(.white.opacity(0.4))
+                    Text("未配置").font(.subheadline).foregroundStyle(.secondary)
                 }
             }
         }

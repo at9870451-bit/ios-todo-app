@@ -9,7 +9,8 @@ struct QuantOKXApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(store.config)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
+                .tint(.blue)
                 .task { await store.bootstrap() }
         }
     }
@@ -48,11 +49,11 @@ struct ToastView: View {
     var body: some View {
         Text(text)
             .font(.subheadline.weight(.medium))
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.ultraThinMaterial, in: Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+            .background(.regularMaterial, in: Capsule())
+            .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
     }
 }
 
@@ -79,6 +80,5 @@ struct MainTabView: View {
                 .tabItem { Label("更多", systemImage: "ellipsis.circle.fill") }
                 .tag(4)
         }
-        .tint(Color(red: 0.29, green: 0.56, blue: 1.0))
     }
 }

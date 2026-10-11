@@ -4,8 +4,8 @@ import SwiftUI
 struct KlineChartView: View {
     let candles: [KlineRow]
 
-    private let upColor = Color(red: 0.16, green: 0.78, blue: 0.51)
-    private let downColor = Color(red: 1.0, green: 0.35, blue: 0.42)
+    private let upColor = Color.green
+    private let downColor = Color.red
 
     var body: some View {
         Canvas { context, size in
@@ -40,7 +40,7 @@ struct KlineChartView: View {
                 grid.move(to: CGPoint(x: 0, y: y))
                 grid.addLine(to: CGPoint(x: size.width, y: y))
             }
-            context.stroke(grid, with: .color(Color.white.opacity(0.06)), lineWidth: 0.5)
+            context.stroke(grid, with: .color(Color(uiColor: .systemGray5)), lineWidth: 0.5)
 
             // 蜡烛
             for (i, c) in data.enumerated() {
@@ -73,13 +73,13 @@ struct KlineChartView: View {
                 var line = Path()
                 line.move(to: CGPoint(x: 0, y: y))
                 line.addLine(to: CGPoint(x: size.width, y: y))
-                context.stroke(line, with: .color(Color(red: 0.29, green: 0.56, blue: 1.0).opacity(0.7)),
+                context.stroke(line, with: .color(Color.blue.opacity(0.7)),
                                style: StrokeStyle(lineWidth: 0.8, dash: [4, 3]))
             }
         }
         .frame(height: 190)
-        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.06), lineWidth: 1))
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(uiColor: .systemGray5), lineWidth: 1))
     }
 }
 
@@ -99,7 +99,7 @@ struct KlineSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("K 线走势").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("K 线走势").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                 Spacer()
                 if loading { ProgressView().controlSize(.small).tint(.white.opacity(0.5)) }
             }
@@ -112,9 +112,9 @@ struct KlineSection: View {
                         } label: {
                             Text(i)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(interval == i ? .white : .white.opacity(0.5))
+                                .foregroundStyle(interval == i ? .white : .secondary)
                                 .padding(.horizontal, 12).padding(.vertical, 6)
-                                .background(interval == i ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                .background(interval == i ? Color.blue : Color(uiColor: .systemGray6),
                                             in: Capsule())
                         }
                     }
@@ -122,7 +122,7 @@ struct KlineSection: View {
             }
             KlineChartView(candles: candles)
             if candles.isEmpty && !loading {
-                Text("暂无 K 线数据").font(.caption).foregroundStyle(.white.opacity(0.35))
+                Text("暂无 K 线数据").font(.caption).foregroundStyle(.tertiary)
             }
         }
         .task { await load() }
@@ -174,7 +174,7 @@ struct StrategyAnalyzeView: View {
                         .autocorrectionDisabled()
 
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("策略类型").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("策略类型").font(.caption).foregroundStyle(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(strategies, id: \.self) { s in
@@ -183,9 +183,9 @@ struct StrategyAnalyzeView: View {
                                     } label: {
                                         Text(s.uppercased())
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(strategy == s ? .white : .white.opacity(0.5))
+                                            .foregroundStyle(strategy == s ? .white : .secondary)
                                             .padding(.horizontal, 12).padding(.vertical, 6)
-                                            .background(strategy == s ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                            .background(strategy == s ? Color.blue : Color(uiColor: .systemGray6),
                                                         in: Capsule())
                                     }
                                 }
@@ -194,7 +194,7 @@ struct StrategyAnalyzeView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("K 线周期").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("K 线周期").font(.caption).foregroundStyle(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(intervals, id: \.self) { i in
@@ -203,9 +203,9 @@ struct StrategyAnalyzeView: View {
                                     } label: {
                                         Text(i)
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(interval == i ? .white : .white.opacity(0.5))
+                                            .foregroundStyle(interval == i ? .white : .secondary)
                                             .padding(.horizontal, 12).padding(.vertical, 6)
-                                            .background(interval == i ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                            .background(interval == i ? Color.blue : Color(uiColor: .systemGray6),
                                                         in: Capsule())
                                     }
                                 }
@@ -229,7 +229,7 @@ struct StrategyAnalyzeView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
-                            Text("信号结果").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            Text("信号结果").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                             Spacer()
                             StatusBadge(text: r.signal,
                                         color: r.signal == "BUY" ? .green : (r.signal == "SELL" ? .red : .gray))
@@ -239,7 +239,7 @@ struct StrategyAnalyzeView: View {
                             StatTile(title: "当前价", value: Fmt.price(r.price?.value))
                         }
                         if let reason = r.reason, !reason.isEmpty {
-                            Text(reason).font(.caption).foregroundStyle(.white.opacity(0.7))
+                            Text(reason).font(.caption).foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }

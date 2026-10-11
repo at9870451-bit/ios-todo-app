@@ -22,24 +22,24 @@ struct OkxAccountView: View {
                 } else {
                     HStack(spacing: 10) {
                         StatTile(title: "总资产 (USDT)", value: Fmt.money(summary.totalAssets), color: .white)
-                        StatTile(title: "可用余额", value: Fmt.money(summary.availableBalance), color: Color(red: 0.55, green: 0.85, blue: 1.0))
+                        StatTile(title: "可用余额", value: Fmt.money(summary.availableBalance), color: Color.cyan)
                     }
                     StatTile(title: "未实现盈亏", value: Fmt.pnl(summary.unrealizedPnl),
                              color: Fmt.pnlColor(summary.unrealizedPnl))
 
                     // 余额明细
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("余额明细").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                        Text("余额明细").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         if let balances = summary.balances, !balances.isEmpty {
                             ForEach(balances.filter { ($0.total.doubleValue) > 0 }) { b in
                                 Card(padding: 12) {
                                     HStack {
-                                        Text(b.asset).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                        Text(b.asset).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                         Spacer()
                                         VStack(alignment: .trailing, spacing: 2) {
-                                            Text(Fmt.money(b.total.value)).font(.subheadline.monospaced()).foregroundStyle(.white)
+                                            Text(Fmt.money(b.total.value)).font(.subheadline.monospaced()).foregroundStyle(.primary)
                                             Text("可用 \(Fmt.money(b.free.value))")
-                                                .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                                .font(.caption2).foregroundStyle(.secondary)
                                         }
                                     }
                                 }
@@ -52,7 +52,7 @@ struct OkxAccountView: View {
                     // 持仓
                     if market == "swap" {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("交易所持仓").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                            Text("交易所持仓").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                             if let positions = summary.positions, !positions.isEmpty {
                                 ForEach(positions) { p in
                                     positionCard(p)
@@ -76,7 +76,7 @@ struct OkxAccountView: View {
         Card(padding: 12) {
             VStack(spacing: 8) {
                 HStack {
-                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text(p.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     StatusBadge(text: p.positionSide.uppercased(), color: .purple)
                     Spacer()
                     Text(Fmt.pnl(p.unrealizedProfit.value))
@@ -85,9 +85,9 @@ struct OkxAccountView: View {
                 }
                 HStack {
                     InfoRow(label: "数量", value: p.positionAmt.value, mono: true)
-                    Divider().frame(height: 14).overlay(Color.white.opacity(0.1))
+                    Divider().frame(height: 14).overlay(Color(uiColor: .separator))
                     InfoRow(label: "开仓价", value: Fmt.price(p.entryPrice.value), mono: true)
-                    Divider().frame(height: 14).overlay(Color.white.opacity(0.1))
+                    Divider().frame(height: 14).overlay(Color(uiColor: .separator))
                     InfoRow(label: "杠杆", value: "\(p.leverage.value)x", mono: true)
                 }
             }

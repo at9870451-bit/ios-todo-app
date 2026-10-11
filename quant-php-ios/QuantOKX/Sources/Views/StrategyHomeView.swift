@@ -7,15 +7,15 @@ struct StrategyHomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("策略")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("多策略引擎 · 回测 · 运行监控")
-                                .font(.footnote).foregroundStyle(.white.opacity(0.45))
+                                .font(.footnote).foregroundStyle(.secondary)
                         }
                         .padding(.top, 6)
 
@@ -30,14 +30,14 @@ struct StrategyHomeView: View {
                                         .font(.system(size: 17)).foregroundStyle(.orange)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("策略回测").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                                    Text("历史数据验证策略表现").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                    Text("策略回测").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                                    Text("历史数据验证策略表现").font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.white.opacity(0.25))
+                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                             }
                             .padding(14)
-                            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15))
+                            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 15))
                         }
                         .buttonStyle(.plain)
 
@@ -52,14 +52,14 @@ struct StrategyHomeView: View {
                                         .font(.system(size: 17)).foregroundStyle(.teal)
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("信号分析").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                                    Text("对当前行情运行策略，输出即时信号").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                    Text("信号分析").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                                    Text("对当前行情运行策略，输出即时信号").font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.white.opacity(0.25))
+                                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
                             }
                             .padding(14)
-                            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15))
+                            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 15))
                         }
                         .buttonStyle(.plain)
 
@@ -71,7 +71,7 @@ struct StrategyHomeView: View {
                         if let automation = store.automation {
                             Card(padding: 13) {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("后台自动化").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                                    Text("后台自动化").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     HStack {
                                         InfoRow(label: "策略任务", value: automation.strategy.status ?? "未运行",
                                                 valueColor: automation.strategy.status == "running" ? .green : .gray)
@@ -80,7 +80,7 @@ struct StrategyHomeView: View {
                                     }
                                     if let last = automation.strategy.lastRunAt {
                                         Text("策略最近执行：\(Fmt.time(last))")
-                                            .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                                            .font(.caption2).foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -89,15 +89,15 @@ struct StrategyHomeView: View {
                         // 策略列表
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text("策略列表").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                Text("策略列表").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 Spacer()
-                                Text("\(store.strategies.count) 个").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                Text("\(store.strategies.count) 个").font(.caption).foregroundStyle(.secondary)
                                 NavigationLink {
                                     StrategyEditView(existing: nil)
                                 } label: {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.system(size: 20))
-                                        .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                                        .foregroundStyle(Color.blue)
                                 }
                             }
                             if store.strategies.isEmpty {
@@ -129,11 +129,11 @@ struct StrategyHomeView: View {
         Card(padding: 13) {
             VStack(spacing: 9) {
                 HStack {
-                    Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text(s.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     StatusBadge(text: s.className.uppercased(), color: .blue)
                     Spacer()
                     StatusBadge(text: s.enabled ? "运行中" : "已停止",
-                                color: s.enabled ? Color(red: 0.25, green: 0.85, blue: 0.5) : .gray)
+                                color: s.enabled ? Color.green : .gray)
                 }
                 HStack {
                     InfoRow(label: "交易对", value: s.symbol, mono: true)
@@ -148,7 +148,7 @@ struct StrategyHomeView: View {
                     if let sig = s.lastSignal, !sig.isEmpty {
                         StatusBadge(text: "信号 \(sig)", color: sig == "BUY" ? .green : (sig == "SELL" ? .red : .gray))
                     }
-                    Text(Fmt.time(s.lastRunAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                    Text(Fmt.time(s.lastRunAt)).font(.caption2).foregroundStyle(.tertiary)
                     Spacer()
                     if let err = s.errorMessage, !err.isEmpty {
                         Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.caption)
@@ -169,7 +169,7 @@ struct StrategyHomeView: View {
                             Task { await store.startStrategy(s.id) }
                         } label: {
                             Text("启动")
-                                .font(.caption.weight(.semibold)).foregroundStyle(Color(red: 0.25, green: 0.85, blue: 0.5))
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color.green)
                                 .frame(maxWidth: .infinity).padding(.vertical, 8)
                                 .background(Color.green.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                         }
@@ -186,9 +186,9 @@ struct StrategyHomeView: View {
                         Task { await store.deleteStrategy(s.id) }
                     } label: {
                         Text("删除")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6))
+                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
-                            .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 9))
+                            .background(Color(uiColor: .systemGray6), in: RoundedRectangle(cornerRadius: 9))
                     }
                 }
             }
@@ -252,7 +252,7 @@ struct BacktestView: View {
                         .autocorrectionDisabled()
 
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("策略类型").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("策略类型").font(.caption).foregroundStyle(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(strategies, id: \.self) { s in
@@ -261,9 +261,9 @@ struct BacktestView: View {
                                     } label: {
                                         Text(s.uppercased())
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(strategy == s ? .white : .white.opacity(0.5))
+                                            .foregroundStyle(strategy == s ? .white : .secondary)
                                             .padding(.horizontal, 12).padding(.vertical, 6)
-                                            .background(strategy == s ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                            .background(strategy == s ? Color.blue : Color(uiColor: .systemGray6),
                                                         in: Capsule())
                                     }
                                 }
@@ -272,7 +272,7 @@ struct BacktestView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("K 线周期").font(.caption).foregroundStyle(.white.opacity(0.5))
+                        Text("K 线周期").font(.caption).foregroundStyle(.secondary)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
                                 ForEach(intervals, id: \.self) { i in
@@ -281,9 +281,9 @@ struct BacktestView: View {
                                     } label: {
                                         Text(i)
                                             .font(.caption.weight(.semibold))
-                                            .foregroundStyle(interval == i ? .white : .white.opacity(0.5))
+                                            .foregroundStyle(interval == i ? .white : .secondary)
                                             .padding(.horizontal, 12).padding(.vertical, 6)
-                                            .background(interval == i ? Color.blue.opacity(0.6) : Color.white.opacity(0.07),
+                                            .background(interval == i ? Color.blue : Color(uiColor: .systemGray6),
                                                         in: Capsule())
                                     }
                                 }
@@ -303,10 +303,10 @@ struct BacktestView: View {
             if let r = result {
                 Card {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("回测结果").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        Text("回测结果").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                         HStack(spacing: 10) {
                             StatTile(title: "收益率", value: String(format: "%+.2f%%", r.returnRate * 100),
-                                     color: r.returnRate >= 0 ? Color(red: 0.25, green: 0.85, blue: 0.5) : Color(red: 1.0, green: 0.36, blue: 0.36))
+                                     color: r.returnRate >= 0 ? Color.green : Color.red)
                             StatTile(title: "最大回撤", value: String(format: "%.2f%%", r.maxDrawdown * 100),
                                      color: .orange)
                         }

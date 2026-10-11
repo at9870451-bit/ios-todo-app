@@ -30,9 +30,9 @@ struct OkxOrdersView: View {
             // 订单列表
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("订单列表").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                    Text("订单列表").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     Spacer()
-                    Text("\(store.orders.count) 条").font(.caption).foregroundStyle(.white.opacity(0.4))
+                    Text("\(store.orders.count) 条").font(.caption).foregroundStyle(.secondary)
                 }
                 // 对账工具
                 HStack(spacing: 10) {
@@ -60,8 +60,8 @@ struct OkxOrdersView: View {
                         Card(padding: 12) {
                             VStack(spacing: 8) {
                                 HStack {
-                                    Text(o.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                                    StatusBadge(text: o.side, color: o.side == "BUY" ? Color(red: 0.25, green: 0.85, blue: 0.5) : Color(red: 1.0, green: 0.36, blue: 0.36))
+                                    Text(o.symbol).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                                    StatusBadge(text: o.side, color: o.side == "BUY" ? Color.green : Color.red)
                                     StatusBadge(text: o.mode, color: .gray)
                                     Spacer()
                                     Text(orderStatusText(o.status))
@@ -74,7 +74,7 @@ struct OkxOrdersView: View {
                                     InfoRow(label: "数量", value: o.quantity.value, mono: true)
                                 }
                                 HStack {
-                                    Text(Fmt.time(o.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                                    Text(Fmt.time(o.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                                     Spacer()
                                     if ["NEW", "PENDING_SUBMIT", "PARTIALLY_FILLED"].contains(o.status) {
                                         Button {
@@ -107,7 +107,7 @@ struct OkxOrdersView: View {
     private var orderForm: some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                Text("下单").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                Text("下单").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
 
                 FieldRow(icon: "bitcoinsign.circle", placeholder: "交易对，如 BTC-USDT", text: $symbol)
 
@@ -159,10 +159,10 @@ struct OkxOrdersView: View {
                 }
 
                 Text("实盘下单需：全局实盘开关开启 + 账户为 live 环境 + 风控未触发。市价单价格留空即可。")
-                    .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                    .font(.caption2).foregroundStyle(.secondary)
 
                 PrimaryButton(title: placing ? "提交中…" : "提交订单", icon: "paperplane.fill",
-                              color: side == "BUY" ? Color(red: 0.16, green: 0.55, blue: 0.35) : Color(red: 0.7, green: 0.25, blue: 0.25),
+                              color: side == "BUY" ? Color.green : Color.red,
                               disabled: placing) {
                     Task { await submit() }
                 }
@@ -196,7 +196,7 @@ struct OkxOrdersView: View {
 
     private func orderStatusColor(_ s: String) -> Color {
         switch s {
-        case "FILLED": return Color(red: 0.25, green: 0.85, blue: 0.5)
+        case "FILLED": return Color.green
         case "NEW", "PENDING_SUBMIT", "PARTIALLY_FILLED": return .orange
         case "REJECTED", "UNKNOWN": return .red
         default: return .gray

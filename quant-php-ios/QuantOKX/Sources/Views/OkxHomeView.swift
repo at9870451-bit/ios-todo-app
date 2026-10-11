@@ -7,15 +7,15 @@ struct OkxHomeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("OKX")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("账户 · 行情 · 交易")
-                                .font(.footnote).foregroundStyle(.white.opacity(0.45))
+                                .font(.footnote).foregroundStyle(.secondary)
                         }
                         .padding(.top, 6)
 
@@ -28,22 +28,22 @@ struct OkxHomeView: View {
                         }
 
                         VStack(spacing: 10) {
-                            NavCard(icon: "key.fill", title: "API 配置", desc: "配置 OKX API Key / Secret / Passphrase", color: Color(red: 0.29, green: 0.56, blue: 1.0)) {
+                            NavCard(icon: "key.fill", title: "API 配置", desc: "配置 OKX API Key / Secret / Passphrase", color: Color.blue) {
                                 OkxConfigView()
                             }
-                            NavCard(icon: "wallet.pass.fill", title: "账户资产", desc: "余额明细与持仓汇总", color: Color(red: 0.25, green: 0.85, blue: 0.5)) {
+                            NavCard(icon: "wallet.pass.fill", title: "账户资产", desc: "余额明细与持仓汇总", color: Color.green) {
                                 OkxAccountView()
                             }
-                            NavCard(icon: "chart.xyaxis.line", title: "实时行情", desc: "现货 / 永续行情列表", color: Color(red: 1.0, green: 0.68, blue: 0.3)) {
+                            NavCard(icon: "chart.xyaxis.line", title: "实时行情", desc: "现货 / 永续行情列表", color: Color.orange) {
                                 OkxMarketView()
                             }
-                            NavCard(icon: "list.bullet.rectangle", title: "订单管理", desc: "下单 · 撤单 · 订单列表", color: Color(red: 0.75, green: 0.65, blue: 1.0)) {
+                            NavCard(icon: "list.bullet.rectangle", title: "订单管理", desc: "下单 · 撤单 · 订单列表", color: Color.purple) {
                                 OkxOrdersView()
                             }
-                            NavCard(icon: "square.stack.3d.up.fill", title: "持仓管理", desc: "查看持仓与一键平仓", color: Color(red: 1.0, green: 0.45, blue: 0.55)) {
+                            NavCard(icon: "square.stack.3d.up.fill", title: "持仓管理", desc: "查看持仓与一键平仓", color: Color.pink) {
                                 OkxPositionsView()
                             }
-                            NavCard(icon: "flask.fill", title: "模拟盘交易台", desc: "OKX Demo Trading 模拟交易", color: Color(red: 0.4, green: 0.8, blue: 0.8)) {
+                            NavCard(icon: "flask.fill", title: "模拟盘交易台", desc: "OKX Demo Trading 模拟交易", color: Color.teal) {
                                 PaperTradingView()
                             }
                         }
@@ -79,15 +79,15 @@ struct NavCard<Destination: View>: View {
                         .foregroundStyle(color)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                    Text(desc).font(.caption).foregroundStyle(.white.opacity(0.4))
+                    Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                    Text(desc).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.white.opacity(0.25))
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
             }
             .padding(14)
-            .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color.white.opacity(0.07), lineWidth: 1))
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 15, style: .continuous).stroke(Color(uiColor: .systemGray6), lineWidth: 1))
         }
         .buttonStyle(.plain)
     }

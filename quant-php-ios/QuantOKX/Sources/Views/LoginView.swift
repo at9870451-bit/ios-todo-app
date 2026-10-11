@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 登录 / 注册页
+/// 登录 / 注册页（Apple 极简浅色风格）
 struct LoginView: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var config: AppConfig
@@ -17,36 +17,27 @@ struct LoginView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.06, green: 0.09, blue: 0.16),
-                         Color(red: 0.02, green: 0.03, blue: 0.07)],
-                startPoint: .topLeading, endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
             ScrollView {
-                VStack(spacing: 22) {
-                    // Logo
+                VStack(spacing: 20) {
+                    // 品牌
                     VStack(spacing: 10) {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(LinearGradient(colors: [Color(red: 0.29, green: 0.56, blue: 1.0),
-                                                              Color(red: 0.12, green: 0.32, blue: 0.85)],
-                                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-                                .frame(width: 72, height: 72)
-                                .shadow(color: Color.blue.opacity(0.4), radius: 16, y: 6)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .fill(Color.blue)
+                                .frame(width: 68, height: 68)
                             Image(systemName: "chart.line.uptrend.xyaxis")
-                                .font(.system(size: 30, weight: .semibold))
+                                .font(.system(size: 28, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
                         Text("QuantOKX")
                             .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("OKX 现货与永续量化控制台")
                             .font(.footnote)
-                            .foregroundStyle(.white.opacity(0.55))
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(.top, 30)
+                    .padding(.top, 26)
 
                     // 分段切换
                     Picker("", selection: $mode) {
@@ -56,9 +47,9 @@ struct LoginView: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 4)
 
-                    VStack(spacing: 14) {
-                        // 服务器地址
-                        FieldRow(icon: "server.rack", placeholder: "服务器地址，如 http://1.2.3.4", text: $serverURL)
+                    // 表单
+                    VStack(spacing: 12) {
+                        FieldRow(icon: "server.rack", placeholder: "服务器地址，如 http://[2404:1:2::be]", text: $serverURL)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
@@ -92,26 +83,26 @@ struct LoginView: View {
                     } label: {
                         HStack(spacing: 6) {
                             if store.busy {
-                                ProgressView().controlSize(.small).tint(.white)
+                                ProgressView().controlSize(.small)
                             } else {
                                 Image(systemName: "antenna.radiowaves.left.and.right")
                             }
                             Text("测试连接")
                         }
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.blue)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
-                        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
                     if let ok = connOK {
                         HStack(spacing: 6) {
                             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(ok ? .green : .red)
+                                .foregroundStyle(ok ? Color.green : Color.red)
                             Text(connMsg)
                                 .font(.footnote)
-                                .foregroundStyle(.white.opacity(0.75))
+                                .foregroundStyle(.secondary)
                         }
                     }
 
@@ -126,12 +117,8 @@ struct LoginView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
-                        .background(LinearGradient(colors: [Color(red: 0.29, green: 0.56, blue: 1.0),
-                                                            Color(red: 0.16, green: 0.38, blue: 0.92)],
-                                                   startPoint: .leading, endPoint: .trailing),
-                                    in: RoundedRectangle(cornerRadius: 14))
+                        .background(Color.blue, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .foregroundStyle(.white)
-                        .shadow(color: Color.blue.opacity(0.35), radius: 12, y: 5)
                     }
                     .disabled(store.busy)
 
@@ -140,16 +127,16 @@ struct LoginView: View {
                         let msg = !store.loginError.isEmpty ? store.loginError : localError
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                            Text(msg).font(.footnote).foregroundStyle(.white.opacity(0.9))
+                            Text(msg).font(.footnote).foregroundStyle(.primary)
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
 
                     Spacer(minLength: 20)
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 22)
             }
         }
         .onAppear { serverURL = config.serverURL }
@@ -180,7 +167,7 @@ struct LoginView: View {
     }
 }
 
-/// 带图标的输入框
+/// 带图标的输入框（白底圆角）
 struct FieldRow: View {
     let icon: String
     let placeholder: String
@@ -190,15 +177,14 @@ struct FieldRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
                 .frame(width: 22)
-            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(.white.opacity(0.35)))
-                .foregroundStyle(.white)
+            TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(.tertiary))
+                .foregroundStyle(.primary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -211,14 +197,13 @@ struct SecureFieldRow: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 15))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
                 .frame(width: 22)
-            SecureField("", text: $text, prompt: Text(placeholder).foregroundStyle(.white.opacity(0.35)))
-                .foregroundStyle(.white)
+            SecureField("", text: $text, prompt: Text(placeholder).foregroundStyle(.tertiary))
+                .foregroundStyle(.primary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
-        .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.08), lineWidth: 1))
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

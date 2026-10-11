@@ -7,15 +7,15 @@ struct AiTradeView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.045, green: 0.055, blue: 0.09).ignoresSafeArea()
+                Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         VStack(alignment: .leading, spacing: 3) {
                             Text("AI 交易")
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("自动分析 · 自动下单 · 风控护航")
-                                .font(.footnote).foregroundStyle(.white.opacity(0.45))
+                                .font(.footnote).foregroundStyle(.secondary)
                         }
                         .padding(.top, 6)
 
@@ -25,17 +25,17 @@ struct AiTradeView: View {
                                 VStack(alignment: .leading, spacing: 10) {
                                     HStack {
                                         Image(systemName: state.running ? "cpu.fill" : "cpu")
-                                            .foregroundStyle(state.running ? Color(red: 0.25, green: 0.85, blue: 0.5) : .gray)
+                                            .foregroundStyle(state.running ? Color.green : .gray)
                                         Text(state.running ? "自动交易运行中" : "自动交易未运行")
                                             .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(.white)
+                                            .foregroundStyle(.primary)
                                         Spacer()
                                         StatusBadge(text: "\(state.runningCount)/\(state.autoConfigCount) 运行",
                                                     color: state.running ? .green : .gray)
                                     }
                                     HStack(spacing: 10) {
                                         StatTile(title: "本地交易", value: state.localTradingEnabled ? "开启" : "关闭",
-                                                 color: state.localTradingEnabled ? Color(red: 0.25, green: 0.85, blue: 0.5) : .gray)
+                                                 color: state.localTradingEnabled ? Color.green : .gray)
                                         StatTile(title: "实盘开关", value: state.liveTradingEnabled ? "开启" : "关闭",
                                                  color: state.liveTradingEnabled ? .orange : .gray)
                                         StatTile(title: "杠杆上限", value: "\(state.maxLeverage)x")
@@ -55,7 +55,7 @@ struct AiTradeView: View {
                                 PrimaryButton(title: "执行一轮", icon: "play.circle.fill") {
                                     Task { await store.runAiOnce(0) }
                                 }
-                                PrimaryButton(title: "刷新状态", icon: "arrow.clockwise", color: Color.white.opacity(0.12)) {
+                                PrimaryButton(title: "刷新状态", icon: "arrow.clockwise", color: Color(uiColor: .systemGray5)) {
                                     Task { await store.loadAiAutoState() }
                                 }
                             }
@@ -67,15 +67,15 @@ struct AiTradeView: View {
                             // 配置列表
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
-                                    Text("AI 配置").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                    Text("AI 配置").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                     Spacer()
-                                    Text("\(state.configs.count) 个").font(.caption).foregroundStyle(.white.opacity(0.4))
+                                    Text("\(state.configs.count) 个").font(.caption).foregroundStyle(.secondary)
                                     NavigationLink {
                                         AiConfigEditView(existingId: nil)
                                     } label: {
                                         Image(systemName: "plus.circle.fill")
                                             .font(.system(size: 20))
-                                            .foregroundStyle(Color(red: 0.29, green: 0.56, blue: 1.0))
+                                            .foregroundStyle(Color.blue)
                                     }
                                 }
                                 if state.configs.isEmpty {
@@ -89,7 +89,7 @@ struct AiTradeView: View {
 
                             // 最近信号
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("最近信号").font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                                Text("最近信号").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                                 if state.recentSignals.isEmpty {
                                     EmptyHint(icon: "waveform.path.ecg", text: "暂无 AI 信号")
                                 } else {
@@ -116,10 +116,10 @@ struct AiTradeView: View {
         Card(padding: 13) {
             VStack(spacing: 9) {
                 HStack {
-                    Text(c.name).font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                    Text(c.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     StatusBadge(text: c.mode, color: c.mode == "auto" ? .purple : .gray)
                     if c.running == true {
-                        StatusBadge(text: "运行中", color: Color(red: 0.25, green: 0.85, blue: 0.5))
+                        StatusBadge(text: "运行中", color: Color.green)
                     }
                     Spacer()
                     if let last = c.lastSignal, !last.isEmpty {
@@ -137,7 +137,7 @@ struct AiTradeView: View {
                 }
                 HStack {
                     Text("运行 \(c.runCount ?? 0) · 交易 \(c.tradeCount ?? 0)")
-                        .font(.caption2).foregroundStyle(.white.opacity(0.4))
+                        .font(.caption2).foregroundStyle(.secondary)
                     Spacer()
                     if let err = c.errorMessage, !err.isEmpty {
                         Text(err).font(.caption2).foregroundStyle(.orange).lineLimit(1)
@@ -158,7 +158,7 @@ struct AiTradeView: View {
                             Task { await store.startAi(c.id) }
                         } label: {
                             Text("启动")
-                                .font(.caption.weight(.semibold)).foregroundStyle(Color(red: 0.25, green: 0.85, blue: 0.5))
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color.green)
                                 .frame(maxWidth: .infinity).padding(.vertical, 8)
                                 .background(Color.green.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
                         }
@@ -167,9 +167,9 @@ struct AiTradeView: View {
                         Task { await store.runAiOnce(c.id) }
                     } label: {
                         Text("执行一轮")
-                            .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                            .font(.caption.weight(.semibold)).foregroundStyle(.primary)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
-                            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 9))
+                            .background(Color(uiColor: .systemGray6), in: RoundedRectangle(cornerRadius: 9))
                     }
                     NavigationLink {
                         AiConfigEditView(existingId: c.id)
@@ -198,25 +198,25 @@ struct AiTradeView: View {
         Card(padding: 12) {
             VStack(spacing: 6) {
                 HStack {
-                    Text(s.symbol).font(.subheadline.monospaced()).foregroundStyle(.white)
+                    Text(s.symbol).font(.subheadline.monospaced()).foregroundStyle(.primary)
                     StatusBadge(text: s.signal, color: s.signal == "BUY" ? .green : (s.signal == "SELL" ? .red : .gray))
                     Spacer()
                     Text("置信 \(String(format: "%.0f%%", s.confidence.doubleValue * 100))")
-                        .font(.caption.monospaced()).foregroundStyle(.white.opacity(0.6))
+                        .font(.caption.monospaced()).foregroundStyle(.secondary)
                     if s.executed == 1 {
                         StatusBadge(text: "已执行", color: .blue)
                     }
                 }
                 if let reason = s.reason, !reason.isEmpty {
                     Text(reason)
-                        .font(.caption).foregroundStyle(.white.opacity(0.55))
+                        .font(.caption).foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3)
                 }
                 HStack {
-                    Text(Fmt.time(s.createdAt)).font(.caption2).foregroundStyle(.white.opacity(0.35))
+                    Text(Fmt.time(s.createdAt)).font(.caption2).foregroundStyle(.tertiary)
                     Spacer()
                     if let e = s.entry?.value, !e.isEmpty {
-                        Text("入场 \(Fmt.price(e))").font(.caption2.monospaced()).foregroundStyle(.white.opacity(0.5))
+                        Text("入场 \(Fmt.price(e))").font(.caption2.monospaced()).foregroundStyle(.secondary)
                     }
                 }
             }
