@@ -236,7 +236,7 @@ struct StrategyAnalyzeView: View {
                         }
                         HStack(spacing: 10) {
                             StatTile(title: "置信度", value: String(format: "%.0f%%", r.confidence * 100))
-                            StatTile(title: "当前价", value: Fmt.price(r.price?.value), mono: true)
+                            StatTile(title: "当前价", value: Fmt.price(r.price?.value))
                         }
                         if let reason = r.reason, !reason.isEmpty {
                             Text(reason).font(.caption).foregroundStyle(.white.opacity(0.7))
