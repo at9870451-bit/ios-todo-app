@@ -21,6 +21,10 @@ public final class Db {
                 "CREATE TABLE IF NOT EXISTS member_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,trade_no TEXT,level TEXT NOT NULL,months INTEGER DEFAULT 1,amount TEXT DEFAULT '0',status TEXT DEFAULT 'paid',created_at TEXT DEFAULT (datetime('now','localtime')))"
             };
             for (String q : ddl) s.executeUpdate(q);
+            // chat 模块表（v1.1.3 起纳入标准初始化）
+            s.executeUpdate("CREATE TABLE IF NOT EXISTS chat_sessions(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,title TEXT DEFAULT '新对话',updated_at TEXT DEFAULT (datetime('now','localtime')),created_at TEXT DEFAULT (datetime('now','localtime')))");
+            s.executeUpdate("CREATE TABLE IF NOT EXISTS chat_messages(id INTEGER PRIMARY KEY AUTOINCREMENT,session_id INTEGER NOT NULL,role TEXT NOT NULL,content TEXT NOT NULL,attachments TEXT,created_at TEXT DEFAULT (datetime('now','localtime')))");
+            try { s.executeUpdate("ALTER TABLE chat_messages ADD COLUMN attachments TEXT"); } catch (Exception ignoreDup) {}
         } catch (Exception e) { throw new RuntimeException(e); }
     }
     public static Connection cn() { try { return DriverManager.getConnection("jdbc:sqlite:data/qk.db"); } catch (Exception e) { throw new RuntimeException(e); } }

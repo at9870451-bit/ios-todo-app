@@ -13,6 +13,10 @@ final class BackendStore: ObservableObject {
     @Published var loginError: String = ""
     @Published var busy: Bool = false
 
+    // AI 对话
+    @Published var chatConfigured: Bool = false
+    @Published var chatModelName: String = ""
+
     // 仪表盘
     @Published var dashboard: DashboardSummary?
     // OKX
@@ -61,6 +65,7 @@ final class BackendStore: ObservableObject {
             let payload: SessionPayload = try await client.get("/api/ios/me", as: SessionPayload.self)
             config.applyAuth(user: payload.user, csrf: payload.csrfToken)
             await client.setCSRF(payload.csrfToken)
+            await loadChatModel()
         } catch {
             // 会话失效：清空登录态（网络错误除外，保留以便重试）
             if let apiErr = error as? APIError, apiErr.isUnauthorized {
@@ -712,16 +717,44 @@ final class BackendStore: ObservableObject {
 
 // MARK: - AI 对话助手（类 Minis）
 
+/// 附件：本地直传 AI（base64），后端不落库
+struct ChatAttachment: Identifiable, Equatable {
+    var id = UUID().uuidString
+    var name: String
+    var kind: String        // image / video / file
+    var mime: String
+    var data: Data
+
+    var icon: String {
+        switch kind {
+        case "image": return "photo.fill"
+        case "video": return "video.fill"
+        default: return "doc.fill"
+        }
+    }
+    var sizeLabel: String {
+        let kb = Double(data.count) / 1024.0
+        return kb > 1024 ? String(format: "%.1fMB", kb / 1024) : String(format: "%.0fKB", kb)
+    }
+}
+
 struct ChatReply: Decodable {
     let sessionId: Int64
     let reply: String
-    enum CodingKeys: String, CodingKey { case sessionId = "session_id", reply }
+    let degraded: Bool?
+    enum CodingKeys: String, CodingKey { case sessionId = "session_id", reply, degraded }
 }
 
 extension BackendStore {
-    func sendChat(sessionId: Int64, content: String) async throws -> ChatReply {
-        struct SendReq: Encodable { let session_id: Int64; let content: String }
-        return try await client.post("/api/chat/send", body: ["session_id": sessionId, "content": content], as: ChatReply.self)
+    func sendChat(sessionId: Int64, content: String, attachments: [ChatAttachment] = [], reasoning: String = "") async throws -> ChatReply {
+        var body: [String: Any] = ["session_id": sessionId, "content": content]
+        if !attachments.isEmpty {
+            body["attachments"] = attachments.map { a in
+                ["kind": a.kind, "name": a.name, "mime": a.mime, "dataBase64": a.data.base64EncodedString()]
+            }
+        }
+        if !reasoning.isEmpty { body["reasoning"] = reasoning }
+        return try await client.post("/api/chat/send", body: body, as: ChatReply.self)
     }
     func fetchConversations() async throws -> [ConversationListView.Conversation] {
         return try await client.get("/api/chat/sessions", as: [ConversationListView.Conversation].self)
@@ -737,7 +770,39 @@ extension BackendStore {
     func saveChatConfig(endpoint: String, key: String, model: String) async -> String {
         do {
             let _: EmptyData = try await client.post("/api/ai/config", body: ["name": "Chat", "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat"], as: EmptyData.self)
+            await MainActor.run {
+                chatModelName = model
+                chatConfigured = true
+            }
             return "配置已保存 ✓"
         } catch { return "保存失败: \(error.localizedDescription)" }
+    }
+
+    /// 拉取当前 chat 模型配置状态（顶部卡片显示用）
+    func loadChatModel() async {
+        do {
+            let rows = try await client.get("/api/ai/list", as: [[String: FlexString]].self)
+            var chosen: [String: FlexString]?
+            for r in rows {
+                let mode = r["mode"]?.value ?? ""
+                let enabled = r["enabled"]?.value ?? ""
+                if mode == "chat" && enabled == "1" { chosen = r; break }
+            }
+            if chosen == nil { chosen = rows.last }
+            guard let r = chosen else {
+                await MainActor.run { chatConfigured = false; chatModelName = "" }
+                return
+            }
+            let model = r["model"]?.value ?? ""
+            let name = r["name"]?.value ?? ""
+            let url = r["api_url"]?.value ?? ""
+            let hasKey = !(r["api_key"]?.value ?? "").isEmpty
+            await MainActor.run {
+                chatModelName = model.isEmpty ? (name.isEmpty ? "未命名配置" : name) : model
+                chatConfigured = !url.isEmpty && (hasKey || !model.isEmpty)
+            }
+        } catch {
+            // 拉取失败不阻塞 UI
+        }
     }
 }

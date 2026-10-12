@@ -24,12 +24,13 @@ targets:
       path: QuantOKX/Info.plist
       properties:
         CFBundleDisplayName: AI 助手
-        CFBundleShortVersionString: "2.1"
-        CFBundleVersion: "12"
+        CFBundleShortVersionString: "2.2"
+        CFBundleVersion: "13"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: 用于拍照并附带给 AI 助手识别
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:

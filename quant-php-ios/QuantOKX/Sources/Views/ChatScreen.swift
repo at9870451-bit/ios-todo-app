@@ -1,29 +1,42 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
+import UIKit
 
-/// 聊天主界面：消息气泡列表 + 输入栏 + 流式对话
+/// 聊天主界面：顶部对话摘要卡 + 气泡消息流 + 附件输入 + 推理强度
 struct ChatScreen: View {
     @EnvironmentObject var store: BackendStore
+    @EnvironmentObject var router: Router
     @State private var input = ""
     @State private var messages: [ChatMessage] = []
     @State private var sessionId: Int64 = 0
     @State private var sending = false
+    @State private var pendingAtts: [ChatAttachment] = []
+    @State private var loadingAtt = false
+    @State private var showPhotoPicker = false
+    @State private var showVideoPicker = false
+    @State private var showFilePicker = false
+    @State private var showCamera = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var videoItem: PhotosPickerItem?
+    @AppStorage("chat.reasoning") private var reasoning = "medium"
     @FocusState private var inputFocus: Bool
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // 蓝白渐变背景
                 LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
+                            headerCard
                             if messages.isEmpty {
                                 VStack(spacing: 12) {
                                     Image(systemName: "bubble.left.and.bubble.right")
                                         .font(.system(size: 44)).foregroundStyle(.tertiary)
                                     Text("开始新对话").font(.headline).foregroundStyle(.secondary)
-                                    Text("输入消息，AI 将为你解答").font(.subheadline).foregroundStyle(.tertiary)
-                                }.padding(.top, 100)
+                                    Text("发送消息、图片或文件，AI 为你解答").font(.subheadline).foregroundStyle(.tertiary)
+                                }.padding(.top, 60)
                             }
                             ForEach(messages) { m in
                                 MessageBubble(msg: m).id(m.id)
@@ -56,21 +69,173 @@ struct ChatScreen: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                InputBar(text: $input, sending: sending, onSend: send)
+                VStack(spacing: 0) {
+                    reasoningRow
+                    attachBar
+                    InputBar(text: $input, sending: sending, onSend: send)
+                }
+            }
+            .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 6, matching: .images)
+            .photosPicker(isPresented: $showVideoPicker, selection: $videoItem, matching: .videos)
+            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: false, onCompletion: handleFilePick)
+            .sheet(isPresented: $showCamera) {
+                CameraPicker { img in
+                    if let data = img.jpegData(compressionQuality: 0.65) {
+                        pendingAtts.append(ChatAttachment(name: "拍照_\(Self.stamp()).jpg", kind: "image", mime: "image/jpeg", data: data))
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .task { await store.loadChatModel() }
+            .onChange(of: photoItems) { _, items in processPhotos(items) }
+            .onChange(of: videoItem) { _, item in processVideo(item) }
+        }
+    }
+
+    // MARK: - 顶部卡片：第一条消息 + 模型配置
+
+    private var headerCard: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            if let first = messages.first(where: { $0.role == "user" }) {
+                HStack(alignment: .top, spacing: 7) {
+                    Image(systemName: "text.quote")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                    Text(first.content.isEmpty ? "[附件消息]" : first.content)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            } else {
+                HStack(spacing: 7) {
+                    Image(systemName: "sparkles")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    Text("新对话 · 发送第一条消息开始")
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            Divider()
+            modelRow
+        }
+        .padding(12)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 5, y: 2)
+    }
+
+    private var modelRow: some View {
+        Button {
+            if !store.chatConfigured { router.tab = 1 }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "cpu")
+                    .font(.caption)
+                    .foregroundStyle(store.chatConfigured ? Color.blue : Color.orange)
+                if store.chatConfigured {
+                    Text("模型：\(store.chatModelName)")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text("已配置")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.green)
+                } else {
+                    Text("AI 模型未添加")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(.orange)
+                    Spacer()
+                    Text("去添加 ›")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 推理强度 + 附件栏
+
+    private var reasoningRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "brain")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text("推理强度")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Picker("", selection: $reasoning) {
+                Text("关闭").tag("off")
+                Text("低").tag("low")
+                Text("中").tag("medium")
+                Text("高").tag("high")
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 228)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+    }
+
+    private var attachBar: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 20) {
+                Button { showPhotoPicker = true } label: {
+                    Image(systemName: "photo").font(.system(size: 17)).foregroundStyle(.blue)
+                }
+                Button { showVideoPicker = true } label: {
+                    Image(systemName: "video.fill").font(.system(size: 17)).foregroundStyle(.blue)
+                }
+                Button { showCamera = true } label: {
+                    Image(systemName: "camera.fill").font(.system(size: 17)).foregroundStyle(.blue)
+                }
+                Button { showFilePicker = true } label: {
+                    Image(systemName: "paperclip").font(.system(size: 17)).foregroundStyle(.blue)
+                }
+                if loadingAtt { ProgressView().controlSize(.small) }
+                Spacer()
+                if !pendingAtts.isEmpty {
+                    Text("已加 \(pendingAtts.count) 个附件")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+
+            if !pendingAtts.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(pendingAtts) { a in
+                            AttChip(att: a) {
+                                pendingAtts.removeAll { $0.id == a.id }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
             }
         }
     }
 
+    // MARK: - 发送
+
     private func send() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !sending else { return }
+        guard (!text.isEmpty || !pendingAtts.isEmpty), !sending else { return }
         input = ""; inputFocus = false
-        messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970), role: "user", content: text))
+        let atts = pendingAtts
+        pendingAtts = []
+        messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970), role: "user", content: text, attachments: atts))
         sending = true
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: text)
+                let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning)
                 if sessionId == 0 { sessionId = reply.sessionId }
+                if reply.degraded == true { store.toast = "当前模型不支持图片，已按附件说明回答" }
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))
             } catch {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
@@ -80,7 +245,119 @@ struct ChatScreen: View {
     }
 
     private func newChat() {
-        messages = []; sessionId = 0
+        messages = []; sessionId = 0; pendingAtts = []
+    }
+
+    // MARK: - 附件处理
+
+    private func processPhotos(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        loadingAtt = true
+        Task {
+            for (idx, item) in items.enumerated() {
+                if let raw = try? await item.loadTransferable(type: Data.self) {
+                    let data = Self.downscaleJPEG(raw) ?? raw
+                    pendingAtts.append(ChatAttachment(name: "照片\(Self.stamp())_\(idx + 1).jpg", kind: "image", mime: "image/jpeg", data: data))
+                }
+            }
+            photoItems = []
+            loadingAtt = false
+        }
+    }
+
+    private func processVideo(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        loadingAtt = true
+        Task {
+            do {
+                let data = try await item.loadTransferable(type: Data.self)
+                guard let data, !data.isEmpty else { throw APIError(message: "视频读取失败") }
+                guard data.count <= 20 * 1024 * 1024 else {
+                    store.toast = "视频过大（限 20MB）"
+                    videoItem = nil
+                    loadingAtt = false
+                    return
+                }
+                let ext = (item.supportedContentTypes.first?.preferredFilenameExtension ?? "mp4").lowercased()
+                pendingAtts.append(ChatAttachment(name: "视频\(Self.stamp()).\(ext)", kind: "video", mime: Self.mime(for: ext), data: data))
+            } catch {
+                store.toast = "视频读取失败：\(error.localizedDescription)"
+            }
+            videoItem = nil
+            loadingAtt = false
+        }
+    }
+
+    private func handleFilePick(_ result: Result<[URL], Error>) {
+        if case .success(let urls) = result, let url = urls.first {
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                guard data.count <= 15 * 1024 * 1024 else {
+                    store.toast = "文件过大（限 15MB）"
+                    return
+                }
+                let ext = url.pathExtension.lowercased()
+                let kind = ["jpg", "jpeg", "png", "gif", "webp", "heic"].contains(ext) ? "image" : (["mp4", "mov", "m4v"].contains(ext) ? "video" : "file")
+                pendingAtts.append(ChatAttachment(name: url.lastPathComponent, kind: kind, mime: Self.mime(for: ext), data: data))
+            } catch {
+                store.toast = "读取文件失败"
+            }
+        }
+    }
+
+    static func stamp() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "HHmmss"
+        return f.string(from: Date())
+    }
+
+    static func mime(for ext: String) -> String {
+        switch ext.lowercased() {
+        case "jpg", "jpeg": return "image/jpeg"
+        case "png": return "image/png"
+        case "gif": return "image/gif"
+        case "webp": return "image/webp"
+        case "heic": return "image/heic"
+        case "mp4": return "video/mp4"
+        case "mov", "m4v": return "video/quicktime"
+        case "pdf": return "application/pdf"
+        case "txt", "md": return "text/plain"
+        default: return "application/octet-stream"
+        }
+    }
+
+    /// 压缩图片到长边 1568px / 质量 0.65，控制 base64 体积
+    static func downscaleJPEG(_ data: Data, maxDim: CGFloat = 1568, quality: CGFloat = 0.65) -> Data? {
+        guard let img = UIImage(data: data) else { return nil }
+        let maxSide = max(img.size.width, img.size.height)
+        if maxSide <= maxDim && data.count < 2_000_000 { return data }
+        let scale = min(1, maxDim / maxSide)
+        let newSize = CGSize(width: img.size.width * scale, height: img.size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let out = renderer.image { _ in img.draw(in: CGRect(origin: .zero, size: newSize)) }
+        return out.jpegData(compressionQuality: quality)
+    }
+}
+
+/// 待发送附件圆片
+struct AttChip: View {
+    let att: ChatAttachment
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: att.icon).font(.caption2).foregroundStyle(.blue)
+            Text(att.name).font(.caption2).lineLimit(1).frame(maxWidth: 110, alignment: .leading)
+            Text(att.sizeLabel).font(.caption2).foregroundStyle(.tertiary)
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill").font(.caption2).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: Capsule())
     }
 }
 
@@ -88,6 +365,7 @@ struct ChatMessage: Identifiable {
     let id: Int64
     let role: String
     let content: String
+    var attachments: [ChatAttachment] = []
 }
 
 struct MessageBubble: View {
@@ -97,22 +375,64 @@ struct MessageBubble: View {
     var body: some View {
         HStack {
             if isUser { Spacer(minLength: 60) }
-            VStack(alignment: .leading, spacing: 0) {
-                Text(msg.content)
-                    .font(.subheadline)
-                    .foregroundStyle(isUser ? .white : .primary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        isUser
-                            ? LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color(uiColor: .secondarySystemGroupedBackground)],
-                                             startPoint: .top, endPoint: .bottom),
-                        in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    )
-                    .shadow(color: Color.black.opacity(isUser ? 0.1 : 0.04), radius: 4, y: 2)
+            VStack(alignment: .leading, spacing: 8) {
+                if !msg.attachments.isEmpty {
+                    attView
+                }
+                if !msg.content.isEmpty {
+                    Text(msg.content)
+                        .font(.subheadline)
+                        .foregroundStyle(isUser ? .white : .primary)
+                        .textSelection(.enabled)
+                }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                isUser
+                    ? LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    : LinearGradient(colors: [Color(uiColor: .secondarySystemGroupedBackground)],
+                                     startPoint: .top, endPoint: .bottom),
+                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            )
+            .shadow(color: Color.black.opacity(isUser ? 0.1 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }
+        }
+    }
+
+    @ViewBuilder
+    private var attView: some View {
+        let images = msg.attachments.filter { $0.kind == "image" }
+        let others = msg.attachments.filter { $0.kind != "image" }
+        if !images.isEmpty {
+            let cols = images.count > 1 ? [GridItem(.adaptive(minimum: 96), spacing: 6)] : [GridItem(.fixed(190))]
+            LazyVGrid(columns: cols, spacing: 6) {
+                ForEach(images) { a in
+                    if let img = UIImage(data: a.data) {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: 190, maxHeight: 190)
+                            .frame(minWidth: 96, minHeight: 96)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                }
+            }
+        }
+        if !others.isEmpty {
+            VStack(spacing: 5) {
+                ForEach(others) { a in
+                    HStack(spacing: 6) {
+                        Image(systemName: a.icon).font(.caption2)
+                        Text(a.name).font(.caption2).lineLimit(1)
+                        Text(a.sizeLabel).font(.caption2).opacity(0.6)
+                    }
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .background(Color.black.opacity(isUser ? 0.14 : 0.06), in: Capsule())
+                    .foregroundStyle(isUser ? .white : .primary)
+                }
+            }
         }
     }
 }
@@ -161,5 +481,36 @@ struct InputBar: View {
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
         .background(.regularMaterial)
+    }
+}
+
+/// 拍照组件（无摄像头设备自动回退相册）
+struct CameraPicker: UIViewControllerRepresentable {
+    let onPick: (UIImage) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let p = UIImagePickerController()
+        p.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
+        p.delegate = context.coordinator
+        return p
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraPicker
+        init(_ p: CameraPicker) { parent = p }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let img = info[.originalImage] as? UIImage { parent.onPick(img) }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
     }
 }
