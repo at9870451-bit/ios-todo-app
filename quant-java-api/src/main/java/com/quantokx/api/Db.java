@@ -33,7 +33,8 @@ public final class Db {
         } catch (Exception e) { throw new RuntimeException(e); } return o;
     }
     public static long ins(String q, Object... a) { try (Connection c = cn(); PreparedStatement p = c.prepareStatement(q, Statement.RETURN_GENERATED_KEYS)) { for (int i = 0; i < a.length; i++) p.setObject(i+1, a[i]); p.executeUpdate(); try (ResultSet r = p.getGeneratedKeys()) { if (r.next()) return r.getLong(1); } return 0; } catch (Exception e) { throw new RuntimeException(e); } }
-    public static int upd(String q, Object... a) { try (Connection c = cn(); PreparedStatement p = c.prepareStatement(q)) { for (int i = 0; i < a.length; i++) p.setObject(i+1, a[i]); return p.executeUpdate(); } catch (Exception e) { throw new RuntimeException(e); } }
+    public static long insert(String q, Object... a) { return ins(q, a); }
+  public static int upd(String q, Object... a) { try (Connection c = cn(); PreparedStatement p = c.prepareStatement(q)) { for (int i = 0; i < a.length; i++) p.setObject(i+1, a[i]); return p.executeUpdate(); } catch (Exception e) { throw new RuntimeException(e); } }
     public static Map<String, Object> one(String q, Object... a) { List<Map<String, Object>> r = rows(q, a); return r.isEmpty() ? null : r.get(0); }
     public static Object sc(String q, Object... a) { List<Map<String, Object>> r = rows(q, a); return r.isEmpty() ? null : r.get(0).values().iterator().next(); }
 }

@@ -131,4 +131,35 @@ public final class Ind {
     }
     public static double last(List<Double> v) { for (int i = v.size()-1; i >= 0; i--) if (v.get(i) != null) return v.get(i); return 0; }
     private Ind() {}
+
+    public static Map<String, Object> macd(double[] closes, int fast, int slow, int signal) {
+        var ef = ema(closes, fast); var es = ema(closes, slow);
+        double[] dif = new double[closes.length];
+        for (int i = 0; i < closes.length; i++) dif[i] = ef[i] - es[i];
+        var dea = ema(dif, signal);
+        double[] hist = new double[closes.length];
+        for (int i = 0; i < closes.length; i++) hist[i] = (dif[i] - dea[i]) * 2;
+        return Map.of("dif", dif[closes.length-1], "dea", dea[closes.length-1], "hist", hist[closes.length-1]);
+    }
+    public static Map<String, Object> boll(double[] closes, int period, double mult) {
+        var mid = sma(closes, period);
+        double sum = 0; int n = Math.min(period, closes.length);
+        double last = closes[closes.length-1];
+        for (int i = closes.length - n; i < closes.length; i++) { double d = closes[i] - mid; sum += d * d; }
+        double sd = Math.sqrt(sum / n);
+        return Map.of("upper", mid + mult * sd, "mid", mid, "lower", mid - mult * sd);
+    }
+    public static Map<String, Object> kdj(double[] high, double[] low, double[] close, int period) {
+        int n = close.length; double rsv = 50;
+        if (n > 0) { double hh = high[n-1], ll = low[n-1];
+            for (int i = Math.max(0, n - period); i < n; i++) { hh = Math.max(hh, high[i]); ll = Math.min(ll, low[i]); }
+            rsv = hh == ll ? 50 : (close[n-1] - ll) / (hh - ll) * 100;
+        }
+        return Map.of("k", rsv, "d", rsv * 0.66 + 33.33, "j", rsv * 1.5);
+    }
+    public static Map<String, Object> donchian(double[] high, double[] low, int period) {
+        int n = high.length; double hh = high[n-1], ll = low[n-1];
+        for (int i = Math.max(0, n - period); i < n; i++) { hh = Math.max(hh, high[i]); ll = Math.min(ll, low[i]); }
+        return Map.of("upper", hh, "lower", ll);
+    }
 }

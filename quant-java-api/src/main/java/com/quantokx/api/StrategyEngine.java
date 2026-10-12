@@ -256,4 +256,29 @@ public final class StrategyEngine {
     }
     private static String fmt(double v) { return String.format("%.2f", v); }
     private StrategyEngine() {}
+
+    public static String strategyName(String key) {
+        return META_NAMES.getOrDefault(key, key.toUpperCase());
+    }
+    public static String strategyDesc(String key) {
+        return META_DESC.getOrDefault(key, "");
+    }
+    public static List<Map<String, Object>> paramsFor(String key) {
+        return META_PARAMS.getOrDefault(key, new ArrayList<>());
+    }
+    static final Map<String, String> META_NAMES = Map.ofEntries(
+        Map.entry("ma","双均线交叉 MA"), Map.entry("ema","EMA 指数均线"), Map.entry("macd","MACD 动能"),
+        Map.entry("rsi","RSI 相对强弱"), Map.entry("boll","布林带 BOLL"), Map.entry("kdj","KDJ 随机指标"),
+        Map.entry("atr","ATR 平均真实波幅"), Map.entry("donchian","唐奇安通道"), Map.entry("supertrend","超级趋势"),
+        Map.entry("momentum","动量"), Map.entry("grid","网格交易"), Map.entry("dca","定投 DCA"),
+        Map.entry("volume","成交量"), Map.entry("macd_rsi","MACD+RSI"), Map.entry("signal","信号"),
+        Map.entry("martin","马丁格尔"), Map.entry("dip","抄底"), Map.entry("range_grid","区间网格"),
+        Map.entry("fvg","公平价值缺口 FVG"), Map.entry("ob","订单块 OB"), Map.entry("sweep","流动性扫单")
+    );
+    static final Map<String, String> META_DESC = Map.ofEntries(
+        Map.entry("ma","短期均线上穿长期均线做多"), Map.entry("fvg","公平价值缺口回填策略"),
+        Map.entry("martin","马丁格尔加仓策略"), Map.entry("sweep","流动性扫单策略")
+    );
+    static final Map<String, List<Map<String, Object>>> META_PARAMS = Map.of();
+
 }
