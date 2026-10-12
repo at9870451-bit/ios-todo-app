@@ -1,0 +1,45 @@
+name: Build QuantOKX Java API
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["quant-java-v*"]
+    branches: [main]
+    paths:
+      - "quant-java-api/**"
+      - ".github/workflows/quant-java-api.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 编译 Java API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+      - name: 编译
+        run: |
+          set -o pipefail
+          cd quant-java-api
+          mvn package -DskipTests 2>&1 | tail -30
+          ls -la target/*.jar
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: quant-java-api
+          path: quant-java-api/target/*.jar
+          retention-days: 30
+
+      - name: 发 Release
+        if: startsWith(github.ref, 'refs/tags/quant-java-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: quant-java-api/target/*.jar
+          draft: false
+          prerelease: false
