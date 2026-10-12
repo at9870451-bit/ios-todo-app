@@ -17,7 +17,7 @@ public class AiCtl {
     long uid = uid(q); long id = b.get("id") instanceof Number n ? n.longValue() : 0;
     String name = Svc.str(b.get("name")); if (name.isEmpty()) return Resp.map("code","INVALID_PARAM","message","请填写配置名称","data",null);
     if (id > 0) { Db.upd("UPDATE ai_configs SET name=?,api_url=?,model=?,api_key=?,api_style=? WHERE id=? AND user_id=?", name, Svc.str(b.get("api_url")), Svc.str(b.get("model")), Svc.str(b.get("api_key")), Svc.str(b.getOrDefault("api_style","chat_completions")), id, uid); return Resp.ok("AI 配置已保存", Resp.map("id", id)); }
-    long newId = Db.ins("INSERT INTO ai_configs(user_id,name,provider_type,api_url,model,api_key,api_style) VALUES(?,?,?,?,?,?)", uid, name, Svc.str(b.getOrDefault("provider_type","openai")), Svc.str(b.get("api_url")), Svc.str(b.get("model")), Svc.str(b.get("api_key")), Svc.str(b.getOrDefault("api_style","chat_completions")));
+    long newId = Db.ins("INSERT INTO ai_configs(user_id,name,provider_type,api_url,model,api_key,api_style) VALUES(?,?,?,?,?,?,?)", uid, name, Svc.str(b.getOrDefault("provider_type","openai")), Svc.str(b.get("api_url")), Svc.str(b.get("model")), Svc.str(b.get("api_key")), Svc.str(b.getOrDefault("api_style","chat_completions")));
     return Resp.ok("AI 配置已保存", Resp.map("id", newId));
   }
   @PostMapping("/ai/delete") public Object delete(@RequestBody Map<String, Object> b, HttpServletRequest q) {
