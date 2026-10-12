@@ -16,21 +16,13 @@ struct QuantOKXApp: App {
     }
 }
 
-/// 根路由：未登录 → 登录页；已登录 → 聊天主界面
+/// 根路由：底部三 Tab（对话 / 设置 / 我的），登录入口在「我的」
 struct RootView: View {
     @EnvironmentObject var store: BackendStore
-    @EnvironmentObject var config: AppConfig
 
     var body: some View {
-        Group {
-            if config.loggedIn {
-                ChatTabView()
-            } else {
-                LoginView()
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: config.loggedIn)
-        .overlay(alignment: .top) {
+        MainTabView()
+            .overlay(alignment: .top) {
             if !store.toast.isEmpty {
                 ToastView(text: store.toast)
                     .padding(.top, 8)
@@ -57,14 +49,44 @@ struct ToastView: View {
     }
 }
 
-/// 聊天主界面（唯一 Tab，去掉交易标签）
-struct ChatTabView: View {
+/// 底部导航：对话 / 设置 / 我的
+struct MainTabView: View {
+    @EnvironmentObject var config: AppConfig
+    @State private var tab: Int = 0
+
     var body: some View {
-        TabView {
-            ChatScreen()
-                .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
-            SettingsScreen()
-                .tabItem { Label("设置", systemImage: "gearshape.fill") }
+        TabView(selection: $tab) {
+            AuthGate(gotoProfile: { tab = 2 }) {
+                ChatScreen()
+            }
+            .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
+            .tag(0)
+
+            AuthGate(gotoProfile: { tab = 2 }) {
+                SettingsScreen()
+            }
+            .tabItem { Label("设置", systemImage: "gearshape.fill") }
+            .tag(1)
+
+            ProfileView(onLoggedIn: { tab = 0 })
+                .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
+                .tag(2)
+        }
+        .tint(.blue)
+    }
+}
+
+/// 登录门控：未登录显示引导占位，点击跳「我的」
+struct AuthGate<Content: View>: View {
+    @EnvironmentObject var config: AppConfig
+    let gotoProfile: () -> Void
+    @ViewBuilder let content: () -> Content
+
+    var body: some View {
+        if config.loggedIn {
+            content()
+        } else {
+            SignedOutHint(gotoProfile: gotoProfile)
         }
     }
 }
