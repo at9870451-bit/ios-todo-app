@@ -102,10 +102,12 @@ class Ledger extends BaseController
                 'volume' => round($volume, 4),
             ]];
 
+            /* daily 是「日期 => 盈亏」字典；空时 PHP 会序列化成 [] 导致 App 端字典解码失败 */
+            $daily = is_array($pnl['daily'] ?? null) ? $pnl['daily'] : [];
             return $this->ok([
                 'days' => $days,
                 'total_pnl' => $pnl['total'],
-                'daily' => $pnl['daily'],
+                'daily' => $daily === [] ? new \stdClass() : $daily,
                 'curve' => $pnl['curve'],
                 'assets' => $assets,
                 'by_exchange' => $byExchange,
