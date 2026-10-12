@@ -14,12 +14,6 @@ public class OkxCtl {
     return Resp.ok(Resp.map("spot", Resp.map("configured", false, "exchange", "okx", "market_type", "spot"), "swap", Resp.map("configured", false, "exchange", "okx", "market_type", "swap")));
   }
   @GetMapping("/okx/positions") public Object positions(@RequestParam String market_type, HttpServletRequest q) { return Resp.ok(new ArrayList<>()); }
-  @GetMapping("/positions/local") public Object positionsLocal(HttpServletRequest q) { return Resp.ok(Db.rows("SELECT * FROM positions WHERE user_id=? AND status='OPEN'", uid(q))); }
-  @PostMapping("/position/close") public Object closePos(@RequestBody Map<String, Object> b, HttpServletRequest q) {
-    long uid = uid(q); String sym = Svc.str(b.get("symbol"));
-    Db.upd("UPDATE positions SET status='CLOSED', unrealized_pnl='0' WHERE user_id=? AND symbol=? AND status='OPEN'", uid, sym);
-    return Resp.ok("持仓已平仓", Resp.map("symbol", sym, "pnl", 0));
-  }
   @GetMapping("/okx/tickers") public Object tickers(@RequestParam String market_type, HttpServletRequest q) { return Resp.ok(new ArrayList<>()); }
   @GetMapping("/okx/ticker") public Object ticker(@RequestParam String symbol, @RequestParam String market_type, HttpServletRequest q) {
     return Resp.ok(Resp.map("symbol", symbol, "lastPrice", "0", "highPrice", "0", "lowPrice", "0", "volume", "0", "priceChangePercent", "0"));
