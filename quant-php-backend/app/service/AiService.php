@@ -481,16 +481,26 @@ final class AiService
             $result['steps'][] = self::step('代理', true, '未启用（境内服务器访问 OpenAI/Claude/Gemini 通常必须启用代理）');
         }
 
-        /* 4) 域名解析 */
+        /* 4) 域名解析（双栈：A 记录解析失败时回退 AAAA——纯 IPv6 服务器场景） */
         try {
             $host = parse_url($config['api_url'], PHP_URL_HOST) ?: '';
             if ($host === '') throw new RuntimeException('接口地址格式无效');
             $ip = gethostbyname($host);
             if ($ip === $host) {
-                $result['steps'][] = self::step('DNS', false, '域名 ' . $host . ' 无法解析，请检查 DNS 或改用可直连的中转地址');
-                return $result;
+                $ip6 = '';
+                try {
+                    $recs = dns_get_record($host, DNS_AAAA);
+                    if (!empty($recs)) $ip6 = (string) ($recs[0]['ipv6'] ?? '');
+                } catch (Throwable $ignore) { /* DNS 查询失败按无记录处理 */ }
+                if ($ip6 !== '') {
+                    $result['steps'][] = self::step('DNS', true, $host . ' 无 A 记录，但存在 AAAA（IPv6）：' . $ip6 . ' —— 纯 IPv6 服务器将通过 AAAA 连接');
+                } else {
+                    $result['steps'][] = self::step('DNS', false, '域名 ' . $host . ' 无法解析（A/AAAA 均无记录），请检查 DNS 或改用可直连的中转地址');
+                    return $result;
+                }
+            } else {
+                $result['steps'][] = self::step('DNS', true, $host . ' → ' . $ip);
             }
-            $result['steps'][] = self::step('DNS', true, $host . ' → ' . $ip);
         } catch (Throwable $e) {
             $result['steps'][] = self::step('DNS', false, $e->getMessage());
             return $result;
