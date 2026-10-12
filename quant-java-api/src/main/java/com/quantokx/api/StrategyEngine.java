@@ -54,25 +54,25 @@ public final class StrategyEngine {
         if (P != null) for (var e : P.entrySet()) p.put(e.getKey(), Svc.num(e.getValue()));
         try {
             Decision d = switch (className) {
-                case "ma" -> evalMa(bars, (int)p.getOrDefault("short", 7.0), (int)p.getOrDefault("long", 25.0));
-                case "ema" -> evalEma(bars, (int)p.getOrDefault("short", 12.0), (int)p.getOrDefault("long", 26.0));
-                case "macd" -> evalMacd(bars, (int)p.getOrDefault("fast", 12.0), (int)p.getOrDefault("slow", 26.0), (int)p.getOrDefault("signal", 9.0));
-                case "rsi" -> evalRsi(bars, (int)p.getOrDefault("period", 14.0), p.getOrDefault("oversold", 30.0), p.getOrDefault("overbought", 70.0));
-                case "boll" -> evalBoll(bars, (int)p.getOrDefault("period", 20.0), p.getOrDefault("k", 2.0));
-                case "kdj" -> evalKdj(bars, (int)p.getOrDefault("period", 9.0));
-                case "atr" -> evalAtr(bars, (int)p.getOrDefault("period", 14.0), p.getOrDefault("mult", 2.0));
-                case "donchian" -> evalDonchian(bars, (int)p.getOrDefault("period", 20.0));
-                case "supertrend" -> evalSupertrend(bars, (int)p.getOrDefault("period", 10.0), p.getOrDefault("mult", 3.0));
-                case "momentum" -> evalMomentum(bars, (int)p.getOrDefault("period", 10.0));
+                case "ma" -> evalMa(bars, p.getOrDefault("short", 7.0).intValue(), p.getOrDefault("long", 25.0).intValue());
+                case "ema" -> evalEma(bars, p.getOrDefault("short", 12.0).intValue(), p.getOrDefault("long", 26.0).intValue());
+                case "macd" -> evalMacd(bars, p.getOrDefault("fast", 12.0).intValue(), p.getOrDefault("slow", 26.0).intValue(), p.getOrDefault("signal", 9.0).intValue());
+                case "rsi" -> evalRsi(bars, p.getOrDefault("period", 14.0).intValue(), p.getOrDefault("oversold", 30.0), p.getOrDefault("overbought", 70.0));
+                case "boll" -> evalBoll(bars, p.getOrDefault("period", 20.0).intValue(), p.getOrDefault("k", 2.0));
+                case "kdj" -> evalKdj(bars, p.getOrDefault("period", 9.0).intValue());
+                case "atr" -> evalAtr(bars, p.getOrDefault("period", 14.0).intValue(), p.getOrDefault("mult", 2.0));
+                case "donchian" -> evalDonchian(bars, p.getOrDefault("period", 20.0).intValue());
+                case "supertrend" -> evalSupertrend(bars, p.getOrDefault("period", 10.0).intValue(), p.getOrDefault("mult", 3.0));
+                case "momentum" -> evalMomentum(bars, p.getOrDefault("period", 10.0).intValue());
                 case "grid", "range_grid" -> evalRange(bars, p.getOrDefault("range_pct", 5.0), p.getOrDefault("upper_pct", 5.0), p.getOrDefault("lower_pct", 5.0));
                 case "dca" -> new Decision("BUY", 1.0, price, "定投买入", Map.of());
                 case "volume" -> evalVolume(bars, p.getOrDefault("vol_mult", 2.0));
-                case "macd_rsi" -> evalMacdRsi(bars, (int)p.getOrDefault("fast", 12.0), (int)p.getOrDefault("slow", 26.0), (int)p.getOrDefault("rsi_period", 14.0));
+                case "macd_rsi" -> evalMacdRsi(bars, p.getOrDefault("fast", 12.0).intValue(), p.getOrDefault("slow", 26.0).intValue(), p.getOrDefault("rsi_period", 14.0).intValue());
                 case "martin" -> evalRange(bars, 3.0, 3.0, 3.0);
                 case "dip" -> evalDip(bars, p.getOrDefault("dip_pct", 5.0));
                 case "fvg" -> evalFvg(bars, p.getOrDefault("min_gap", 0.3));
-                case "ob" -> evalOb(bars, (int)p.getOrDefault("confirm_bars", 3.0));
-                case "sweep" -> evalSweep(bars, (int)p.getOrDefault("lookback", 20.0));
+                case "ob" -> evalOb(bars, p.getOrDefault("confirm_bars", 3.0).intValue());
+                case "sweep" -> evalSweep(bars, p.getOrDefault("lookback", 20.0).intValue());
                 default -> new Decision("HOLD", 0.0, price, "未知策略 " + className, Map.of());
             };
             return new Decision(d.signal(), Math.max(0, Math.min(1, d.confidence())), price, d.reason(), d.indicators());
