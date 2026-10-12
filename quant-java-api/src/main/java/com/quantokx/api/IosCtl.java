@@ -2,6 +2,7 @@ package com.quantokx.api;
 
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.*;
 
 @RestController
@@ -9,7 +10,7 @@ import java.util.*;
 public class IosCtl {
 
     @GetMapping("/ping")
-    public Object ping(HttpServletRequest req, jakarta.servlet.http.HttpServletResponse resp) {
+    public Object ping(HttpServletRequest req, HttpServletResponse resp) {
         String token = QkApiApplication.cookie(req, Sess.COOKIE);
         String csrf = token != null ? Sess.csrfOf(token) : "";
         if (csrf.isEmpty()) {
@@ -56,7 +57,7 @@ public class IosCtl {
         return Resp.ok(null);
     }
 
-    static Map<String, Object> payload(long uid, String csrf, String message) {
+    static Object payload(long uid, String csrf, String message) {
         var u = Db.one("SELECT * FROM users WHERE id=?", uid);
         if (u == null) return Resp.map("code","USER_NOT_FOUND","message","用户不存在","data",null);
         String role = Svc.str(u.get("role"));
