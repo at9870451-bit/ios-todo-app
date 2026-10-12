@@ -10,7 +10,7 @@ public class MemberCtl {
 
     @GetMapping("/plans")
     public Map<String, Object> plans() {
-        return Resp.ok(Resp.map("plans", Member.plans(), "periods", List.of(
+        return Resp.ok(Resp.map("plans", Member.plans(), "periods", java.util.Arrays.asList(
             Resp.map("months", 1, "label", "1 个月", "discount", ""),
             Resp.map("months", 3, "label", "3 个月", "discount", "约 9 折"),
             Resp.map("months", 12, "label", "12 个月", "discount", "约 8.3 折")

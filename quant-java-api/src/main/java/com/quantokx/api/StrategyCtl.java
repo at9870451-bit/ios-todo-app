@@ -12,10 +12,10 @@ public class StrategyCtl {
   }
   @GetMapping("/strategy/meta") public Map<String, Object> meta() {
     var items = new LinkedHashMap<String, Object>();
-    for (String k : List.of("ma","ema","macd","rsi","boll","kdj","atr","donchian","supertrend","momentum","grid","dca","volume","macd_rsi","signal","martin","dip","range_grid","fvg","ob","sweep")) {
+    for (String k : java.util.Arrays.asList("ma","ema","macd","rsi","boll","kdj","atr","donchian","supertrend","momentum","grid","dca","volume","macd_rsi","signal","martin","dip","range_grid","fvg","ob","sweep")) {
       items.put(k, Resp.map("name", StrategyEngine.strategyName(k), "group", "趋势", "markets", List.of("spot","swap"), "desc", StrategyEngine.strategyDesc(k), "params", StrategyEngine.paramsFor(k)));
     }
-    return Resp.ok(Resp.map("strategies", items, "groups", Resp.map("趋势", "趋势", "震荡", "震荡"), "markets", Resp.map("spot","Spot 现货","swap","Swap 永续"), "direction_modes", Resp.map("long_only","只做多","short_only","只做空","long_short","多空双向"), "modes", Resp.map("paper","本地模拟","testnet","OKX 模拟盘","live","实盘"), "intervals", List.of("1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d")));
+    return Resp.ok(Resp.map("strategies", items, "groups", Resp.map("趋势", "趋势", "震荡", "震荡"), "markets", Resp.map("spot","Spot 现货","swap","Swap 永续"), "direction_modes", Resp.map("long_only","只做多","short_only","只做空","long_short","多空双向"), "modes", Resp.map("paper","本地模拟","testnet","OKX 模拟盘","live","实盘"), "intervals", java.util.Arrays.asList("1m","3m","5m","15m","30m","1h","2h","4h","6h","12h","1d")));
   }
   @PostMapping("/strategy/create") public Map<String, Object> create(@RequestBody Map<String, Object> b, HttpServletRequest q) {
     long uid = uid(q); String name = Svc.str(b.get("name"));
