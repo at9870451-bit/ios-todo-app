@@ -214,7 +214,7 @@ public final class StrategyEngine {
     private static Decision evalFvg(List<Ind.Bar> bars, double minGapPct) {
         int i = bars.size()-1;
         if (i<3) return hold(bars, "数据不足");
-        var a = bars.get(i-2), b = bars.get(i-1), c = bars.get(i);
+        Ind.Bar a = bars.get(i-2), b = bars.get(i-1), c = bars.get(i);
         double ref = a.high();
         double gapUp = a.high()-b.low(), gapDn = a.low()-b.high();
         if (gapUp>0 && gapUp/ref*100>=minGapPct) {
