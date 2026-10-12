@@ -502,7 +502,7 @@ struct AiConfigEditView: View {
             body["trade_mode"] = tradeMode
             body["leverage"] = Int(leverage) ?? 1
             body["auto_symbol"] = (autoSymbols.first ?? "BTC-USDT-SWAP").uppercased()
-            body["auto_symbols"] = autoSymbols.map { $0.uppercased() }.joined(separator: ","),
+            body["auto_symbols"] = autoSymbols.map { $0.uppercased() }.joined(separator: ",")
             body["auto_market_type"] = autoMarketType
             body["direction_mode"] = directionMode
             body["auto_interval"] = autoInterval
