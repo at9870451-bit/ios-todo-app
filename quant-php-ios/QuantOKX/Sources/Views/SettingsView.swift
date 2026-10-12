@@ -45,9 +45,4 @@ struct SettingsScreen: View {
             .navigationBarTitleDisplayMode(.large)
         }
     }
-}
-
-/// 设置 Tab 包装
-struct SettingsScreen: View {
-    var body: some View { SettingsView() }
-}
+}}
