@@ -271,7 +271,7 @@ struct ChatScreen: View {
         Task {
             do {
                 let data = try await item.loadTransferable(type: Data.self)
-                guard let data, !data.isEmpty else { throw APIError(message: "视频读取失败") }
+                guard let data, !data.isEmpty else { throw APIError(message: "视频读取失败", code: "ATTACHMENT", status: 0) }
                 guard data.count <= 20 * 1024 * 1024 else {
                     store.toast = "视频过大（限 20MB）"
                     videoItem = nil
