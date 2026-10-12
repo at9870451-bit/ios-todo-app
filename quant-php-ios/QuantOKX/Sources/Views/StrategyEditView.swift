@@ -14,6 +14,7 @@ struct StrategyEditView: View {
     @State private var marketType = "swap"
     @State private var directionMode = "long_only"
     @State private var symbol = "BTC-USDT-SWAP"
+    @State private var symbolList: [String] = ["BTC-USDT-SWAP"]
     @State private var interval = "15m"
     @State private var mode = "paper"
     @State private var positionPercent = "5"
@@ -80,9 +81,7 @@ struct StrategyEditView: View {
                             }
                             .pickerStyle(.segmented)
 
-                            FieldRow(icon: "bitcoinsign.circle", placeholder: "交易对（多个用逗号分隔）", text: $symbol)
-                                .textInputAutocapitalization(.characters)
-                                .autocorrectionDisabled()
+                            MultiSymbolEditor(title: "自动交易币种（多选，逐个分析执行）", symbols: $symbolList)
 
                             VStack(alignment: .leading, spacing: 5) {
                                 Text("K 线周期").font(.caption).foregroundStyle(.secondary)
@@ -226,6 +225,7 @@ struct StrategyEditView: View {
             leverage = "\(e.leverage)"
             minConfidence = String(format: "%.2f", e.minConfidence)
         }
+        symbolList = symbol.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).uppercased() }
         loaded = true
     }
 
@@ -241,7 +241,8 @@ struct StrategyEditView: View {
             "class_name": className,
             "market_type": marketType,
             "direction_mode": directionMode,
-            "symbol": symbol.uppercased(),
+            "symbol": (symbolList.first ?? "BTC-USDT-SWAP").uppercased(),
+            "symbols": symbolList.map { $0.uppercased() }.joined(separator: ","),
             "interval": interval,
             "mode": mode,
             "position_percent": positionPercent,
@@ -278,7 +279,7 @@ struct AiConfigEditView: View {
     @State private var enabled = true
     @State private var tradeMode = "demo"
     @State private var leverage = "1"
-    @State private var autoSymbol = "BTC-USDT-SWAP"
+    @State private var autoSymbols: [String] = ["BTC-USDT-SWAP"]
     @State private var autoMarketType = "swap"
     @State private var directionMode = "long_only"
     @State private var autoInterval = "15m"
@@ -364,7 +365,7 @@ struct AiConfigEditView: View {
                                 }
                                 .pickerStyle(.segmented)
 
-                                FieldRow(icon: "bitcoinsign.circle", placeholder: "交易对", text: $autoSymbol)
+                                MultiSymbolEditor(title: "自动交易币种（多选，逐个分析执行）", symbols: $autoSymbols)
                                     .textInputAutocapitalization(.characters).autocorrectionDisabled()
 
                                 Picker("方向", selection: $directionMode) {
@@ -468,7 +469,8 @@ struct AiConfigEditView: View {
         enabled = d.enabled
         tradeMode = d.tradeMode ?? "demo"
         leverage = "\(d.leverage ?? 1)"
-        autoSymbol = d.autoSymbol ?? "BTC-USDT-SWAP"
+        autoSymbols = ((d.autoSymbols ?? "").isEmpty ? (d.autoSymbol ?? "BTC-USDT-SWAP") : d.autoSymbols!)
+            .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces).uppercased() }
         autoMarketType = d.autoMarketType ?? "swap"
         directionMode = d.directionMode ?? "long_only"
         autoInterval = d.autoInterval ?? "15m"
@@ -499,7 +501,8 @@ struct AiConfigEditView: View {
         if mode == "auto" {
             body["trade_mode"] = tradeMode
             body["leverage"] = Int(leverage) ?? 1
-            body["auto_symbol"] = autoSymbol.uppercased()
+            body["auto_symbol"] = (autoSymbols.first ?? "BTC-USDT-SWAP").uppercased()
+            body["auto_symbols"] = autoSymbols.map { $0.uppercased() }.joined(separator: ","),
             body["auto_market_type"] = autoMarketType
             body["direction_mode"] = directionMode
             body["auto_interval"] = autoInterval
