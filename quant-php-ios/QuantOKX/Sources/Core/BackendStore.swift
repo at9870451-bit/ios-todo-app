@@ -724,8 +724,6 @@ extension BackendStore {
         return try await client.post("/api/chat/send", body: ["session_id": sessionId, "content": content], as: ChatReply.self)
     }
     func fetchConversations() async throws -> [ConversationListView.Conversation] {
-        struct Data: Decodable { let items: [ConversationListView.Conversation]? }
-        // 直接解析为数组
         return try await client.get("/api/chat/sessions", as: [ConversationListView.Conversation].self)
     }
     func fetchMessages(sessionId: Int64) async throws -> [ChatMessage] {
@@ -734,11 +732,11 @@ extension BackendStore {
         return rows.map { ChatMessage(id: $0.id, role: $0.role, content: $0.content) }
     }
     func deleteConversation(id: Int64) async throws {
-        let _: Object = try await client.post("/api/chat/session/delete", body: ["id": id], as: Object.self)
+        let _: EmptyData = try await client.post("/api/chat/session/delete", body: ["id": id], as: EmptyData.self)
     }
     func saveChatConfig(endpoint: String, key: String, model: String) async -> String {
         do {
-            let _: Object = try await client.post("/api/ai/config", body: ["name": "Chat", "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat"], as: Object.self)
+            let _: EmptyData = try await client.post("/api/ai/config", body: ["name": "Chat", "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat"], as: EmptyData.self)
             return "配置已保存 ✓"
         } catch { return "保存失败: \(error.localizedDescription)" }
     }

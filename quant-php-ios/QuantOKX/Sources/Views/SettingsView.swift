@@ -45,4 +45,4 @@ struct SettingsScreen: View {
             .navigationBarTitleDisplayMode(.large)
         }
     }
-}}
+}
