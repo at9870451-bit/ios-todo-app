@@ -23,6 +23,7 @@ public final class Sess {
     public static String newToken() { return hex(24); }
     public static String newCsrf() { return hex(24); }
     public static String create(long uid) { String t = newToken(); SESSIONS.put(t, new String[]{String.valueOf(uid), newCsrf()}); return t; }
+    public static String createWith(String token) { SESSIONS.put(token, new String[]{"0", newCsrf()}); return token; }
     public static String csrfOf(String t) { String[] s = SESSIONS.get(t); return s == null ? "" : s[1]; }
     public static Long userIdOf(String t) { String[] s = SESSIONS.get(t); return s == null ? null : Long.valueOf(s[0]); }
     public static void drop(String t) { SESSIONS.remove(t); }

@@ -14,7 +14,7 @@ public class IosCtl {
         String csrf = token != null ? Sess.csrfOf(token) : "";
         if (csrf.isEmpty()) {
             token = Sess.newToken();
-            Sess.create(token);
+            Sess.createWith(token);
             csrf = Sess.csrfOf(token);
             resp.addHeader("Set-Cookie", Sess.COOKIE + "=" + token + "; Path=/; HttpOnly; Max-Age=604800");
         }

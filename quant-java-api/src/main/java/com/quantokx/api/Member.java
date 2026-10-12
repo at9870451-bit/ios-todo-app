@@ -40,7 +40,7 @@ public final class Member {
                 "price_year", String.format("%.2f", pm * 12 * 0.8),
                 "strategy_limit", r(level) >= 3 ? 99 : r(level) >= 2 ? 20 : r(level) >= 1 ? 10 : 1,
                 "ai_config_limit", r(level) >= 3 ? 99 : r(level) >= 2 ? 10 : r(level) >= 1 ? 5 : 1,
-                "account_limit", r(level) >= 3 ? 10 : 2, "max_leverage", r(level) >= 3 ? 125 : r(level) >= 2 ? 50 : r >= 1 ? 20 : 3,
+                "account_limit", r(level) >= 3 ? 10 : 2, "max_leverage", r(level) >= 3 ? 125 : r(level) >= 2 ? 50 : r(level) >= 1 ? 20 : 3,
                 "backtest_daily", r(level) >= 3 ? -1 : r(level) >= 2 ? 50 : 3,
                 "ai_daily", r(level) >= 3 ? -1 : r(level) >= 2 ? 200 : 10,
                 "multi_symbol_limit", r(level) >= 3 ? 12 : r(level) >= 2 ? 8 : 1,

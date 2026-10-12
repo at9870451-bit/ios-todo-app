@@ -130,19 +130,23 @@ public final class Ind {
         return o;
     }
     public static double last(List<Double> v) { for (int i = v.size()-1; i >= 0; i--) if (v.get(i) != null) return v.get(i); return 0; }
+    static double num(Object o) { return num(o, 0); }
+    static double num(Object o, double d) { if (o == null) return d; if (o instanceof Number n) return n.doubleValue(); try { return Double.parseDouble(o.toString()); } catch (Exception e) { return d; } }
+    static double sma(double[] v, int p) { int n = Math.min(p, v.length); if (n <= 0) return 0; double s = 0; for (int i = v.length - n; i < v.length; i++) s += v[i]; return s / n; }
+    static double[] emaArr(double[] v, int p) { double k = 2.0 / (p + 1); double[] e = new double[v.length]; e[0] = v[0]; for (int i = 1; i < v.length; i++) e[i] = v[i] * k + e[i-1] * (1 - k); return e; }
     private Ind() {}
 
     public static Map<String, Object> macd(double[] closes, int fast, int slow, int signal) {
-        var ef = ema(closes, fast); var es = ema(closes, slow);
+        double[] ef = emaArr(closes, fast); double[] es = emaArr(closes, slow);
         double[] dif = new double[closes.length];
         for (int i = 0; i < closes.length; i++) dif[i] = ef[i] - es[i];
-        var dea = ema(dif, signal);
+        double[] dea = emaArr(dif, signal);
         double[] hist = new double[closes.length];
         for (int i = 0; i < closes.length; i++) hist[i] = (dif[i] - dea[i]) * 2;
         return Map.of("dif", dif[closes.length-1], "dea", dea[closes.length-1], "hist", hist[closes.length-1]);
     }
     public static Map<String, Object> boll(double[] closes, int period, double mult) {
-        var mid = sma(closes, period);
+        double mid = sma(closes, period);
         double sum = 0; int n = Math.min(period, closes.length);
         double last = closes[closes.length-1];
         for (int i = closes.length - n; i < closes.length; i++) { double d = closes[i] - mid; sum += d * d; }

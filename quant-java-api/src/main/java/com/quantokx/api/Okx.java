@@ -164,6 +164,7 @@ public final class Okx {
         public OkxErr(String code, String message) { super(message); this.code = code; }
     }
 
+    static double num(Object o) { return num(o, 0); }
     static String u(String s) {
         try { return java.net.URLEncoder.encode(s, "UTF-8"); } catch (Exception e) { return s; }
     }
