@@ -25,7 +25,7 @@ targets:
       properties:
         CFBundleDisplayName: OKX量化
         CFBundleShortVersionString: "1.5"
-        CFBundleVersion: "8"
+        CFBundleVersion: "9"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
