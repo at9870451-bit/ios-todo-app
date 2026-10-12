@@ -23,9 +23,9 @@ targets:
     info:
       path: QuantOKX/Info.plist
       properties:
-        CFBundleDisplayName: OKX量化
-        CFBundleShortVersionString: "1.5"
-        CFBundleVersion: "9"
+        CFBundleDisplayName: AI 助手
+        CFBundleShortVersionString: "2.0"
+        CFBundleVersion: "10"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

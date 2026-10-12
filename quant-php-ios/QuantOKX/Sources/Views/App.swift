@@ -16,7 +16,7 @@ struct QuantOKXApp: App {
     }
 }
 
-/// 根视图：未登录 → 登录页；已登录 → 主界面
+/// 根路由：未登录 → 登录页；已登录 → 聊天主界面
 struct RootView: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var config: AppConfig
@@ -24,7 +24,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if config.loggedIn {
-                MainTabView()
+                ChatTabView()
             } else {
                 LoginView()
             }
@@ -57,28 +57,14 @@ struct ToastView: View {
     }
 }
 
-/// 主界面：底部五标签（控制台 / OKX / AI交易 / 策略 / 更多）
-struct MainTabView: View {
-    @EnvironmentObject var store: BackendStore
-    @State private var tab: Int = 0
-
+/// 聊天主界面（唯一 Tab，去掉交易标签）
+struct ChatTabView: View {
     var body: some View {
-        TabView(selection: $tab) {
-            DashboardView()
-                .tabItem { Label("控制台", systemImage: "house.fill") }
-                .tag(0)
-            OkxHomeView()
-                .tabItem { Label("OKX", systemImage: "wallet.pass.fill") }
-                .tag(1)
-            AiTradeView()
-                .tabItem { Label("AI交易", systemImage: "cpu.fill") }
-                .tag(2)
-            StrategyHomeView()
-                .tabItem { Label("策略", systemImage: "chart.xyaxis.line") }
-                .tag(3)
-            MoreView()
-                .tabItem { Label("更多", systemImage: "ellipsis.circle.fill") }
-                .tag(4)
+        TabView {
+            ChatScreen()
+                .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
+            SettingsScreen()
+                .tabItem { Label("设置", systemImage: "gearshape.fill") }
         }
     }
 }

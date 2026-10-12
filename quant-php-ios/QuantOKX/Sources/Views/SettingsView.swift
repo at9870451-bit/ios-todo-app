@@ -1,76 +1,53 @@
 import SwiftUI
 
-/// 设置：服务器地址、账号信息、关于
-struct SettingsView: View {
+/// 设置页：AI 配置 + 服务器 + 退出
+struct SettingsScreen: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var config: AppConfig
-
-    @State private var serverURL: String = ""
-    @State private var testMsg: String = ""
+    @AppStorage("ai_endpoint") var aiEndpoint = "https://api.deepseek.com"
+    @AppStorage("ai_key") var aiKey = ""
+    @AppStorage("ai_model") var aiModel = "deepseek-flash"
+    @AppStorage("system_prompt") var systemPrompt = ""
+    @AppStorage("memory") var memory = ""
     @State private var testing = false
+    @State private var testResult = ""
 
     var body: some View {
-        PageScaffold(title: "设置", subtitle: "服务器与账号") {
-            // 服务器
-            Card {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("服务器").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                    FieldRow(icon: "server.rack", placeholder: "http://服务器地址", text: $serverURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                    HStack(spacing: 10) {
-                        PrimaryButton(title: testing ? "测试中…" : "测试连接", icon: "antenna.radiowaves.left.and.right", disabled: testing) {
-                            Task {
-                                testing = true
-                                defer { testing = false }
-                                let r = await store.testConnection(url: serverURL)
-                                testMsg = r.message
-                            }
-                        }
-                        PrimaryButton(title: "保存并重连", icon: "checkmark.circle.fill", color: Color.green) {
-                            Task {
-                                config.serverURL = serverURL.trimmingCharacters(in: .whitespaces)
-                                await store.bootstrap()
-                                store.toast = "服务器已更新"
-                            }
-                        }
+        NavigationStack {
+            Form {
+                Section("服务器") {
+                    HStack { Text("地址").foregroundStyle(.secondary); Spacer(); Text(config.serverURL).font(.caption.monospaced()).foregroundStyle(.secondary) }
+                }
+                Section("AI 模型配置") {
+                    TextField("API 地址", text: $aiEndpoint).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    TextField("API Key", text: $aiKey).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    TextField("模型", text: $aiModel).autocorrectionDisabled().textInputAutocapitalization(.never)
+                    Button {
+                        testing = true; testResult = ""
+                        Task { testResult = await store.saveChatConfig(endpoint: aiEndpoint, key: aiKey, model: aiModel); testing = false }
+                    } label: {
+                        if testing { ProgressView().controlSize(.small) } else { Text("测试连接").font(.subheadline) }
                     }
-                    if !testMsg.isEmpty {
-                        Text(testMsg).font(.caption).foregroundStyle(.secondary)
-                    }
+                    if !testResult.isEmpty { Text(testResult).font(.caption).foregroundStyle(testResult.contains("200") ? .green : .red) }
+                }
+                Section("人设 / 系统提示词") {
+                    TextEditor(text: $systemPrompt).frame(minHeight: 60).font(.subheadline)
+                }
+                Section("AI 记忆") {
+                    TextEditor(text: $memory).frame(minHeight: 40).font(.subheadline)
+                    Text("AI 会记住这段内容作为长期记忆").font(.caption2).foregroundStyle(.tertiary)
+                }
+                Section {
+                    Button("退出登录", role: .destructive) { config.loggedIn = false }
                 }
             }
-
-            // 账号
-            Card {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("账号").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                    InfoRow(label: "用户名", value: config.username)
-                    InfoRow(label: "昵称", value: config.nickname.isEmpty ? "--" : config.nickname)
-                    InfoRow(label: "角色", value: config.role == "admin" ? "管理员" : "普通用户")
-                    InfoRow(label: "会员等级", value: config.membershipLevel.uppercased())
-                    Divider().overlay(Color(uiColor: .systemGray6))
-                    PrimaryButton(title: "退出登录", icon: "rectangle.portrait.and.arrow.right", color: Color.red) {
-                        Task { await store.logout() }
-                    }
-                }
-            }
-
-            // 关于
-            Card {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("关于").font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
-                    InfoRow(label: "应用", value: "QuantOKX iOS")
-                    InfoRow(label: "版本", value: "1.0.0")
-                    InfoRow(label: "后端", value: "ThinkPHP 8.1 · PHP 8.2 · MySQL 5.7")
-                    Text("本应用为 OKX 量化交易控制台 iOS 客户端，与网页端共用同一后端服务与账号体系。交易有风险，请谨慎操作。")
-                        .font(.caption2).foregroundStyle(.secondary)
-                }
-            }
+            .navigationTitle("设置")
+            .navigationBarTitleDisplayMode(.large)
         }
-        .navigationTitle("设置")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear { serverURL = config.serverURL }
     }
+}
+
+/// 设置 Tab 包装
+struct SettingsScreen: View {
+    var body: some View { SettingsView() }
 }
