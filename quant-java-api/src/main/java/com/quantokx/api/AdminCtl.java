@@ -10,7 +10,7 @@ public class AdminCtl {
     return Resp.ok(Resp.map("user_total", 1, "user_today", 0, "order_total", 0, "order_paid", 0, "order_pending", 0, "income_total", "0.00", "income_today", "0.00"));
   }
   @GetMapping("/users") public Object users(HttpServletRequest q) {
-    return Resp.ok(Resp.map("items", Db.rows("SELECT id,username,role,level AS membership_level,status FROM users ORDER BY id"), "total", 1, "page", 1));
+    return Resp.ok(Resp.map("items", Db.rows("SELECT id,username,role,level AS membership_level FROM users ORDER BY id"), "total", 1, "page", 1));
   }
   @GetMapping("/orders") public Object orders(HttpServletRequest q) {
     return Resp.ok(Resp.map("items", new ArrayList<>(), "total", 0, "page", 1));

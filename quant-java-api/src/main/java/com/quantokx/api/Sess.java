@@ -42,9 +42,8 @@ public final class Sess {
     public static Login login(String username, String password) {
         if (username == null || username.isBlank() || password == null || password.isBlank())
             return new Login(false, "请输入用户名和密码", 0);
-        Map<String, Object> u = Db.one("SELECT id,pass_hash,status FROM users WHERE username=?", username);
+        Map<String, Object> u = Db.one("SELECT id,pass_hash FROM users WHERE username=?", username);
         if (u == null) return new Login(false, "用户名或密码错误", 0);
-        if (((Number) u.get("status")).intValue() != 1) return new Login(false, "账号已禁用", 0);
         if (!BC.verify(password, (String) u.get("pass_hash"))) return new Login(false, "用户名或密码错误", 0);
         return new Login(true, "登录成功", ((Number) u.get("id")).longValue());
     }
