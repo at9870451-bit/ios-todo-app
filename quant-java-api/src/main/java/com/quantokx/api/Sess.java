@@ -14,6 +14,12 @@ public final class Sess {
     public record Reg(boolean ok, String message, long userId) {}
     public record Login(boolean ok, String message, long userId) {}
 
+    static String hex(int n) {
+        byte[] b = new byte[n]; RND.nextBytes(b);
+        StringBuilder s = new StringBuilder();
+        for (byte x : b) s.append(String.format("%02x", x));
+        return s.toString();
+    }
     public static String newToken() { return hex(24); }
     public static String newCsrf() { return hex(24); }
     public static String create(long uid) { String t = newToken(); SESSIONS.put(t, new String[]{String.valueOf(uid), newCsrf()}); return t; }

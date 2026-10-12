@@ -9,7 +9,7 @@ import java.util.*;
 public class IosCtl {
 
     @GetMapping("/ping")
-    public Map<String, Object> ping(HttpServletRequest req, jakarta.servlet.http.HttpServletResponse resp) {
+    public Object ping(HttpServletRequest req, jakarta.servlet.http.HttpServletResponse resp) {
         String token = QkApiApplication.cookie(req, Sess.COOKIE);
         String csrf = token != null ? Sess.csrfOf(token) : "";
         if (csrf.isEmpty()) {
@@ -22,7 +22,7 @@ public class IosCtl {
     }
 
     @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, Object> body, HttpServletResponse resp) {
+    public Object login(@RequestBody Map<String, Object> body, HttpServletResponse resp) {
         String username = Svc.str(body.get("username"));
         String password = Svc.str(body.get("password"));
         var r = Sess.login(username, password);
@@ -33,7 +33,7 @@ public class IosCtl {
     }
 
     @PostMapping("/register")
-    public Map<String, Object> register(@RequestBody Map<String, Object> body, HttpServletResponse resp) {
+    public Object register(@RequestBody Map<String, Object> body, HttpServletResponse resp) {
         var r = Sess.register(Svc.str(body.get("username")), Svc.str(body.get("password")), Svc.str(body.get("email")));
         if (!r.ok()) { resp.setStatus(422); return Resp.map("code", "REGISTER_FAILED", "message", r.message(), "data", null); }
         String token = Sess.create(r.userId());
@@ -42,7 +42,7 @@ public class IosCtl {
     }
 
     @GetMapping("/me")
-    public Map<String, Object> me(HttpServletRequest req) {
+    public Object me(HttpServletRequest req) {
         Long uid = (Long) req.getAttribute("uid");
         String tk = (String) req.getAttribute("tk");
         if (uid == null) return Resp.map("code","UNAUTHORIZED","message","未登录","data",null);
@@ -50,7 +50,7 @@ public class IosCtl {
     }
 
     @PostMapping("/logout")
-    public Map<String, Object> logout(HttpServletRequest req) {
+    public Object logout(HttpServletRequest req) {
         String token = (String) req.getAttribute("tk");
         if (token != null) Sess.drop(token);
         return Resp.ok(null);

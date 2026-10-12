@@ -36,5 +36,6 @@ public final class Db {
     public static long insert(String q, Object... a) { return ins(q, a); }
   public static int upd(String q, Object... a) { try (Connection c = cn(); PreparedStatement p = c.prepareStatement(q)) { for (int i = 0; i < a.length; i++) p.setObject(i+1, a[i]); return p.executeUpdate(); } catch (Exception e) { throw new RuntimeException(e); } }
     public static Map<String, Object> one(String q, Object... a) { List<Map<String, Object>> r = rows(q, a); return r.isEmpty() ? null : r.get(0); }
-    public static Object sc(String q, Object... a) { List<Map<String, Object>> r = rows(q, a); return r.isEmpty() ? null : r.get(0).values().iterator().next(); }
+    public static Object scalar(String q, Object... a) { return sc(q, a); }
+  public static Object sc(String q, Object... a) { List<Map<String, Object>> r = rows(q, a); return r.isEmpty() ? null : r.get(0).values().iterator().next(); }
 }

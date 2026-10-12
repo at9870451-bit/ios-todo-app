@@ -9,7 +9,7 @@ public class MemberCtl {
     Long uid(HttpServletRequest q) { return (Long) q.getAttribute("uid"); }
 
     @GetMapping("/plans")
-    public Map<String, Object> plans() {
+    public Object plans() {
         return Resp.ok(Resp.map("plans", Member.plans(), "periods", java.util.Arrays.asList(
             Resp.map("months", 1, "label", "1 个月", "discount", ""),
             Resp.map("months", 3, "label", "3 个月", "discount", "约 9 折"),
@@ -18,7 +18,7 @@ public class MemberCtl {
     }
 
     @GetMapping("/status")
-    public Map<String, Object> status(HttpServletRequest q) {
+    public Object status(HttpServletRequest q) {
         long uid = uid(q);
         var u = Db.one("SELECT level FROM users WHERE id=?", uid);
         String level = u == null ? "free" : Svc.str(u.get("level"));
@@ -26,7 +26,7 @@ public class MemberCtl {
     }
 
     @GetMapping("/orders")
-    public Map<String, Object> orders(HttpServletRequest q) {
+    public Object orders(HttpServletRequest q) {
         long uid = uid(q);
         var rows = Db.rows("SELECT * FROM member_orders WHERE user_id=? ORDER BY id DESC LIMIT 50", uid);
         var items = new ArrayList<Map<String, Object>>();
@@ -35,7 +35,7 @@ public class MemberCtl {
     }
 
     @PostMapping("/pay")
-    public Map<String, Object> pay(@RequestBody Map<String, Object> body, HttpServletRequest q) {
+    public Object pay(@RequestBody Map<String, Object> body, HttpServletRequest q) {
         long uid = uid(q);
         String level = Svc.str(body.get("level"));
         int months = body.get("months") instanceof Number n ? n.intValue() : 1;
