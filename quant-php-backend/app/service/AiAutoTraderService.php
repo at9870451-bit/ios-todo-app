@@ -378,6 +378,26 @@ final class AiAutoTraderService
             ];
         }
 
+        /* 防重复开仓：同 symbol 同方向已有持仓时跳过（避免每轮信号重复加仓） */
+        if (($decision['action'] ?? '') === 'open') {
+            $posSideChk = strtoupper((string) ($decision['pos_side'] ?? ''));
+            $posQuery = \app\model\Position::where('user_id', $user->id)
+                ->where('symbol', $symbol)
+                ->where('status', 'OPEN');
+            if (in_array($posSideChk, ['LONG', 'SHORT'], true)) $posQuery->where('position_side', $posSideChk);
+            if ((int) $posQuery->count() > 0) {
+                return [
+                    'symbol' => $symbol, 'market_type' => $marketType,
+                    'signal' => $action, 'confidence' => $confidence, 'threshold' => $threshold,
+                    'direction_mode' => $directionMode,
+                    'direction_action' => $decision['action'] ?? 'open',
+                    'direction_note' => '已有同方向持仓，跳过重复开仓',
+                    'executed' => false, 'skipped' => true,
+                    'reason' => '已有同方向持仓',
+                ];
+            }
+        }
+
         if ($decision['action'] !== 'hold' && $decision['action'] !== 'skip' && ($decision['action'] === 'close' || $confidence >= $threshold)) {
             /* 合约先同步杠杆 */
             if ($marketType === 'swap' && $tradeMode !== 'local' && $account) {
@@ -391,6 +411,26 @@ final class AiAutoTraderService
             $engineMode = $tradeMode === 'local' ? 'paper' : 'testnet';
             if ($tradeMode === 'live') $engineMode = 'live';
 
+            /* 止损止盈强制兜底：AI 信号未给出时，按方向以市价近似计算
+               （多头：SL=-1.5% / TP=+3%；空头反向），确保每笔自动单都带 TP/SL */
+            $entryPx = (float) ($signal['entry'] ?? 0);
+            if ($entryPx <= 0) {
+                try {
+                    $tk = (new OkxService($account ?? null, $marketType))->ticker($symbol);
+                    $entryPx = (float) ($tk['lastPrice'] ?? 0);
+                } catch (Throwable $e) { $entryPx = 0; }
+            }
+            $slFinal = (string) ($signal['stop_loss'] ?? '');
+            $tpFinal = (string) ($signal['take_profit'] ?? '');
+            if ($entryPx > 0) {
+                $isBuy = strtolower((string) ($decision['side'] ?? 'buy')) === 'buy';
+                if ($slFinal === '' || (float) $slFinal <= 0) {
+                    $slFinal = (string) round($isBuy ? $entryPx * 0.985 : $entryPx * 1.015, 6);
+                }
+                if ($tpFinal === '' || (float) $tpFinal <= 0) {
+                    $tpFinal = (string) round($isBuy ? $entryPx * 1.03 : $entryPx * 0.97, 6);
+                }
+            }
             $order = TradingEngine::execute($user, [
                 'symbol' => $symbol,
                 'market_type' => $marketType,
@@ -401,8 +441,8 @@ final class AiAutoTraderService
                 'order_type' => 'MARKET',
                 'quantity' => (string) ($config->auto_quantity ?: '0.001'),
                 'price' => (string) ($signal['entry'] ?? ''),
-                'stop_loss' => (string) ($signal['stop_loss'] ?? ''),
-                'take_profit' => (string) ($signal['take_profit'] ?? ''),
+                'stop_loss' => $slFinal,
+                'take_profit' => $tpFinal,
                 'position_percent' => (float) ($config->auto_position_percent ?: 1),
                 'leverage' => $leverage,
                 'source' => 'AI',

@@ -164,7 +164,7 @@ final class BackendStore: ObservableObject {
 
     func loadTickers(market: String, keyword: String = "") async {
         do {
-            var q = ["market_type": market, "limit": "50"]
+            var q = ["market_type": market, "limit": "300"]
             if !keyword.isEmpty { q["keyword"] = keyword }
             tickers = try await client.get("/api/okx/tickers", query: q, as: [TickerRow].self)
         } catch { handle(error) }

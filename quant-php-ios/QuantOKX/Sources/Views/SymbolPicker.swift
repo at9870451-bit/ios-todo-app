@@ -69,13 +69,24 @@ struct MultiSymbolEditor: View {
             }
 
             if showAll {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
-                    ForEach(store.tickers.prefix(60), id: \.symbol) { t in
-                        chip(t.symbol, compact: true)
-                    }
-                }
                 if store.tickers.isEmpty {
                     LoadingHint()
+                } else {
+                    let majors = ["BTC", "ETH", "SOL", "XRP", "BNB", "DOGE", "LTC", "ADA", "AVAX", "LINK", "DOT", "TON"]
+                    let base: (String) -> String = { $0.replacingOccurrences(of: "-USDT-SWAP", with: "").replacingOccurrences(of: "-USDT", with: "") }
+                    let majorRows = store.tickers.filter { majors.contains(base($0.symbol)) }
+                    let restRows = store.tickers.filter { !majors.contains(base($0.symbol)) }
+
+                    if !majorRows.isEmpty {
+                        Text("主流币").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
+                            ForEach(majorRows, id: \.symbol) { t in chip(t.symbol, compact: true) }
+                        }
+                    }
+                    Text("全部币种（\(restRows.count) 个）").font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
+                        ForEach(restRows, id: \.symbol) { t in chip(t.symbol, compact: true) }
+                    }
                 }
             }
 
