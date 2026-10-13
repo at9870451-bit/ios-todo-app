@@ -21,12 +21,13 @@ struct ChatScreen: View {
     @State private var showHistory = false
     private let synthesizer = AVSpeechSynthesizer()
     @AppStorage("chat.reasoning") private var reasoning = "medium"
+    @AppStorage("persona.prompt") private var personaPrompt = ""
     @FocusState private var inputFocus: Bool
 
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                AppBackground()
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 12) {
@@ -347,7 +348,7 @@ struct ChatScreen: View {
         sending = true
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning)
+                let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning, systemPrompt: personaPrompt)
                 if sessionId == 0 { sessionId = reply.sessionId }
                 if reply.degraded == true { store.toast = "当前模型不支持图片，已按附件说明回答" }
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))

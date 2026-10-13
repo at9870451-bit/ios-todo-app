@@ -21,7 +21,7 @@ struct ConversationListView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            AppBackground()
             if loading {
                 VStack(spacing: 10) {
                     ProgressView()

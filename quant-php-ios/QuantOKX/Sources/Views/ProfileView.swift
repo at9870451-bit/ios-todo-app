@@ -19,7 +19,7 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+                AppBackground()
                 ScrollView {
                     VStack(spacing: 18) {
                         if config.loggedIn {
@@ -255,7 +255,7 @@ struct SignedOutHint: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            AppBackground()
             VStack(spacing: 14) {
                 Image(systemName: "person.crop.circle.badge.exclamationmark")
                     .font(.system(size: 46))

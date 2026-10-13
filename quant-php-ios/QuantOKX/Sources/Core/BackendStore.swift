@@ -746,7 +746,7 @@ struct ChatReply: Decodable {
 }
 
 extension BackendStore {
-    func sendChat(sessionId: Int64, content: String, attachments: [ChatAttachment] = [], reasoning: String = "") async throws -> ChatReply {
+    func sendChat(sessionId: Int64, content: String, attachments: [ChatAttachment] = [], reasoning: String = "", systemPrompt: String = "") async throws -> ChatReply {
         var body: [String: Any] = ["session_id": sessionId, "content": content]
         if !attachments.isEmpty {
             body["attachments"] = attachments.map { a in
@@ -754,6 +754,7 @@ extension BackendStore {
             }
         }
         if !reasoning.isEmpty { body["reasoning"] = reasoning }
+        if !systemPrompt.isEmpty { body["system_prompt"] = systemPrompt }
         return try await client.post("/api/chat/send", body: body, as: ChatReply.self)
     }
     func fetchConversations() async throws -> [ConversationListView.Conversation] {
@@ -770,9 +771,9 @@ extension BackendStore {
     func renameConversation(id: Int64, title: String) async throws {
         let _: EmptyData = try await client.post("/api/chat/session/rename", body: ["id": id, "title": title], as: EmptyData.self)
     }
-    func saveChatConfig(endpoint: String, key: String, model: String) async -> String {
+    func saveChatConfig(endpoint: String, key: String, model: String, apiStyle: String = "chat_completions", name: String = "Chat") async -> String {
         do {
-            let _: EmptyData = try await client.post("/api/ai/config", body: ["name": "Chat", "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat"], as: EmptyData.self)
+            let _: EmptyData = try await client.post("/api/ai/config", body: ["name": name, "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat", "api_style": apiStyle], as: EmptyData.self)
             await MainActor.run {
                 chatModelName = model
                 chatConfigured = true

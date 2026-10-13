@@ -11,6 +11,8 @@ struct QuantOKXApp: App {
                 .environmentObject(store)
                 .environmentObject(store.config)
                 .environmentObject(router)
+                .environmentObject(ProviderStore.shared)
+                .environmentObject(BackgroundStore.shared)
                 .preferredColorScheme(.light)
                 .tint(.orange)
                 .task { await store.bootstrap() }
