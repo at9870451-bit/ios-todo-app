@@ -7,7 +7,6 @@ struct ProfileView: View {
     var onLoggedIn: (() -> Void)? = nil
 
     @State private var mode: Int = 0          // 0 登录 / 1 注册
-    @State private var serverURL: String = ""
     @State private var username: String = ""
     @State private var password: String = ""
     @State private var confirm: String = ""
@@ -36,7 +35,6 @@ struct ProfileView: View {
             .navigationTitle("我的")
             .navigationBarTitleDisplayMode(.large)
         }
-        .onAppear { serverURL = config.serverURL }
         .onChange(of: config.loggedIn) { _, now in
             if now { onLoggedIn?() }
         }
@@ -77,13 +75,14 @@ struct ProfileView: View {
 
             VStack(spacing: 0) {
                 HStack {
-                    Label("服务器", systemImage: "server.rack").font(.subheadline)
+                    Label("服务状态", systemImage: "server.rack").font(.subheadline)
                     Spacer()
-                    Text(config.serverURL)
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    HStack(spacing: 5) {
+                        Circle().fill(Color.green).frame(width: 7, height: 7)
+                        Text("已连接")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .padding(14)
             }
@@ -136,11 +135,6 @@ struct ProfileView: View {
             .padding(.horizontal, 4)
 
             VStack(spacing: 12) {
-                FieldRow(icon: "server.rack", placeholder: "服务器地址，如 http://154.12.16.204:8080", text: $serverURL)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-
                 FieldRow(icon: "person.fill", placeholder: "用户名", text: $username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -165,7 +159,7 @@ struct ProfileView: View {
                 Button {
                     Task {
                         connOK = nil
-                        let r = await store.testConnection(url: serverURL)
+                        let r = await store.testConnection(url: config.serverURL)
                         connOK = r.ok
                         connMsg = r.message
                     }
@@ -228,10 +222,6 @@ struct ProfileView: View {
     private func submit() async {
         localError = ""
         store.loginError = ""
-        guard !serverURL.trimmingCharacters(in: .whitespaces).isEmpty else {
-            localError = "请填写服务器地址"
-            return
-        }
         guard !username.trimmingCharacters(in: .whitespaces).isEmpty else {
             localError = "请填写用户名"
             return
@@ -240,7 +230,6 @@ struct ProfileView: View {
             guard password.count >= 8 else { localError = "密码至少 8 位"; return }
             guard password == confirm else { localError = "两次输入的密码不一致"; return }
         }
-        config.serverURL = serverURL.trimmingCharacters(in: .whitespaces)
         if mode == 0 {
             await store.login(username: username.trimmingCharacters(in: .whitespaces), password: password)
         } else {
