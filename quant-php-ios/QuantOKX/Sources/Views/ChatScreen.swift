@@ -130,7 +130,7 @@ struct ChatScreen: View {
                 }
                 .ignoresSafeArea()
             }
-            .task { await store.loadChatModel() }
+            .task { await store.loadChatModel(); await resumeLastConversation() }
             .onChange(of: pickedItems) { _, items in processPicked(items) }
         }
     }
@@ -382,6 +382,20 @@ struct ChatScreen: View {
 
     private func newChat() {
         messages = []; sessionId = 0; pendingAtts = []
+    }
+
+    /// 启动时恢复上一次会话（除非上次就是全新会话）：打开 App 接着上次聊
+    private func resumeLastConversation() async {
+        guard messages.isEmpty, sessionId == 0 else { return }
+        do {
+            let list = try await store.fetchConversations()
+            guard let last = list.first(where: { $0.updatedAt != nil }) ?? list.first else { return }
+            await MainActor.run {
+                openSession(last.id)
+            }
+        } catch {
+            // 拉取失败保持全新会话
+        }
     }
 
     /// 从聊天 Tab 打开指定会话
