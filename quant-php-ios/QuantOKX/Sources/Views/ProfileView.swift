@@ -49,7 +49,7 @@ struct ProfileView: View {
             VStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(Theme.heroGradient)
                         .frame(width: 66, height: 66)
                     Text(String(config.username.prefix(1)).uppercased())
                         .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -73,7 +73,7 @@ struct ProfileView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 26)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .solidCard(18)
 
             VStack(spacing: 0) {
                 HStack {
@@ -87,7 +87,7 @@ struct ProfileView: View {
                 }
                 .padding(14)
             }
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .solidCard(14)
 
             Button {
                 Task { await store.logout() }
@@ -99,7 +99,7 @@ struct ProfileView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
-                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .solidCard(14)
                 .foregroundStyle(.red)
             }
             .disabled(store.busy)
@@ -113,7 +113,7 @@ struct ProfileView: View {
             VStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(Theme.heroGradient)
                         .frame(width: 58, height: 58)
                     Text("AI")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -159,7 +159,7 @@ struct ProfileView: View {
                 }
             }
             .padding(14)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassPanel(16)
 
             HStack(spacing: 10) {
                 Button {
@@ -195,7 +195,8 @@ struct ProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: Theme.accent.opacity(0.28), radius: 7, x: 0, y: 3)
                     .foregroundStyle(.white)
                 }
                 .disabled(store.busy)
@@ -269,7 +270,8 @@ struct SignedOutHint: View {
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .shadow(color: Theme.accent.opacity(0.28), radius: 7, x: 0, y: 3)
                         .foregroundStyle(.white)
                 }
                 .padding(.top, 6)

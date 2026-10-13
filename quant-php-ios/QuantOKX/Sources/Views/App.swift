@@ -13,8 +13,7 @@ struct QuantOKXApp: App {
                 .environmentObject(router)
                 .environmentObject(ProviderStore.shared)
                 .environmentObject(BackgroundStore.shared)
-                .preferredColorScheme(.light)
-                .tint(.orange)
+                .tint(Theme.accent)
                 .task { await store.bootstrap() }
         }
     }
@@ -53,8 +52,9 @@ struct ToastView: View {
             .foregroundStyle(.primary)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(.regularMaterial, in: Capsule())
-            .shadow(color: Color.black.opacity(0.08), radius: 8, y: 3)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.8))
+            .shadow(color: Color.black.opacity(0.10), radius: 12, y: 4)
     }
 }
 

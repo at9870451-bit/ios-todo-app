@@ -1,5 +1,5 @@
-# QuantOKX iOS 构建（对接 PHP 后端版）
-name: Build QuantOKX PHP iOS
+# Amore iOS 构建（对接 PHP 后端版）
+name: Build Amore iOS
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    name: 编译 QuantOKX ipa
+    name: 编译 Amore ipa
     runs-on: macos-26
     timeout-minutes: 30
 
@@ -40,8 +40,8 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild \
-            -project QuantOKX.xcodeproj \
-            -scheme QuantOKX \
+            -project Amore.xcodeproj \
+            -scheme Amore \
             -configuration Release \
             -sdk iphoneos \
             -derivedDataPath build \
@@ -54,28 +54,28 @@ jobs:
       - name: 打包 ipa
         working-directory: quant-php-ios
         run: |
-          APP_PATH="build/Build/Products/Release-iphoneos/QuantOKX.app"
+          APP_PATH="build/Build/Products/Release-iphoneos/Amore.app"
           if [ ! -d "$APP_PATH" ]; then
             echo "::error::找不到产物 $APP_PATH"
             exit 1
           fi
-          rm -rf Payload QuantOKX.ipa
+          rm -rf Payload Amore.ipa
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
-          rm -rf Payload/QuantOKX.app/_CodeSignature 2>/dev/null || true
-          zip -qry QuantOKX.ipa Payload
+          rm -rf Payload/Amore.app/_CodeSignature 2>/dev/null || true
+          zip -qry Amore.ipa Payload
           echo "=== 产物 ==="
-          ls -lh QuantOKX.ipa
+          ls -lh Amore.ipa
           echo "SHA256: $(shasum -a 256 QuantOKX.ipa | awk '{print $1}')"
-          echo "架构: $(lipo -archs Payload/QuantOKX.app/QuantOKX)"
+          echo "架构: $(lipo -archs Payload/Amore.app/Amore)"
           echo "最低系统: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/QuantOKX.app/Info.plist)"
           echo "SDK: $(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' Payload/QuantOKX.app/Info.plist)"
 
       - name: 上传产物
         uses: actions/upload-artifact@v4
         with:
-          name: QuantOKX-PHP-ipa
-          path: quant-php-ios/QuantOKX.ipa
+          name: Amore-ipa
+          path: quant-php-ios/Amore.ipa
           retention-days: 30
 
       - name: 发 Release
@@ -89,12 +89,12 @@ jobs:
           name: >-
             ${{ startsWith(github.ref, 'refs/tags/quant-php-v')
                 && github.ref_name
-                || format('QuantOKX PHP 构建 #{0}', github.run_number) }}
+                || format('Amore 构建 #{0}', github.run_number) }}
           body: |
             QuantOKX iOS 客户端（对接 ThinkPHP 后端版）。
             后端源码部署于 quant-v37-nav（PHP 8.2 + ThinkPHP 8.1 + MySQL）。
             提交：`${{ github.sha }}`
-          files: quant-php-ios/QuantOKX.ipa
+          files: quant-php-ios/Amore.ipa
           draft: false
           prerelease: false
 

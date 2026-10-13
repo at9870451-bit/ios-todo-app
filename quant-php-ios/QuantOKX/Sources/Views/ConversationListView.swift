@@ -70,11 +70,7 @@ struct ConversationListView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(LinearGradient(
-                            colors: isCurrent
-                                ? [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)]
-                                : [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(isCurrent ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(LinearGradient(colors: [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)], startPoint: .topLeading, endPoint: .bottomTrailing)))
                         .frame(width: 42, height: 42)
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 15))
@@ -106,9 +102,7 @@ struct ConversationListView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(12)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.black.opacity(0.045), radius: 9, x: 0, y: 2)
-            .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+            .solidCard(16)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -130,11 +124,14 @@ struct ConversationListView: View {
         VStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Theme.accent.opacity(0.10))
+                    .fill(Theme.heroGradient.opacity(0.12))
+                    .frame(width: 76, height: 76)
+                Circle()
+                    .strokeBorder(Theme.heroGradient.opacity(0.28), lineWidth: 1)
                     .frame(width: 76, height: 76)
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 28))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.heroGradient)
             }
             VStack(spacing: 5) {
                 Text("暂无历史会话").font(.headline).foregroundStyle(.secondary)

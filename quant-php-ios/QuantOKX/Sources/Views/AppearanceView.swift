@@ -41,9 +41,10 @@ final class BackgroundStore: ObservableObject {
     }
 }
 
-/// 全局背景：无图 = 蓝白渐变；有图 = 本地图片 + 可调遮罩
+/// 全局背景：无图 = 白底 + 极淡蓝橙极光（自适应深浅色）；有图 = 本地图片 + 可调遮罩
 struct AppBackground: View {
     @EnvironmentObject var bg: BackgroundStore
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
         if let img = bg.image {
@@ -57,11 +58,37 @@ struct AppBackground: View {
                     .ignoresSafeArea()
             }
         } else {
-            LinearGradient(
-                colors: [Color.white, Color(red: 0.90, green: 0.94, blue: 1.0)],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            ZStack {
+                (scheme == .dark
+                    ? Color(red: 0.066, green: 0.066, blue: 0.082)
+                    : Color.white)
+                    .ignoresSafeArea()
+                LinearGradient(
+                    colors: [.clear, scheme == .dark ? Color.white.opacity(0.045) : Theme.bgLight],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .ignoresSafeArea()
+                GeometryReader { geo in
+                    ZStack {
+                        Circle()
+                            .fill(Theme.heroBlue.opacity(scheme == .dark ? 0.12 : 0.07))
+                            .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.95)
+                            .blur(radius: 64)
+                            .offset(x: -geo.size.width * 0.38, y: -geo.size.height * 0.28)
+                        Circle()
+                            .fill(Theme.accent.opacity(scheme == .dark ? 0.09 : 0.06))
+                            .frame(width: geo.size.width * 0.85, height: geo.size.width * 0.85)
+                            .blur(radius: 72)
+                            .offset(x: geo.size.width * 0.42, y: geo.size.height * 0.38)
+                        Circle()
+                            .fill(Theme.heroSky.opacity(scheme == .dark ? 0.07 : 0.05))
+                            .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
+                            .blur(radius: 60)
+                            .offset(x: 0, y: -geo.size.height * 0.45)
+                    }
+                }
+                .ignoresSafeArea()
+            }
         }
     }
 }

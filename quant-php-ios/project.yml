@@ -1,4 +1,4 @@
-name: QuantOKX
+name: Amore
 options:
   bundleIdPrefix: com.quantokx
   deploymentTarget:
@@ -15,7 +15,7 @@ settings:
     CODE_SIGNING_ALLOWED: "NO"
 
 targets:
-  QuantOKX:
+  Amore:
     type: application
     platform: iOS
     sources:
@@ -24,8 +24,8 @@ targets:
       path: QuantOKX/Info.plist
       properties:
         CFBundleDisplayName: Amore
-        CFBundleShortVersionString: "3.1"
-        CFBundleVersion: "22"
+        CFBundleShortVersionString: "3.2"
+        CFBundleVersion: "23"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

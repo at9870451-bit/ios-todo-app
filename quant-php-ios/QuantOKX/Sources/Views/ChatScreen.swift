@@ -129,11 +129,14 @@ struct ChatScreen: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Theme.accent.opacity(0.10))
+                    .fill(Theme.heroGradient.opacity(0.12))
+                    .frame(width: 84, height: 84)
+                Circle()
+                    .strokeBorder(Theme.heroGradient.opacity(0.28), lineWidth: 1)
                     .frame(width: 84, height: 84)
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 32))
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(Theme.heroGradient)
             }
             .padding(.top, 36)
             VStack(spacing: 5) {
@@ -143,6 +146,7 @@ struct ChatScreen: View {
             VStack(spacing: 8) {
                 ForEach(suggestions, id: \.self) { s in
                     Button {
+                        Haptics.light()
                         input = s
                         inputFocus = true
                     } label: {
@@ -161,9 +165,10 @@ struct ChatScreen: View {
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 11)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.white.opacity(0.3), lineWidth: 0.8))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableButtonStyle())
                 }
             }
             .padding(.horizontal, 6)
@@ -200,9 +205,9 @@ struct ChatScreen: View {
             modelRow
         }
         .padding(12)
-        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.045), radius: 9, x: 0, y: 2)
-        .shadow(color: Color.black.opacity(0.04), radius: 5, y: 2)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8))
+        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
 
     private var modelRow: some View {
@@ -300,19 +305,25 @@ struct ChatScreen: View {
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: 32, height: 32)
-                    .background(
-                        (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending
-                            ? Color(uiColor: .systemGray3)
-                            : Theme.accent,
-                        in: Circle()
-                    )
+                    .background {
+                        if (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending {
+                            Circle().fill(Color(uiColor: .systemGray3))
+                        } else {
+                            Circle()
+                                .fill(Theme.heroGradient)
+                                .overlay(Circle().fill(LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .center)))
+                                .shadow(color: Theme.accent.opacity(0.35), radius: 6, x: 0, y: 3)
+                        }
+                    }
             }
             .disabled((input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending)
         }
         .padding(.leading, 12)
         .padding(.trailing, 8)
         .padding(.vertical, 7)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
+        .shadow(color: Color.black.opacity(0.07), radius: 12, x: 0, y: 5)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
     }
@@ -345,6 +356,7 @@ struct ChatScreen: View {
     private func send() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (!text.isEmpty || !pendingAtts.isEmpty), !sending else { return }
+        Haptics.light()
         input = ""; inputFocus = false
         let atts = pendingAtts
         pendingAtts = []
@@ -570,15 +582,14 @@ struct MessageBubble: View {
             .padding(.vertical, 10)
             .background(
                 isUser
-                    ? LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    : LinearGradient(colors: [Color.white],
-                                     startPoint: .top, endPoint: .bottom),
+                    ? Theme.heroGradient
+                    : AnyShapeStyle(Theme.card),
                 in: isUser
                     ? UnevenRoundedRectangle(topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 5, style: .continuous)
                     : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 18, style: .continuous)
             )
             .shadow(color: Color.black.opacity(isUser ? 0.0 : 0.05), radius: 7, x: 0, y: 2)
-            .shadow(color: Color.black.opacity(isUser ? 0.1 : 0.04), radius: 4, y: 2)
+            .shadow(color: Color.black.opacity(isUser ? 0.12 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }
         }
     }

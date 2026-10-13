@@ -66,7 +66,7 @@ struct ProviderListView: View {
                 if idx < items.count - 1 { Divider().padding(.leading, 52) }
             }
         }
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassPanel(18)
     }
 
     private func row(_ p: ProviderStore.Provider) -> some View {
@@ -180,7 +180,7 @@ struct ProviderTypePicker: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .glassPanel(16)
 
                     Text("官方模型")
                         .font(.subheadline.weight(.semibold))
@@ -245,7 +245,7 @@ struct ProviderTypePicker: View {
                 if idx < opts.count - 1 { Divider().padding(.leading, 64) }
             }
         }
-        .background(Theme.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .glassPanel(18)
     }
 }
 

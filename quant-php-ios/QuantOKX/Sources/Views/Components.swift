@@ -8,13 +8,13 @@ struct PageScaffold<Content: View>: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)], startPoint: .top, endPoint: .bottom).ignoresSafeArea()
+            ZStack { Color(uiColor: .systemGroupedBackground).ignoresSafeArea(); LinearGradient(colors: [Color.white.opacity(0.65), .clear], startPoint: .top, endPoint: .bottom).ignoresSafeArea() }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(title)
                             .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Theme.accent)
                         if let subtitle {
                             Text(subtitle).font(.footnote).foregroundStyle(.secondary)
                         }
@@ -117,7 +117,8 @@ struct PrimaryButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(disabled ? color.opacity(0.3) : color, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(disabled ? AnyShapeStyle(color.opacity(0.3)) : AnyShapeStyle(Theme.heroGradient), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .shadow(color: disabled ? .clear : Theme.accent.opacity(0.28), radius: 7, x: 0, y: 3)
             .foregroundStyle(.white)
         }
         .disabled(disabled)
