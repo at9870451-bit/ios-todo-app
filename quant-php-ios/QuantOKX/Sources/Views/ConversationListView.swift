@@ -72,7 +72,7 @@ struct ConversationListView: View {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .fill(LinearGradient(
                             colors: isCurrent
-                                ? [Color.blue, Color(red: 0.2, green: 0.45, blue: 1.0)]
+                                ? [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)]
                                 : [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)],
                             startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 42, height: 42)
@@ -89,10 +89,10 @@ struct ConversationListView: View {
                         if isCurrent {
                             Text("当前")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Theme.accent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.12), in: Capsule())
+                                .background(Theme.accent.opacity(0.12), in: Capsule())
                         }
                     }
                     Text((c.lastMsg?.isEmpty == false) ? c.lastMsg! : "暂无消息")
@@ -106,7 +106,8 @@ struct ConversationListView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(12)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.045), radius: 9, x: 0, y: 2)
             .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
         }
         .buttonStyle(.plain)
@@ -129,11 +130,11 @@ struct ConversationListView: View {
         VStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.10))
+                    .fill(Theme.accent.opacity(0.10))
                     .frame(width: 76, height: 76)
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 28))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Theme.accent)
             }
             VStack(spacing: 5) {
                 Text("暂无历史会话").font(.headline).foregroundStyle(.secondary)

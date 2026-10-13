@@ -49,7 +49,7 @@ struct ProfileView: View {
             VStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 66, height: 66)
                     Text(String(config.username.prefix(1)).uppercased())
                         .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -113,7 +113,7 @@ struct ProfileView: View {
             VStack(spacing: 8) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .fill(LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 58, height: 58)
                     Text("AI")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -179,7 +179,7 @@ struct ProfileView: View {
                         Text("测试连接")
                     }
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Theme.accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -195,7 +195,7 @@ struct ProfileView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Color.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .foregroundStyle(.white)
                 }
                 .disabled(store.busy)
@@ -269,7 +269,7 @@ struct SignedOutHint: View {
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 24)
                         .padding(.vertical, 12)
-                        .background(Color.blue, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .foregroundStyle(.white)
                 }
                 .padding(.top, 6)

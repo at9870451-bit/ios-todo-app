@@ -81,10 +81,10 @@ struct ProviderListView: View {
                         if ps.activeId == p.id {
                             Text("使用中")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Theme.accent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Color.blue.opacity(0.12), in: Capsule())
+                                .background(Theme.accent.opacity(0.12), in: Capsule())
                         }
                     }
                     Text("API Key · \(p.maskedKey)")
@@ -132,7 +132,7 @@ struct ProviderTypePicker: View {
 
     private let official: [Option] = [
         Option(id: "openai", name: "OpenAI", sub: "GPT · o 系列与官方端点", icon: "brain.filled.head.profile", color: .green, label: "OpenAI"),
-        Option(id: "deepseek", name: "DeepSeek", sub: "深度求索官方 API", icon: "whale", color: .blue, label: "DeepSeek"),
+        Option(id: "deepseek", name: "DeepSeek", sub: "深度求索官方 API", icon: "whale", color: Theme.accent, label: "DeepSeek"),
         Option(id: "moonshot", name: "Moonshot Kimi", sub: "Kimi 系列模型", icon: "moon.stars.fill", color: .indigo, label: "Kimi"),
         Option(id: "grok", name: "xAI (Grok)", sub: "支持 Grok 系列模型", icon: "x.squareroot", color: .black, label: "Grok"),
         Option(id: "openrouter", name: "OpenRouter", sub: "聚合 GPT、Claude、Gemini 等主流模型", icon: "arrow.triangle.branch", color: .cyan, label: "OpenRouter"),
@@ -307,7 +307,7 @@ struct ProviderEditView: View {
                                                     Spacer()
                                                     if provider.model == m {
                                                         Image(systemName: "checkmark.circle.fill")
-                                                            .foregroundStyle(.blue)
+                                                            .foregroundStyle(Theme.accent)
                                                     }
                                                 }
                                                 .padding(.horizontal, 14)

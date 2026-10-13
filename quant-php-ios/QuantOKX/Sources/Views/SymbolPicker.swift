@@ -21,7 +21,7 @@ struct MultiSymbolEditor: View {
             }
             ForEach(symbols, id: \.self) { s in
                 HStack {
-                    Image(systemName: "link.circle.fill").foregroundStyle(.blue.opacity(0.7))
+                    Image(systemName: "link.circle.fill").foregroundStyle(Theme.accent.opacity(0.7))
                     Text(s).font(.footnote.monospaced()).foregroundStyle(.primary)
                     Spacer()
                     Button {
@@ -44,7 +44,7 @@ struct MultiSymbolEditor: View {
                 Button {
                     add(newSymbol)
                 } label: {
-                    Image(systemName: "plus.circle.fill").font(.system(size: 22)).foregroundStyle(.blue)
+                    Image(systemName: "plus.circle.fill").font(.system(size: 22)).foregroundStyle(Theme.accent)
                 }
                 .disabled(newSymbol.trimmingCharacters(in: .whitespaces).isEmpty)
             }
@@ -65,7 +65,7 @@ struct MultiSymbolEditor: View {
                 }
             } label: {
                 Label(showAll ? "收起行情列表" : "从行情列表选择更多", systemImage: showAll ? "chevron.up" : "chevron.down")
-                    .font(.caption2).foregroundStyle(.blue)
+                    .font(.caption2).foregroundStyle(Theme.accent)
             }
 
             if showAll {
@@ -118,7 +118,7 @@ struct MultiSymbolEditor: View {
                 .padding(.horizontal, compact ? 8 : 10)
                 .padding(.vertical, 5)
                 .frame(maxWidth: compact ? .infinity : nil)
-                .background(selected ? Color.blue : Color(uiColor: .systemGray5), in: Capsule())
+                .background(selected ? Theme.accent : Color(uiColor: .systemGray5), in: Capsule())
                 .foregroundStyle(selected ? .white : .primary)
         }
         .buttonStyle(.plain)

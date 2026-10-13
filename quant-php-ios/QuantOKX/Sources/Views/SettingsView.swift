@@ -18,7 +18,7 @@ struct SettingsScreen: View {
                             ProviderListView()
                         } label: {
                             HStack(spacing: 12) {
-                                settingIcon("cpu", .blue)
+                                settingIcon("cpu", Theme.accent)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("AI 模型配置").font(.subheadline.weight(.medium))
                                     Text(subtitleForProviders)

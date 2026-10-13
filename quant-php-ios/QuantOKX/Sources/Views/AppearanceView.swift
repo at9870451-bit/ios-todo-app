@@ -58,7 +58,7 @@ struct AppBackground: View {
             }
         } else {
             LinearGradient(
-                colors: [Color(red: 0.90, green: 0.95, blue: 1.0), Color(uiColor: .systemGroupedBackground)],
+                colors: [Color.white, Color(red: 0.90, green: 0.94, blue: 1.0)],
                 startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea()
@@ -89,7 +89,7 @@ struct AppearanceView: View {
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                                 HStack {
-                                    Capsule().fill(Color.blue.opacity(0.85)).frame(width: 90, height: 22)
+                                    Capsule().fill(Theme.accent.opacity(0.85)).frame(width: 90, height: 22)
                                     Capsule().fill(Theme.card).frame(width: 120, height: 22)
                                 }
                             }
@@ -107,7 +107,7 @@ struct AppearanceView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Color.blue, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                     .foregroundStyle(.white)
                 }
 
@@ -214,7 +214,7 @@ struct PersonaView: View {
                                     }
                                     Spacer()
                                     if prompt == text {
-                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.blue)
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.accent)
                                     } else {
                                         Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
                                     }

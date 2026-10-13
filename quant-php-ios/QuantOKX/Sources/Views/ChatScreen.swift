@@ -126,11 +126,11 @@ struct ChatScreen: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.10))
+                    .fill(Theme.accent.opacity(0.10))
                     .frame(width: 84, height: 84)
                 Image(systemName: "bubble.left.and.bubble.right")
                     .font(.system(size: 32))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(Theme.accent)
             }
             .padding(.top, 36)
             VStack(spacing: 5) {
@@ -146,7 +146,7 @@ struct ChatScreen: View {
                         HStack(spacing: 8) {
                             Image(systemName: "wand.and.stars")
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Theme.accent)
                             Text(s)
                                 .font(.subheadline)
                                 .foregroundStyle(.primary)
@@ -197,7 +197,8 @@ struct ChatScreen: View {
             modelRow
         }
         .padding(12)
-        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.white, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.045), radius: 9, x: 0, y: 2)
         .shadow(color: Color.black.opacity(0.04), radius: 5, y: 2)
     }
 
@@ -208,7 +209,7 @@ struct ChatScreen: View {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
                     .font(.caption)
-                    .foregroundStyle(store.chatConfigured ? Color.blue : Color.orange)
+                    .foregroundStyle(store.chatConfigured ? Theme.accent : Color.red)
                 if store.chatConfigured {
                     Text("模型：\(store.chatModelName)")
                         .font(.footnote.weight(.medium))
@@ -225,7 +226,7 @@ struct ChatScreen: View {
                     Spacer()
                     Text("去添加 ›")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(Theme.accent)
                 }
             }
         }
@@ -253,7 +254,7 @@ struct ChatScreen: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 9)
                 .padding(.vertical, 4)
-                .background(Color.blue.opacity(0.08), in: Capsule())
+                .background(Theme.accent.opacity(0.10), in: Capsule())
             }
             if loadingAtt {
                 ProgressView().controlSize(.mini)
@@ -299,7 +300,7 @@ struct ChatScreen: View {
                     .background(
                         (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending
                             ? Color(uiColor: .systemGray3)
-                            : Color.blue,
+                            : Theme.accent,
                         in: Circle()
                     )
             }
@@ -490,7 +491,7 @@ struct AttChip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: att.icon).font(.caption2).foregroundStyle(.blue)
+            Image(systemName: att.icon).font(.caption2).foregroundStyle(Theme.accent)
             Text(att.name).font(.caption2).lineLimit(1).frame(maxWidth: 110, alignment: .leading)
             Text(att.sizeLabel).font(.caption2).foregroundStyle(.tertiary)
             Button(action: onRemove) {
@@ -532,13 +533,14 @@ struct MessageBubble: View {
             .padding(.vertical, 10)
             .background(
                 isUser
-                    ? LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    : LinearGradient(colors: [Color(uiColor: .secondarySystemGroupedBackground)],
+                    ? LinearGradient(colors: [Color(red: 1.0, green: 0.49, blue: 0.10), Color(red: 1.0, green: 0.38, blue: 0.02)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    : LinearGradient(colors: [Color.white],
                                      startPoint: .top, endPoint: .bottom),
                 in: isUser
                     ? UnevenRoundedRectangle(topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 5, style: .continuous)
                     : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 18, style: .continuous)
             )
+            .shadow(color: Color.black.opacity(isUser ? 0.0 : 0.05), radius: 7, x: 0, y: 2)
             .shadow(color: Color.black.opacity(isUser ? 0.1 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }
         }

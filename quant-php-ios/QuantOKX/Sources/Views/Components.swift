@@ -105,7 +105,7 @@ struct InfoRow: View {
 struct PrimaryButton: View {
     let title: String
     var icon: String? = nil
-    var color: Color = .blue
+    var color: Color = Theme.accent
     var disabled: Bool = false
     let action: () -> Void
 

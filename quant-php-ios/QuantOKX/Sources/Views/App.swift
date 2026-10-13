@@ -81,7 +81,7 @@ struct MainTabView: View {
                 .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
                 .tag(2)
         }
-        .tint(.blue)
+        .tint(Theme.accent)
     }
 }
 
