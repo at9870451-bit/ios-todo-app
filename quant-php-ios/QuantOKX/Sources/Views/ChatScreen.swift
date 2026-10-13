@@ -13,12 +13,10 @@ struct ChatScreen: View {
     @State private var sending = false
     @State private var pendingAtts: [ChatAttachment] = []
     @State private var loadingAtt = false
-    @State private var showPhotoPicker = false
-    @State private var showVideoPicker = false
     @State private var showFilePicker = false
     @State private var showCamera = false
-    @State private var photoItems: [PhotosPickerItem] = []
-    @State private var videoItem: PhotosPickerItem?
+    @State private var showPicker = false
+    @State private var pickedItems: [PhotosPickerItem] = []
     @AppStorage("chat.reasoning") private var reasoning = "medium"
     @FocusState private var inputFocus: Bool
 
@@ -64,16 +62,17 @@ struct ChatScreen: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 0) {
-                    Divider()
-                    reasoningRow
-                    attachBar
-                    InputBar(text: $input, sending: sending, onSend: send)
+                VStack(spacing: 8) {
+                    if !pendingAtts.isEmpty {
+                        pendingChips
+                    }
+                    statusRow
+                    inputPanel
                 }
+                .padding(.top, 8)
                 .background(.regularMaterial)
             }
-            .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 6, matching: .images)
-            .photosPicker(isPresented: $showVideoPicker, selection: $videoItem, matching: .videos)
+            .photosPicker(isPresented: $showPicker, selection: $pickedItems, maxSelectionCount: 6, matching: .any(of: [.images, .videos]))
             .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: false, onCompletion: handleFilePick)
             .sheet(isPresented: $showCamera) {
                 CameraPicker { img in
@@ -84,8 +83,7 @@ struct ChatScreen: View {
                 .ignoresSafeArea()
             }
             .task { await store.loadChatModel() }
-            .onChange(of: photoItems) { _, items in processPhotos(items) }
-            .onChange(of: videoItem) { _, item in processVideo(item) }
+            .onChange(of: pickedItems) { _, items in processPicked(items) }
         }
     }
 
@@ -203,76 +201,107 @@ struct ChatScreen: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 推理强度 + 附件栏
+    // MARK: - 输入区：状态行 + 单行面板（Minis 风格）
 
-    private var reasoningRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "brain")
-                .font(.caption)
+    private var statusRow: some View {
+        HStack(spacing: 10) {
+            Menu {
+                Picker("推理强度", selection: $reasoning) {
+                    Text("关闭").tag("off")
+                    Text("低").tag("low")
+                    Text("中").tag("medium")
+                    Text("高").tag("high")
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "brain")
+                        .font(.system(size: 10, weight: .medium))
+                    Text("推理 · \(Self.reasoningLabel(reasoning))")
+                        .font(.system(size: 11, weight: .medium))
+                }
                 .foregroundStyle(.secondary)
-            Text("推理强度")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
+                .background(Color.blue.opacity(0.08), in: Capsule())
+            }
+            if loadingAtt {
+                ProgressView().controlSize(.mini)
+                Text("处理附件中...").font(.system(size: 11)).foregroundStyle(.tertiary)
+            }
             Spacer()
-            Picker("", selection: $reasoning) {
-                Text("关闭").tag("off")
-                Text("低").tag("low")
-                Text("中").tag("medium")
-                Text("高").tag("high")
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 228)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 2)
+        .padding(.horizontal, 14)
     }
 
-    private var attachBar: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 12) {
-                attachButton("photo", "照片") { showPhotoPicker = true }
-                attachButton("video.fill", "视频") { showVideoPicker = true }
-                attachButton("camera.fill", "拍照") { showCamera = true }
-                attachButton("paperclip", "文件") { showFilePicker = true }
-                if loadingAtt { ProgressView().controlSize(.small) }
-                Spacer()
-                if !pendingAtts.isEmpty {
-                    Text("已加 \(pendingAtts.count) 个附件")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+    private var inputPanel: some View {
+        HStack(spacing: 10) {
+            Menu {
+                Button { showFilePicker = true } label: {
+                    Label("添加文件", systemImage: "doc")
                 }
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 4)
-
-            if !pendingAtts.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(pendingAtts) { a in
-                            AttChip(att: a) {
-                                pendingAtts.removeAll { $0.id == a.id }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
+                Button { showPicker = true } label: {
+                    Label("选择照片和视频", systemImage: "photo.on.rectangle")
                 }
-            }
-        }
-    }
-
-    private func attachButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.blue)
-                    .frame(width: 32, height: 32)
-                    .background(Color.blue.opacity(0.10), in: Circle())
-                Text(label)
-                    .font(.system(size: 9))
+                Button { showCamera = true } label: {
+                    Label("拍照", systemImage: "camera")
+                }
+            } label: {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 24, weight: .light))
                     .foregroundStyle(.secondary)
             }
+            .accessibilityLabel("添加附件")
+
+            TextField("输入消息...", text: $input, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...5)
+                .focused($inputFocus)
+                .onSubmit { send() }
+
+            Button {
+                send()
+            } label: {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+                    .background(
+                        (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending
+                            ? Color(uiColor: .systemGray3)
+                            : Color.blue,
+                        in: Circle()
+                    )
+            }
+            .disabled((input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending)
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 8)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
+    }
+
+    /// 待发送附件预览（面板上方横滚胶囊）
+    private var pendingChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(pendingAtts) { a in
+                    AttChip(att: a) {
+                        pendingAtts.removeAll { $0.id == a.id }
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+        }
+    }
+
+    static func reasoningLabel(_ r: String) -> String {
+        switch r {
+        case "off": return "关闭"
+        case "low": return "低"
+        case "high": return "高"
+        default: return "中"
         }
     }
 
@@ -305,40 +334,41 @@ struct ChatScreen: View {
 
     // MARK: - 附件处理
 
-    private func processPhotos(_ items: [PhotosPickerItem]) {
+    /// 混合处理照片/视频选择结果（按内容类型分流）
+    private func processPicked(_ items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
         loadingAtt = true
         Task {
             for (idx, item) in items.enumerated() {
-                if let raw = try? await item.loadTransferable(type: Data.self) {
-                    let data = Self.downscaleJPEG(raw) ?? raw
-                    pendingAtts.append(ChatAttachment(name: "照片\(Self.stamp())_\(idx + 1).jpg", kind: "image", mime: "image/jpeg", data: data))
+                let isImage = item.supportedContentTypes.contains { $0.conforms(to: .image) }
+                let isVideo = item.supportedContentTypes.contains { $0.conforms(to: .movie) || $0.conforms(to: .video) }
+                do {
+                    guard let raw = try await item.loadTransferable(type: Data.self), !raw.isEmpty else {
+                        throw APIError(message: "内容读取失败", code: "ATTACHMENT", status: 0)
+                    }
+                    if isImage {
+                        let data = Self.downscaleJPEG(raw) ?? raw
+                        pendingAtts.append(ChatAttachment(name: "照片\(Self.stamp())_\(idx + 1).jpg", kind: "image", mime: "image/jpeg", data: data))
+                    } else if isVideo {
+                        guard raw.count <= 20 * 1024 * 1024 else {
+                            store.toast = "视频过大（限 20MB）"
+                            continue
+                        }
+                        let ext = (item.supportedContentTypes.first?.preferredFilenameExtension ?? "mp4").lowercased()
+                        pendingAtts.append(ChatAttachment(name: "视频\(Self.stamp())_\(idx + 1).\(ext)", kind: "video", mime: Self.mime(for: ext), data: raw))
+                    } else {
+                        guard raw.count <= 15 * 1024 * 1024 else {
+                            store.toast = "文件过大（限 15MB）"
+                            continue
+                        }
+                        let ext = (item.supportedContentTypes.first?.preferredFilenameExtension ?? "dat").lowercased()
+                        pendingAtts.append(ChatAttachment(name: "文件\(Self.stamp())_\(idx + 1).\(ext)", kind: "file", mime: Self.mime(for: ext), data: raw))
+                    }
+                } catch {
+                    store.toast = "附件读取失败：\(error.localizedDescription)"
                 }
             }
-            photoItems = []
-            loadingAtt = false
-        }
-    }
-
-    private func processVideo(_ item: PhotosPickerItem?) {
-        guard let item else { return }
-        loadingAtt = true
-        Task {
-            do {
-                let data = try await item.loadTransferable(type: Data.self)
-                guard let data, !data.isEmpty else { throw APIError(message: "视频读取失败", code: "ATTACHMENT", status: 0) }
-                guard data.count <= 20 * 1024 * 1024 else {
-                    store.toast = "视频过大（限 20MB）"
-                    videoItem = nil
-                    loadingAtt = false
-                    return
-                }
-                let ext = (item.supportedContentTypes.first?.preferredFilenameExtension ?? "mp4").lowercased()
-                pendingAtts.append(ChatAttachment(name: "视频\(Self.stamp()).\(ext)", kind: "video", mime: Self.mime(for: ext), data: data))
-            } catch {
-                store.toast = "视频读取失败：\(error.localizedDescription)"
-            }
-            videoItem = nil
+            pickedItems = []
             loadingAtt = false
         }
     }
@@ -509,35 +539,6 @@ struct TypingIndicator: View {
         .onChange(of: dot) { _, v in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { withAnimation { dot = (v + 1) % 3 } }
         }
-    }
-}
-
-struct InputBar: View {
-    @Binding var text: String
-    let sending: Bool
-    let onSend: () -> Void
-    @FocusState private var focus: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            TextField("输入消息...", text: $text, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...5)
-                .padding(.horizontal, 14).padding(.vertical, 10)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                .focused($focus)
-                .onSubmit { onSend() }
-            Button {
-                onSend()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(.blue)
-            }
-            .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
     }
 }
 
