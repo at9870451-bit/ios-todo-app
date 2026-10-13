@@ -91,6 +91,20 @@ struct ChatScreen: View {
             .navigationDestination(isPresented: $showHistory) {
                 ConversationListView(sessionId: $sessionId, messages: $messages)
             }
+            .onChange(of: router.pendingConversationId) { _, nid in
+                // 聊天 Tab 点开会话 → 加载到当前对话页
+                if nid != 0 {
+                    openSession(nid)
+                    router.pendingConversationId = 0
+                }
+            }
+            .onChange(of: router.newChatRequested) { _, n in
+                // 聊天 Tab「新对话」→ 清空开场
+                if n > 0 {
+                    newChat()
+                    router.newChatRequested = 0
+                }
+            }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
                     if !pendingAtts.isEmpty {
@@ -212,7 +226,7 @@ struct ChatScreen: View {
 
     private var modelRow: some View {
         Button {
-            if !store.chatConfigured { router.tab = 1 }
+            if !store.chatConfigured { router.tab = 2 }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
@@ -377,6 +391,20 @@ struct ChatScreen: View {
 
     private func newChat() {
         messages = []; sessionId = 0; pendingAtts = []
+    }
+
+    /// 从聊天 Tab 打开指定会话
+    private func openSession(_ id: Int64) {
+        synthesizer.stopSpeaking(at: .immediate)
+        audioPlayer?.stop()
+        sessionId = id
+        Task {
+            do {
+                messages = try await store.fetchMessages(sessionId: id)
+            } catch {
+                store.toast = "加载消息失败"
+            }
+        }
     }
 
     /// 朗读最后一条 AI 回复（本地语音 / 语音模型，再次点击停止）

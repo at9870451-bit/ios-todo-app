@@ -22,6 +22,20 @@ struct QuantOKXApp: App {
 /// 全局 Tab 路由（跨页跳转：对话页「去添加配置」→ 设置页等）
 final class Router: ObservableObject {
     @Published var tab: Int = 0
+    /// 跨 Tab 打开指定会话（聊天 Tab → 对话 Tab）
+    @Published var pendingConversationId: Int64 = 0
+    /// 请求新对话（聊天 Tab → 对话 Tab 清空开场）
+    @Published var newChatRequested: Int = 0
+
+    func openConversation(id: Int64) {
+        pendingConversationId = id
+        tab = 1
+    }
+
+    func startNewChat() {
+        newChatRequested += 1
+        tab = 1
+    }
 }
 
 /// 根路由：底部三 Tab（对话 / 设置 / 我的），登录入口在「我的」
@@ -58,28 +72,34 @@ struct ToastView: View {
     }
 }
 
-/// 底部导航：对话 / 设置 / 我的
+/// 底部导航：聊天 / 对话 / 设置 / 我的
 struct MainTabView: View {
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var router: Router
 
     var body: some View {
         TabView(selection: $router.tab) {
-            AuthGate(gotoProfile: { router.tab = 2 }) {
+            AuthGate(gotoProfile: { router.tab = 3 }) {
+                ChatsListView()
+            }
+            .tabItem { Label("聊天", systemImage: "ellipsis.message.fill") }
+            .tag(0)
+
+            AuthGate(gotoProfile: { router.tab = 3 }) {
                 ChatScreen()
             }
             .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
-            .tag(0)
+            .tag(1)
 
-            AuthGate(gotoProfile: { router.tab = 2 }) {
+            AuthGate(gotoProfile: { router.tab = 3 }) {
                 SettingsScreen()
             }
             .tabItem { Label("设置", systemImage: "gearshape.fill") }
-            .tag(1)
+            .tag(2)
 
-            ProfileView(onLoggedIn: { router.tab = 0 })
+            ProfileView(onLoggedIn: { router.tab = 1 })
                 .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
-                .tag(2)
+                .tag(3)
         }
         .tint(Theme.accent)
     }
