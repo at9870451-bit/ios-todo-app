@@ -87,6 +87,7 @@ final class BackendStore: ObservableObject {
             )
             config.applyAuth(user: payload.user, csrf: payload.csrfToken)
             await client.setCSRF(payload.csrfToken)
+            await pushLocalChatConfigIfNeeded()
             toast = "欢迎回来，\(payload.user.nickname)"
         } catch {
             loginError = error.localizedDescription
@@ -108,6 +109,7 @@ final class BackendStore: ObservableObject {
             let payload: SessionPayload = try await client.post("/api/ios/register", body: body, as: SessionPayload.self)
             config.applyAuth(user: payload.user, csrf: payload.csrfToken)
             await client.setCSRF(payload.csrfToken)
+            await pushLocalChatConfigIfNeeded()
             toast = "注册成功"
         } catch {
             loginError = error.localizedDescription
@@ -780,6 +782,26 @@ extension BackendStore {
             }
             return "配置已保存 ✓"
         } catch { return "保存失败: \(error.localizedDescription)" }
+    }
+
+    /// 登录/注册后把本机激活的主模型同步到当前服务器。
+    /// 这样换服务器后，聊天 Tab 与对话 Tab 仍共用同一个 GPT 配置。
+    func pushLocalChatConfigIfNeeded() async {
+        guard let p = ProviderStore.shared.active,
+              p.kind == .main,
+              !p.apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !p.effectiveBase.isEmpty else {
+            await loadChatModel()
+            return
+        }
+        _ = await saveChatConfig(
+            endpoint: p.effectiveBase,
+            key: p.apiKey,
+            model: p.model,
+            apiStyle: p.apiFormat.rawValue,
+            name: p.label
+        )
+        await loadChatModel()
     }
 
     /// 拉取当前 chat 模型配置状态（顶部卡片显示用）

@@ -66,10 +66,10 @@ jobs:
           zip -qry Amore.ipa Payload
           echo "=== 产物 ==="
           ls -lh Amore.ipa
-          echo "SHA256: $(shasum -a 256 QuantOKX.ipa | awk '{print $1}')"
+          echo "SHA256: $(shasum -a 256 Amore.ipa | awk '{print $1}')"
           echo "架构: $(lipo -archs Payload/Amore.app/Amore)"
-          echo "最低系统: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/QuantOKX.app/Info.plist)"
-          echo "SDK: $(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' Payload/QuantOKX.app/Info.plist)"
+          echo "最低系统: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/Amore.app/Info.plist)"
+          echo "SDK: $(/usr/libexec/PlistBuddy -c 'Print :DTSDKName' Payload/Amore.app/Info.plist)"
 
       - name: 上传产物
         uses: actions/upload-artifact@v4

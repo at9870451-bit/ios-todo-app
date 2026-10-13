@@ -19,7 +19,13 @@ final class AppConfig: ObservableObject {
     var csrfToken: String = ""
 
     private init() {
-        self.serverURL = UserDefaults.standard.string(forKey: "server_url") ?? "http://[2404:8c80:85:8001::be]"
+        var saved = UserDefaults.standard.string(forKey: "server_url") ?? "http://154.12.16.204:8080"
+        // 旧服务器已下线：自动迁移到新服务器（2404:8c80:85:8001::be / 64.83.22.85 / www.daykai.asia）
+        if saved.contains("2404:8c80:85:8001") || saved.contains("64.83.22.85") || saved.contains("daykai.asia") {
+            saved = "http://154.12.16.204:8080"
+            UserDefaults.standard.set(saved, forKey: "server_url")
+        }
+        self.serverURL = saved
         if let u = Keychain.read("auth.username") { username = u; loggedIn = true }
         if let n = Keychain.read("auth.nickname") { nickname = n }
         if let r = Keychain.read("auth.role") { role = r }

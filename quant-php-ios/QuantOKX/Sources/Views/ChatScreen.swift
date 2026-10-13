@@ -370,7 +370,7 @@ struct ChatScreen: View {
         Task {
             do {
                 let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning, systemPrompt: personaPrompt)
-                if sessionId == 0 { sessionId = reply.sessionId }
+                if sessionId != reply.sessionId { sessionId = reply.sessionId }
                 if reply.degraded == true { store.toast = "当前模型不支持图片，已按附件说明回答" }
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))
             } catch {

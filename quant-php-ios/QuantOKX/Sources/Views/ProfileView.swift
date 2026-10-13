@@ -136,7 +136,7 @@ struct ProfileView: View {
             .padding(.horizontal, 4)
 
             VStack(spacing: 12) {
-                FieldRow(icon: "server.rack", placeholder: "服务器地址，如 http://[2404:1:2::be]", text: $serverURL)
+                FieldRow(icon: "server.rack", placeholder: "服务器地址，如 http://154.12.16.204:8080", text: $serverURL)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .keyboardType(.URL)

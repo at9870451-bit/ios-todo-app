@@ -435,7 +435,7 @@ struct ChatRoomView: View {
         Task {
             do {
                 let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt)
-                if sessionId == 0 {
+                if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
                 }
