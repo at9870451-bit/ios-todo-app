@@ -80,8 +80,10 @@ public class ChatCtl {
     var history = Db.rows("SELECT role,content FROM chat_messages WHERE session_id=? ORDER BY id DESC LIMIT 20", sid);
     Collections.reverse(history);
 
-    // 组装 messages：历史文本 + 最后一条为多模态 content parts（图片 base64 内联，视频/文件以文本元数据描述）
+    // 组装 messages：人设 system 前置 + 历史文本 + 最后一条多模态 content parts（图片 base64 内联）
     var msgs = new ArrayList<Map<String, Object>>();
+    String systemPrompt = Svc.str(b.get("system_prompt"));
+    if (!systemPrompt.isEmpty()) msgs.add(Resp.map("role", "system", "content", systemPrompt));
     for (var m : history) {
       String role = Svc.str(m.get("role"));
       String c = Svc.str(m.get("content"));
@@ -177,11 +179,12 @@ public class ChatCtl {
   }
 
   static String callAI(Map<String, Object> cfg, List<Map<String, Object>> messages, String reasoning) throws Exception {
+    String apiStyle = Svc.str(cfg.getOrDefault("api_style", "chat_completions"));
+    if (apiStyle.equals("responses")) return callResponses(cfg, messages, reasoning);
     String apiKey = Svc.str(cfg.get("api_key"));
-    String apiUrl = Svc.str(cfg.get("api_url"));
+    String apiUrl = normalizeCompletionsUrl(Svc.str(cfg.get("api_url")));
     String model = Svc.str(cfg.getOrDefault("model", "deepseek-chat"));
     double temperature = cfg.get("temperature") instanceof Number n ? n.doubleValue() : 0.7;
-    if (!apiUrl.contains("/completions")) apiUrl = apiUrl.replaceAll("/+$", "") + "/v1/chat/completions";
     var root = Resp.eo();
     root.put("model", model);
     root.put("messages", messages);
@@ -189,18 +192,101 @@ public class ChatCtl {
     root.put("max_tokens", 2048);
     if (!reasoning.isEmpty() && !reasoning.equals("off")) root.put("reasoning_effort", reasoning);
     String body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(root);
-    HttpClient c = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(20)).build();
-    HttpRequest req = HttpRequest.newBuilder().uri(URI.create(apiUrl)).header("Content-Type", "application/json").header("Authorization", "Bearer " + apiKey).timeout(java.time.Duration.ofMinutes(5)).POST(HttpRequest.BodyPublishers.ofString(body)).build();
-    HttpResponse<String> resp = c.send(req, HttpResponse.BodyHandlers.ofString());
-    if (resp.statusCode() != 200) {
-      String eb = resp.body() == null ? "" : resp.body();
-      String lower = eb.toLowerCase();
-      if (!eb.isEmpty() && (lower.contains("image") || lower.contains("multimodal") || lower.contains("vision") || lower.contains("content parts") || lower.contains("invalid content"))) {
-        throw new MultimodalUnsupportedException("HTTP " + resp.statusCode() + ": " + eb.substring(0, Math.min(200, eb.length())));
-      }
-      throw new RuntimeException("HTTP " + resp.statusCode() + ": " + eb.substring(0, Math.min(200, eb.length())));
-    }
+    HttpResponse<String> resp = postAI(apiUrl, apiKey, body);
+    if (resp.statusCode() != 200) throw diagnose(resp);
     return parseReply(resp.body());
+  }
+
+  /** OpenAI Responses API（/v1/responses）调用 */
+  static String callResponses(Map<String, Object> cfg, List<Map<String, Object>> messages, String reasoning) throws Exception {
+    String apiKey = Svc.str(cfg.get("api_key"));
+    String apiUrl = Svc.str(cfg.get("api_url")).replaceAll("/+$", "");
+    String model = Svc.str(cfg.getOrDefault("model", "gpt-4o"));
+    if (!apiUrl.contains("/responses")) {
+      apiUrl = apiUrl.endsWith("/v1") ? apiUrl + "/responses" : apiUrl + "/v1/responses";
+    }
+    StringBuilder instructions = new StringBuilder();
+    var input = new ArrayList<Map<String, Object>>();
+    for (var m : messages) {
+      String role = Svc.str(m.get("role"));
+      Object content = m.get("content");
+      if (role.equals("system")) {
+        if (content instanceof String s) instructions.append(instructions.length() > 0 ? "\n" : "").append(s);
+        continue;
+      }
+      String partType = role.equals("assistant") ? "output_text" : "input_text";
+      var parts = new ArrayList<Map<String, Object>>();
+      if (content instanceof String s) {
+        parts.add(Resp.map("type", partType, "text", s));
+      } else if (content instanceof List<?> ls) {
+        for (Object o : ls) {
+          if (!(o instanceof Map)) continue;
+          @SuppressWarnings("unchecked") Map<String, Object> p = (Map<String, Object>) o;
+          String t = Svc.str(p.get("type"));
+          if (t.equals("text")) {
+            parts.add(Resp.map("type", partType, "text", Svc.str(p.get("text"))));
+          } else if (t.equals("image_url")) {
+            Object iu = p.get("image_url");
+            String url = iu instanceof Map ? Svc.str(((Map<String, Object>) iu).get("url")) : "";
+            parts.add(Resp.map("type", "input_image", "image_url", url));
+          }
+        }
+      }
+      var item = Resp.eo();
+      item.put("role", role);
+      item.put("content", parts);
+      input.add(item);
+    }
+    var root = Resp.eo();
+    root.put("model", model);
+    root.put("input", input);
+    if (instructions.length() > 0) root.put("instructions", instructions.toString());
+    root.put("max_output_tokens", 2048);
+    if (!reasoning.isEmpty() && !reasoning.equals("off")) root.put("reasoning", Resp.map("effort", reasoning));
+    String body = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(root);
+    HttpResponse<String> resp = postAI(apiUrl, apiKey, body);
+    if (resp.statusCode() != 200) throw diagnose(resp);
+    return parseResponsesReply(resp.body());
+  }
+
+  /** chat/completions 地址智能补全：/v1 结尾追加 /chat/completions，否则追加 /v1/chat/completions */
+  static String normalizeCompletionsUrl(String raw) {
+    String u = raw.replaceAll("/+$", "");
+    if (u.contains("/chat/completions")) return u;
+    if (u.endsWith("/v1")) return u + "/chat/completions";
+    return u + "/v1/chat/completions";
+  }
+
+  static HttpResponse<String> postAI(String url, String apiKey, String body) throws Exception {
+    HttpClient c = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(20)).build();
+    HttpRequest req = HttpRequest.newBuilder().uri(URI.create(url)).header("Content-Type", "application/json").header("Authorization", "Bearer " + apiKey).timeout(java.time.Duration.ofMinutes(5)).POST(HttpRequest.BodyPublishers.ofString(body)).build();
+    return c.send(req, HttpResponse.BodyHandlers.ofString());
+  }
+
+  /** 非 200 响应：多模态不支持抛降级异常，否则普通错误 */
+  static RuntimeException diagnose(HttpResponse<String> resp) {
+    String eb = resp.body() == null ? "" : resp.body();
+    String lower = eb.toLowerCase();
+    if (!eb.isEmpty() && (lower.contains("image") || lower.contains("multimodal") || lower.contains("vision") || lower.contains("content parts") || lower.contains("invalid content") || lower.contains("input_image"))) {
+      return new MultimodalUnsupportedException("HTTP " + resp.statusCode() + ": " + eb.substring(0, Math.min(200, eb.length())));
+    }
+    return new RuntimeException("HTTP " + resp.statusCode() + ": " + eb.substring(0, Math.min(200, eb.length())));
+  }
+
+  static String parseResponsesReply(String json) {
+    try {
+      var root = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+      var ot = root.path("output_text");
+      if (ot.isTextual() && !ot.asText().isEmpty()) return ot.asText();
+      StringBuilder sb = new StringBuilder();
+      for (var item : root.path("output")) {
+        for (var p : item.path("content")) {
+          if (p.path("type").asText().equals("output_text")) sb.append(p.path("text").asText());
+        }
+      }
+      if (sb.length() > 0) return sb.toString();
+    } catch (Exception ignore) {}
+    return json.length() > 400 ? json.substring(0, 400) : (json.isEmpty() ? "(空响应)" : json);
   }
 
   static String parseReply(String json) {
