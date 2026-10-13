@@ -99,7 +99,11 @@ struct ChatScreen: View {
                 .background(.regularMaterial)
             }
             .photosPicker(isPresented: $showPicker, selection: $pickedItems, maxSelectionCount: 6, matching: .any(of: [.images, .videos]))
-            .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item], allowsMultipleSelection: false, onCompletion: handleFilePick)
+            .sheet(isPresented: $showFilePicker) {
+                AnyFilePicker { url in
+                    handleFileURL(url)
+                }
+            }
             .sheet(isPresented: $showCamera) {
                 CameraPicker { img in
                     if let data = img.jpegData(compressionQuality: 0.65) {
@@ -428,22 +432,19 @@ struct ChatScreen: View {
         }
     }
 
-    private func handleFilePick(_ result: Result<[URL], Error>) {
-        if case .success(let urls) = result, let url = urls.first {
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let data = try Data(contentsOf: url)
-                guard data.count <= 15 * 1024 * 1024 else {
-                    store.toast = "文件过大（限 15MB）"
-                    return
-                }
-                let ext = url.pathExtension.lowercased()
-                let kind = ["jpg", "jpeg", "png", "gif", "webp", "heic"].contains(ext) ? "image" : (["mp4", "mov", "m4v"].contains(ext) ? "video" : "file")
-                pendingAtts.append(ChatAttachment(name: url.lastPathComponent, kind: kind, mime: Self.mime(for: ext), data: data))
-            } catch {
-                store.toast = "读取文件失败"
+    /// 文件选择回调（UIDocumentPicker 已导入副本，直接可读）
+    private func handleFileURL(_ url: URL) {
+        do {
+            let data = try Data(contentsOf: url)
+            guard data.count <= 15 * 1024 * 1024 else {
+                store.toast = "文件过大（限 15MB）"
+                return
             }
+            let ext = url.pathExtension.lowercased()
+            let kind = ["jpg", "jpeg", "png", "gif", "webp", "heic"].contains(ext) ? "image" : (["mp4", "mov", "m4v"].contains(ext) ? "video" : "file")
+            pendingAtts.append(ChatAttachment(name: url.lastPathComponent, kind: kind, mime: Self.mime(for: ext), data: data))
+        } catch {
+            store.toast = "读取文件失败"
         }
     }
 
@@ -593,6 +594,34 @@ struct TypingIndicator: View {
         .onAppear { withAnimation { dot = 1 } }
         .onChange(of: dot) { _, v in
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { withAnimation { dot = (v + 1) % 3 } }
+        }
+    }
+}
+
+/// 任意文件选择器（UIDocumentPicker 导入副本模式，任何文件可选）
+struct AnyFilePicker: UIViewControllerRepresentable {
+    let onPick: (URL) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let p = UIDocumentPickerViewController(forOpeningContentTypes: [.item], asCopy: true)
+        p.allowsMultipleSelection = false
+        p.delegate = context.coordinator
+        return p
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let parent: AnyFilePicker
+        init(_ p: AnyFilePicker) { parent = p }
+
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            parent.onPick(url)
+            parent.dismiss()
         }
     }
 }
