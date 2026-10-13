@@ -16,15 +16,48 @@ final class ProviderStore: ObservableObject {
         }
     }
 
+    /// 模型角色：设置页按此分组（主模型 / 副模型 / 语音模型 / 图片模型）
+    enum Kind: String, Codable, CaseIterable, Identifiable {
+        case main, secondary, tts, image
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .main: return "主模型"
+            case .secondary: return "副模型"
+            case .tts: return "语音模型"
+            case .image: return "图片模型"
+            }
+        }
+        var icon: String {
+            switch self {
+            case .main: return "sparkles"
+            case .secondary: return "text.badge.plus"
+            case .tts: return "waveform"
+            case .image: return "photo.on.rectangle.angled"
+            }
+        }
+        var subtitle: String {
+            switch self {
+            case .main: return "对话 / 推理主力模型"
+            case .secondary: return "辅助 / 备用模型"
+            case .tts: return "文本转语音（朗读用）"
+            case .image: return "图像生成模型"
+            }
+        }
+    }
+
     struct Provider: Codable, Identifiable, Equatable {
         var id: UUID = UUID()
         var label: String
         var vendor: String          // openai / deepseek / moonshot / grok / openrouter / custom
+        var kind: Kind = .main
         var apiFormat: APIFormat = .chat
         var apiKey: String
         var baseURL: String = ""      // 空 = 使用官方默认地址
         var autoV1: Bool = true
         var model: String = ""
+        var ttsVoice: String = "alloy"  // 语音模型音色（OpenAI 风格）
+        var imageModel: String = ""     // 图片模型专用（如 dall-e-3）
 
         var effectiveBase: String {
             let base = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -101,8 +134,9 @@ final class ProviderStore: ObservableObject {
     }
 
     /// 激活配置同步到服务端（/api/chat/send 依此后端配置调用 AI）
+    /// 仅主模型参与对话；语音 / 图片模型只在本机使用，不同步
     func syncActive() {
-        guard let a = active else { return }
+        guard let a = active, a.kind == .main else { return }
         let base = a.effectiveBase
         let model = a.model
         let name = a.label
@@ -173,5 +207,49 @@ final class ProviderStore: ObservableObject {
             return ids
         }
         throw VerifyError(message: "响应无法解析（非 OpenAI 兼容格式），可手动填写模型名")
+    }
+
+    // MARK: - TTS 语音合成（App 直连语音模型，密钥不出本机）
+
+    struct TTSResult {
+        let audio: Data
+        let format: String   // mp3 / wav / ogg
+    }
+
+    /// 调用 TTS 服务商 POST {base}/v1/audio/speech，返回音频数据
+    /// - 兼容 OpenAI 风格 /v1/audio/speech；模型名取 provider.model，空则默认 tts-1
+    func synthesizeSpeech(p: Provider, text: String) async throws -> TTSResult {
+        struct TtsError: LocalizedError {
+            let message: String
+            var errorDescription: String? { message }
+        }
+        let key = p.apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else { throw TtsError(message: "语音模型未填 API Key") }
+        var u = p.effectiveBase.trimmingCharacters(in: .whitespacesAndNewlines)
+        while u.hasSuffix("/") { u.removeLast() }
+        if u.hasSuffix("/v1") { u.removeLast(3) }
+        let urlStr = u + "/v1/audio/speech"
+        guard let url = URL(string: urlStr) else { throw TtsError(message: "语音模型地址无效") }
+        let model = p.model.isEmpty ? "tts-1" : p.model
+        let payload: [String: String] = [
+            "model": model,
+            "input": String(text.prefix(1500)),
+            "voice": p.ttsVoice.isEmpty ? "alloy" : p.ttsVoice,
+            "response_format": "mp3",
+        ]
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 30
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        req.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200, data.count > 100 else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            let hint = status == 401 ? "（Key 无效或未授权）" : (status == 404 ? "（该端点不支持 /v1/audio/speech，请确认支持 OpenAI 风格 TTS）" : "")
+            throw TtsError(message: "语音合成失败 HTTP \(status) \(hint)\(body.isEmpty ? "" : "：" + String(body.prefix(120)))")
+        }
+        return TTSResult(audio: data, format: "mp3")
     }
 }

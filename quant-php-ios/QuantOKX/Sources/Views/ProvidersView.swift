@@ -12,26 +12,32 @@ struct ProviderListView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(ProviderStore.APIFormat.allCases) { fmt in
-                    let items = ps.providers.filter { $0.apiFormat == fmt }
+                ForEach(ProviderStore.Kind.allCases) { kind in
+                    let items = ps.providers.filter { $0.kind == kind }
                     if !items.isEmpty {
-                        Text(fmt.title)
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 4)
-                            .padding(.top, 8)
+                        HStack(spacing: 8) {
+                            Image(systemName: kind.icon).font(.caption).foregroundStyle(Theme.accent)
+                            Text(kind.title)
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                            Text("· \(kind.subtitle)")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.top, 8)
                         card(items)
                     }
                 }
                 if ps.providers.isEmpty {
-                    DEmpty(icon: "cpu", text: "还没有 AI 服务商\n点右上角 + 添加官方或第三方模型")
+                    DEmpty(icon: "cpu", text: "还没有 AI 模型\n点右上角 + 添加主模型 / 副模型 / 语音模型 / 图片模型")
                 }
             }
             .padding(.horizontal, 14)
             .padding(.bottom, 24)
         }
         .background(AppBackground())
-        .navigationTitle("AI 服务商")
+        .navigationTitle("AI 模型配置")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -41,8 +47,8 @@ struct ProviderListView: View {
             }
         }
         .sheet(isPresented: $showTypePicker, onDismiss: {}) {
-            ProviderTypePicker { vendor, label in
-                editTarget = ProviderStore.Provider(label: label, vendor: vendor, apiKey: "")
+            ProviderTypePicker { kind, vendor, label in
+                editTarget = ProviderStore.Provider(label: label, vendor: vendor, kind: kind, apiKey: "")
                 showEditSheet = true
             }
         }
@@ -78,7 +84,7 @@ struct ProviderListView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                             .lineLimit(1)
-                        if ps.activeId == p.id {
+                        if ps.activeId == p.id && p.kind == .main {
                             Text("使用中")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(Theme.accent)
@@ -107,7 +113,7 @@ struct ProviderListView: View {
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if ps.activeId != p.id {
+            if ps.activeId != p.id && p.kind == .main {
                 Button { ps.activate(p) } label: { Label("设为当前使用", systemImage: "checkmark.circle") }
             }
             Button(role: .destructive) { ps.remove(p) } label: { Label("删除", systemImage: "trash") }
@@ -118,8 +124,9 @@ struct ProviderListView: View {
 // MARK: - 添加服务商类型选择（官方 / 第三方）
 
 struct ProviderTypePicker: View {
-    let onPick: (String, String) -> Void
+    let onPick: (ProviderStore.Kind, String, String) -> Void
     @Environment(\.dismiss) private var dismiss
+    @State private var kind: ProviderStore.Kind = .main
 
     struct Option: Identifiable {
         let id: String
@@ -142,10 +149,44 @@ struct ProviderTypePicker: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    Text("模型角色")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                    VStack(spacing: 0) {
+                        ForEach(ProviderStore.Kind.allCases) { k in
+                            Button {
+                                kind = k
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: k.icon)
+                                        .font(.subheadline)
+                                        .foregroundStyle(kind == k ? .white : Theme.accent)
+                                        .frame(width: 22)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(k.title).font(.subheadline.weight(kind == k ? .semibold : .regular))
+                                        Text(k.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                                    }
+                                    Spacer()
+                                    if kind == k {
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(kind == .tts ? .orange : Theme.accent)
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(kind == k ? (k == .tts ? Color.orange.opacity(0.10) : Theme.accent.opacity(0.10)) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
                     Text("官方模型")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
+                        .padding(.top, 4)
                     card(official)
 
                     Text("第三方 / 兼容 API")
@@ -154,10 +195,10 @@ struct ProviderTypePicker: View {
                         .padding(.horizontal, 4)
                         .padding(.top, 8)
                     card([
-                        Option(id: "custom", name: "自定义兼容 API", sub: "任意 OpenAI 兼容端点（Chat / Responses）", icon: "slider.horizontal.3", color: .gray, label: "自定义"),
+                        Option(id: "custom", name: "自定义兼容 API", sub: "任意 OpenAI 兼容端点（Chat / Responses / TTS / Images）", icon: "slider.horizontal.3", color: .gray, label: "自定义"),
                     ])
 
-                    Text("您可以添加同一 AI 服务商的多个实例（例如工作和个人账户）。OpenAI 格式同时支持 Chat Completions 与 Responses 两种 API。")
+                    Text("您可以添加同一 AI 服务商的多个实例（例如工作和个人账户）。角色决定它出现在设置页的哪个分组；语音模型需支持 OpenAI 风格 /v1/audio/speech。")
                         .font(.footnote)
                         .foregroundStyle(.tertiary)
                         .padding(.horizontal, 6)
@@ -167,7 +208,7 @@ struct ProviderTypePicker: View {
                 .padding(.bottom, 30)
             }
             .background(AppBackground())
-            .navigationTitle("添加 AI 服务商")
+            .navigationTitle("添加 AI 模型")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -181,7 +222,7 @@ struct ProviderTypePicker: View {
         VStack(spacing: 0) {
             ForEach(Array(opts.enumerated()), id: \.element.id) { idx, o in
                 Button {
-                    onPick(o.id, o.label)
+                    onPick(kind, o.id, o.label)
                     dismiss()
                 } label: {
                     HStack(spacing: 12) {
@@ -231,6 +272,19 @@ struct ProviderEditView: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
                             .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+
+                    field(title: "模型角色") {
+                        Picker("", selection: $provider.kind) {
+                            ForEach(ProviderStore.Kind.allCases) { k in
+                                Label(k.title + " · " + k.subtitle, systemImage: k.icon).tag(k)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 6)
+                        .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
                     field(title: "API Key") {
@@ -362,8 +416,8 @@ struct ProviderEditView: View {
                         .font(.caption)
                         .foregroundStyle(.tertiary)
 
-                    field(title: "默认模型（可选）") {
-                        TextField("如 gpt-4o / deepseek-chat", text: $provider.model)
+                    field(title: provider.kind == .tts ? "语音模型（可选）" : (provider.kind == .image ? "图片模型（可选）" : "默认模型（可选）")) {
+                        TextField(modelPlaceholder, text: $provider.model)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding(.horizontal, 14)
@@ -371,7 +425,21 @@ struct ProviderEditView: View {
                             .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
 
-                    DButton(title: isNew ? "添加 AI 服务商" : "保存修改", icon: "checkmark") {
+                    if provider.kind == .tts {
+                        field(title: "音色（可选）") {
+                            TextField("alloy / ash / nova / shaley", text: $provider.ttsVoice)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                        Text("需服务商支持 OpenAI 风格 /v1/audio/speech；不填模型则默认 tts-1。")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    DButton(title: isNew ? "添加 AI 模型" : "保存修改", icon: "checkmark") {
                         save()
                     }
                     .padding(.top, 6)
@@ -381,7 +449,7 @@ struct ProviderEditView: View {
                             ps.remove(provider)
                             dismiss()
                         } label: {
-                            Text("删除此服务商")
+                            Text("删除此模型")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.red)
                                 .frame(maxWidth: .infinity)
@@ -407,6 +475,14 @@ struct ProviderEditView: View {
         }
     }
 
+    private var modelPlaceholder: String {
+        switch provider.kind {
+        case .tts: return "如 tts-1 / tts-1-hd / cosyvoice-v1"
+        case .image: return "如 dall-e-3 / gpt-image-1 / flux-schnell"
+        default: return "如 gpt-4o / deepseek-chat"
+        }
+    }
+
     private func field<V: View>(title: String, @ViewBuilder content: () -> V) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
@@ -419,7 +495,7 @@ struct ProviderEditView: View {
     private func save() {
         var p = provider
         p.label = p.label.trimmingCharacters(in: .whitespaces)
-        if p.label.isEmpty { p.label = "AI 服务商" }
+        if p.label.isEmpty { p.label = "AI 模型" }
         if isNew {
             ps.add(p)
         } else {

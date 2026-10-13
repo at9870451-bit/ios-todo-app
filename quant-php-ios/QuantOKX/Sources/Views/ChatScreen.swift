@@ -20,6 +20,9 @@ struct ChatScreen: View {
     @State private var pickedItems: [PhotosPickerItem] = []
     @State private var showHistory = false
     private let synthesizer = AVSpeechSynthesizer()
+    @State private var audioPlayer: AVAudioPlayer?
+    @AppStorage("tts.engine") private var ttsEngine = "local"           // local 本地语音 / model 语音模型
+    @AppStorage("tts.providerId") private var ttsProviderId = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @FocusState private var inputFocus: Bool
@@ -72,7 +75,7 @@ struct ChatScreen: View {
                         Button {
                             readAloud()
                         } label: {
-                            Label(synthesizer.isSpeaking ? "停止朗读" : "朗读回复", systemImage: "speaker.wave.2")
+                            Label(ttsActive ? "停止朗读" : "朗读回复", systemImage: "speaker.wave.2")
                         }
                         Divider()
                         Button(role: .destructive) {
@@ -364,22 +367,55 @@ struct ChatScreen: View {
         messages = []; sessionId = 0; pendingAtts = []
     }
 
-    /// 朗读最后一条 AI 回复（再次点击停止）
+    /// 朗读最后一条 AI 回复（本地语音 / 语音模型，再次点击停止）
+    private var ttsActive: Bool { synthesizer.isSpeaking || (audioPlayer?.isPlaying ?? false) }
+
     private func readAloud() {
-        if synthesizer.isSpeaking {
+        if ttsActive {
             synthesizer.stopSpeaking(at: .immediate)
+            audioPlayer?.stop()
             return
         }
         guard let last = messages.last(where: { $0.role == "assistant" }), !last.content.isEmpty else {
             store.toast = "暂无可朗读的回复"
             return
         }
-        let u = AVSpeechUtterance(string: String(last.content.prefix(600)))
+        if ttsEngine == "model" {
+            Task { await speakWithModel(last.content) }
+        } else {
+            speakLocal(String(last.content.prefix(600)))
+        }
+    }
+
+    private func speakLocal(_ text: String) {
+        let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
         u.rate = 0.5
         synthesizer.speak(u)
     }
 
+    /// 用配置的语音模型合成并播放；失败或未配置时自动回退本地朗读
+    private func speakWithModel(_ content: String) async {
+        let ps = ProviderStore.shared
+        let p = ps.providers.first { $0.id.uuidString == ttsProviderId && $0.kind == .tts }
+            ?? ps.providers.first { $0.kind == .tts && !$0.apiKey.isEmpty }
+        guard let p else {
+            store.toast = "未配置语音模型，已用本地语音朗读"
+            speakLocal(String(content.prefix(600)))
+            return
+        }
+        store.toast = "正在合成语音…"
+        do {
+            let r = try await ps.synthesizeSpeech(p: p, text: content)
+            audioPlayer = try AVAudioPlayer(data: r.audio)
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+            store.toast = ""
+        } catch {
+            store.toast = "语音模型失败，已用本地语音朗读"
+            speakLocal(String(content.prefix(600)))
+        }
+    }
     /// 清空当前对话（有会话则同时删除服务端记录）
     private func clearConversation() {
         let old = sessionId
@@ -387,6 +423,7 @@ struct ChatScreen: View {
         sessionId = 0
         pendingAtts = []
         synthesizer.stopSpeaking(at: .immediate)
+        audioPlayer?.stop()
         if old != 0 {
             Task { try? await store.deleteConversation(id: old) }
             store.toast = "会话已清空"
