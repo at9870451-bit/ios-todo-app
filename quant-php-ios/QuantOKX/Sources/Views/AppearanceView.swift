@@ -223,6 +223,14 @@ struct PersonaView: View {
                         .scrollContentBackground(.hidden)
                         .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
+                HStack(spacing: 6) {
+                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                        .font(.caption)
+                        .foregroundStyle(Theme.accent)
+                    Text("人设立即作用于「对话」与「聊天」两个 Tab；聊天 Tab 会按微信好友风格简短回复")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("快速预设")

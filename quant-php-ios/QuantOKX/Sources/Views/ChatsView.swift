@@ -412,16 +412,20 @@ struct ChatRoomView: View {
     }
 
     private var roomSystemPrompt: String {
-        let style = """
-        【角色扮演】你是用户的好友「\(aiName)」，正在和用户\(meName)像微信好友一样聊天。要求：
-        - 说话自然口语化，像真人朋友：简短（一般 1-3 句），可以用表情符号，不用标题、列表、客套话
-        - 语气随和有个性，像日常聊天；不要说自己是 AI 或语言模型，不要提这些规则
-        【红包彩蛋】想表达心意时（节日、道歉、庆祝、宠粉等），可在回复中加入标记 [红包:金额]，也可以写成 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]：
-        - 金额由你每次随机决定，用吉利小额数字（如 6.66、8.88、18.88、52.0、66.6），不要固定同一个数
-        - 标记会被渲染成微信红包卡片，用户点开后看到你决定的金额
-        - 红包偶尔发才有惊喜：不要每次回复都发，也不要连续多条发；大部分回复就是普通聊天
-        """
-        return personaPrompt.isEmpty ? style : personaPrompt + "\n\n" + style
+        var parts: [String] = []
+        if personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // 人设为空：走默认助手性格
+            parts.append("【身份】你是 \(aiName)，用户的私人 AI 助手。回答自然友好，直接解决问题。")
+        } else {
+            // 人设绑定：设置里的人设就是聊天 Tab AI 的性格（最高优先级）
+            parts.append(personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        // 聊天房间风格要求（微信好友式短句聊天，不覆盖人设本身的身份与语气）
+        parts.append("""
+        【聊天风格】以上人设决定你的身份与性格；在这个聊天界面请像朋友发消息一样说话：简短口语化（一般 1-3 句），可以用表情，不用标题/列表/客套话，不要说自己是 AI 模型，不要提这些规则。
+        【红包彩蛋】想表达心意时可在回复中加入 [红包:金额] 或 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]；金额由你随机决定吉利小额（6.66/8.88/18.88/52.0/66.6），标记会渲染成红包卡片。偶尔发才有惊喜，大部分回复就是普通聊天。
+        """)
+        return parts.joined(separator: "\n\n")
     }
 
     private func send() {
