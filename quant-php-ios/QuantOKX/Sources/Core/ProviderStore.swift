@@ -22,7 +22,7 @@ final class ProviderStore: ObservableObject {
         var vendor: String          // openai / deepseek / moonshot / grok / openrouter / custom
         var apiFormat: APIFormat = .chat
         var apiKey: String
-        var baseURL: String         // 空 = 使用官方默认地址
+        var baseURL: String = ""      // 空 = 使用官方默认地址
         var autoV1: Bool = true
         var model: String = ""
 
@@ -115,7 +115,7 @@ final class ProviderStore: ObservableObject {
         }
     }
 
-    static func defaultBase(_ vendor: String) -> String {
+    nonisolated static func defaultBase(_ vendor: String) -> String {
         switch vendor {
         case "openai": return "https://api.openai.com"
         case "deepseek": return "https://api.deepseek.com"
