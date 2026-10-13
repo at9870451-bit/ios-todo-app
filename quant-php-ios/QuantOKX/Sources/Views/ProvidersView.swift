@@ -217,6 +217,10 @@ struct ProviderEditView: View {
     let isNew: Bool
 
     @State private var showKey = false
+    @State private var models: [String] = []
+    @State private var verifying = false
+    @State private var verifyOK: Bool?
+    @State private var verifyMsg = ""
 
     var body: some View {
         NavigationStack {
@@ -252,6 +256,74 @@ struct ProviderEditView: View {
                     Text("密钥保存在本机沙盒；保存后同步至你的服务器用于调用，不会发送给任何第三方。")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+
+                    // 验证连接 + 读取模型列表
+                    Button {
+                        verify()
+                    } label: {
+                        HStack(spacing: 7) {
+                            if verifying {
+                                ProgressView().controlSize(.small).tint(.white)
+                            } else {
+                                Image(systemName: "antenna.radiowaves.left.and.right")
+                            }
+                            Text("验证并读取模型列表")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color(uiColor: .systemGray5), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                        .foregroundStyle(.primary)
+                    }
+                    .disabled(verifying)
+
+                    if let ok = verifyOK {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
+                                .foregroundStyle(ok ? Color.green : Color.red)
+                            Text(verifyMsg)
+                                .font(.caption)
+                                .foregroundStyle(ok ? Color.green : Color.red)
+                        }
+                    }
+
+                    if !models.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("选择默认模型（点击填入）")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            VStack(spacing: 0) {
+                                ScrollView {
+                                    VStack(spacing: 0) {
+                                        ForEach(Array(models.enumerated()), id: \.element) { idx, m in
+                                            Button {
+                                                provider.model = m
+                                            } label: {
+                                                HStack {
+                                                    Text(m)
+                                                        .font(.caption.monospaced())
+                                                        .foregroundStyle(.primary)
+                                                        .lineLimit(1)
+                                                    Spacer()
+                                                    if provider.model == m {
+                                                        Image(systemName: "checkmark.circle.fill")
+                                                            .foregroundStyle(.blue)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 10)
+                                                .contentShape(Rectangle())
+                                            }
+                                            .buttonStyle(.plain)
+                                            if idx < models.count - 1 { Divider().padding(.leading, 14) }
+                                        }
+                                    }
+                                }
+                                .frame(maxHeight: 230)
+                            }
+                            .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        }
+                    }
 
                     field(title: "自定义 API 地址（可选）") {
                         VStack(spacing: 0) {
@@ -354,5 +426,24 @@ struct ProviderEditView: View {
             ps.update(p)
         }
         dismiss()
+    }
+
+    /// 用地址+Key 直连 /v1/models 验证并拉取模型列表
+    private func verify() {
+        verifying = true
+        verifyOK = nil
+        models = []
+        Task {
+            do {
+                let list = try await ps.fetchModels(provider)
+                models = list
+                verifyOK = true
+                verifyMsg = "验证成功，共 \(list.count) 个模型"
+            } catch {
+                verifyOK = false
+                verifyMsg = error.localizedDescription
+            }
+            verifying = false
+        }
     }
 }

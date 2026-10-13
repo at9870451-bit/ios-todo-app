@@ -125,4 +125,53 @@ final class ProviderStore: ObservableObject {
         default: return ""
         }
     }
+
+    // MARK: - 验证连接 + 模型列表（GET {base}/v1/models）
+
+    nonisolated static func modelsURL(for base: String) -> String {
+        var u = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        while u.hasSuffix("/") { u.removeLast() }
+        if u.hasSuffix("/v1") { return u + "/models" }
+        return u + "/v1/models"
+    }
+
+    private struct ModelListResponse: Decodable {
+        struct M: Decodable { let id: String }
+        let data: [M]
+    }
+
+    func fetchModels(_ p: Provider) async throws -> [String] {
+        struct VerifyError: LocalizedError {
+            let message: String
+            var errorDescription: String? { message }
+        }
+        let key = p.apiKey.trimmingCharacters(in: .whitespaces)
+        guard !key.isEmpty else { throw VerifyError(message: "请先填写 API Key") }
+        guard let url = URL(string: Self.modelsURL(for: p.effectiveBase)) else {
+            throw VerifyError(message: "API 地址无效")
+        }
+        var req = URLRequest(url: url)
+        req.httpMethod = "GET"
+        req.timeoutInterval = 20
+        req.setValue("application/json", forHTTPHeaderField: "Accept")
+        req.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
+        let (data, resp): (Data, URLResponse)
+        do {
+            (data, resp) = try await URLSession.shared.data(for: req)
+        } catch {
+            throw VerifyError(message: "网络错误：\(error.localizedDescription)")
+        }
+        let status = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else {
+            let body = String(data: data, encoding: .utf8) ?? ""
+            let hint = status == 401 ? "（Key 无效或未授权）" : (status == 404 ? "（该端点不支持 /v1/models，可手动填写模型名）" : "")
+            throw VerifyError(message: "验证失败 HTTP \(status) \(hint)\(body.isEmpty ? "" : "：" + String(body.prefix(120)))")
+        }
+        if let d = try? JSONDecoder().decode(ModelListResponse.self, from: data) {
+            let ids = d.data.map { $0.id }.filter { !$0.isEmpty }.sorted()
+            guard !ids.isEmpty else { throw VerifyError(message: "验证成功但模型列表为空，可手动填写模型名") }
+            return ids
+        }
+        throw VerifyError(message: "响应无法解析（非 OpenAI 兼容格式），可手动填写模型名")
+    }
 }
