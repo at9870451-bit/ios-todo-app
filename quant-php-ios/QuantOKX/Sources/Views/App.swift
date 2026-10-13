@@ -13,6 +13,7 @@ struct QuantOKXApp: App {
                 .environmentObject(router)
                 .environmentObject(ProviderStore.shared)
                 .environmentObject(BackgroundStore.shared)
+                .environmentObject(AvatarStore.shared)
                 .tint(Theme.accent)
                 .task { await store.bootstrap() }
         }
@@ -80,7 +81,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $router.tab) {
             AuthGate(gotoProfile: { router.tab = 3 }) {
-                ChatsListView()
+                ChatRoomView()
             }
             .tabItem { Label("聊天", systemImage: "ellipsis.message.fill") }
             .tag(0)
