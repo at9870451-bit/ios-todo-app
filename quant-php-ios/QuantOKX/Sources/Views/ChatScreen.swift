@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
 import UIKit
+import AVFoundation
 
 /// 聊天主界面：顶部对话摘要卡 + 气泡消息流 + 附件输入 + 推理强度
 struct ChatScreen: View {
@@ -17,6 +18,8 @@ struct ChatScreen: View {
     @State private var showCamera = false
     @State private var showPicker = false
     @State private var pickedItems: [PhotosPickerItem] = []
+    @State private var showHistory = false
+    private let synthesizer = AVSpeechSynthesizer()
     @AppStorage("chat.reasoning") private var reasoning = "medium"
     @FocusState private var inputFocus: Bool
 
@@ -53,13 +56,36 @@ struct ChatScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink { ConversationListView(sessionId: $sessionId, messages: $messages) } label: {
-                        Image(systemName: "clock.arrow.circlepath")
+                    Menu {
+                        Button {
+                            newChat()
+                        } label: {
+                            Label("新对话", systemImage: "square.and.pencil")
+                        }
+                        Button {
+                            showHistory = true
+                        } label: {
+                            Label("历史会话", systemImage: "clock.arrow.circlepath")
+                        }
+                        Divider()
+                        Button {
+                            readAloud()
+                        } label: {
+                            Label(synthesizer.isSpeaking ? "停止朗读" : "朗读回复", systemImage: "speaker.wave.2")
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            clearConversation()
+                        } label: {
+                            Label("清空对话", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "plus.bubble")
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { newChat() } label: { Image(systemName: "plus.message") }
-                }
+            }
+            .navigationDestination(isPresented: $showHistory) {
+                ConversationListView(sessionId: $sessionId, messages: $messages)
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 8) {
@@ -330,6 +356,35 @@ struct ChatScreen: View {
 
     private func newChat() {
         messages = []; sessionId = 0; pendingAtts = []
+    }
+
+    /// 朗读最后一条 AI 回复（再次点击停止）
+    private func readAloud() {
+        if synthesizer.isSpeaking {
+            synthesizer.stopSpeaking(at: .immediate)
+            return
+        }
+        guard let last = messages.last(where: { $0.role == "assistant" }), !last.content.isEmpty else {
+            store.toast = "暂无可朗读的回复"
+            return
+        }
+        let u = AVSpeechUtterance(string: String(last.content.prefix(600)))
+        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+        u.rate = 0.5
+        synthesizer.speak(u)
+    }
+
+    /// 清空当前对话（有会话则同时删除服务端记录）
+    private func clearConversation() {
+        let old = sessionId
+        messages = []
+        sessionId = 0
+        pendingAtts = []
+        synthesizer.stopSpeaking(at: .immediate)
+        if old != 0 {
+            Task { try? await store.deleteConversation(id: old) }
+            store.toast = "会话已清空"
+        }
     }
 
     // MARK: - 附件处理
