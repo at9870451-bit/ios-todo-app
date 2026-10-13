@@ -167,6 +167,8 @@ struct RedPacketCard: View {
 struct RedPacketMsg: Identifiable {
     let id = UUID()
     let blessing: String
+    /// 拆开时的随机金额（0.01 ~ 18.88 元，仅娱乐）
+    let amount: Double = Double.random(in: 0.01...18.88)
 }
 
 struct RedPacketOpenedView: View {
@@ -192,11 +194,11 @@ struct RedPacketOpenedView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text("0.00 元")
+            Text(String(format: "%.2f", msg.amount) + " 元")
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.accent)
 
-            Text("AI 模拟红包 · 仅娱乐，无真实金额")
+            Text("AI 模拟红包 · 随机金额 · 仅娱乐，无真实金额")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -435,7 +437,12 @@ struct BubbleRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if isUser { Spacer(minLength: 52) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true) }
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
+                // 昵称（头像旁），气泡在下方
+                Text(isUser ? meName : aiName)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
                     segmentView(seg)
                 }
@@ -471,13 +478,10 @@ struct BubbleRow: View {
                     .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
             }
         case .redPacket(let blessing):
-            HStack {
-                if isUser { Spacer() }
-                RedPacketCard(blessing: blessing) {
-                    onOpenRedPacket(blessing)
-                }
-                if !isUser { Spacer() }
+            RedPacketCard(blessing: blessing) {
+                onOpenRedPacket(blessing)
             }
+            .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
         }
     }
 }
