@@ -4,9 +4,9 @@ import SwiftUI
 struct ChatsListView: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var router: Router
-    @State private var conversations: [ConversationRow] = []
+    @State private var conversations: [ConversationListView.Conversation] = []
     @State private var loading = true
-    @State private var renaming: ConversationRow?
+    @State private var renaming: ConversationListView.Conversation?
     @State private var renameText = ""
 
     var body: some View {
@@ -63,7 +63,7 @@ struct ChatsListView: View {
         }
     }
 
-    private func row(_ c: ConversationRow) -> some View {
+    private func row(_ c: ConversationListView.Conversation) -> some View {
         Button {
             Haptics.light()
             router.openConversation(id: c.id)
@@ -161,7 +161,7 @@ struct ChatsListView: View {
         do {
             try await store.renameConversation(id: c.id, title: t)
             if let i = conversations.firstIndex(where: { $0.id == c.id }) {
-                conversations[i] = ConversationRow(id: c.id, title: t, lastMsg: c.lastMsg, updatedAt: c.updatedAt)
+                conversations[i] = ConversationListView.Conversation(id: c.id, title: t, lastMsg: c.lastMsg, updatedAt: c.updatedAt)
             }
             store.toast = "已重命名"
         } catch {
@@ -170,11 +170,4 @@ struct ChatsListView: View {
     }
 }
 
-/// 会话行模型（聊天 Tab 专用，避免与历史会话页共享 @Binding）
-struct ConversationRow: Identifiable, Decodable {
-    let id: Int64
-    let title: String
-    let lastMsg: String?
-    let updatedAt: String?
-    enum CodingKeys: String, CodingKey { case id, title, lastMsg = "last_msg", updatedAt = "updated_at" }
-}
+/// 会话行模型直接复用 ConversationListView.Conversation（与 fetchConversations 返回一致）
