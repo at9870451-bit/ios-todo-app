@@ -24,8 +24,8 @@ targets:
       path: QuantOKX/Info.plist
       properties:
         CFBundleDisplayName: Amore
-        CFBundleShortVersionString: "3.5"
-        CFBundleVersion: "26"
+        CFBundleShortVersionString: "3.6"
+        CFBundleVersion: "27"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

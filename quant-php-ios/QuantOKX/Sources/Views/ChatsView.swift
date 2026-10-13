@@ -75,11 +75,12 @@ struct ChatAvatar: View {
     }
 }
 
-// MARK: - 红包标记解析（[红包:祝福语] → 红包卡片）
+// MARK: - 红包标记解析（[红包:金额] 或 [红包:金额:祝福语] → 红包卡片）
+// 金额由 AI 在消息中决定，客户端不本地生成
 
 enum MsgSegment: Equatable {
     case text(String)
-    case redPacket(String)
+    case redPacket(blessing: String, amount: Double?)
 }
 
 enum RedPacketParser {
@@ -98,9 +99,9 @@ enum RedPacketParser {
             }
             let after = rest[open.upperBound...]
             if let end = after.range(of: "]") {
-                let blessing = String(after[..<end.lowerBound])
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                segs.append(.redPacket(blessing))
+                let inner = String(after[..<end.lowerBound])
+                let (blessing, amount) = parseInner(inner)
+                segs.append(.redPacket(blessing: blessing, amount: amount))
                 rest = after[end.upperBound...]
             } else {
                 segs.append(.text(String(rest)))
@@ -112,6 +113,27 @@ enum RedPacketParser {
             segs.append(.text(String(rest)))
         }
         return segs
+    }
+
+    /// 解析标记内部：容错地找出金额（第一个数字）与祝福语
+    /// 例："8.88" / "8.88:恭喜发财" / "恭喜发财,8.88" / "8.88元"
+    private static func parseInner(_ inner: String) -> (blessing: String, amount: Double?) {
+        var amount: Double?
+        var blessingParts: [String] = []
+        let separators = CharacterSet(charactersIn: ":：,， ")
+        for rawPart in inner.components(separatedBy: separators) {
+            let part = rawPart.trimmingCharacters(in: .whitespaces)
+            guard !part.isEmpty else { continue }
+            if amount == nil {
+                let cleaned = part.replacingOccurrences(of: "元", with: "")
+                if let d = Double(cleaned) {
+                    amount = d
+                    continue
+                }
+            }
+            blessingParts.append(part)
+        }
+        return (blessingParts.joined(separator: "，"), amount)
     }
 }
 
@@ -167,13 +189,18 @@ struct RedPacketCard: View {
 struct RedPacketMsg: Identifiable {
     let id = UUID()
     let blessing: String
-    /// 拆开时的随机金额（0.01 ~ 18.88 元，仅娱乐）
-    let amount: Double = Double.random(in: 0.01...18.88)
+    /// 金额由 AI 在消息中决定（[红包:8.88]）；nil 时显示 0.00
+    let amount: Double?
 }
 
 struct RedPacketOpenedView: View {
     let msg: RedPacketMsg
     @Environment(\.dismiss) private var dismiss
+
+    private var amountText: String {
+        if let a = msg.amount { return String(format: "%.2f", a) + " 元" }
+        return "0.00 元"
+    }
 
     var body: some View {
         VStack(spacing: 16) {
@@ -194,11 +221,11 @@ struct RedPacketOpenedView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Text(String(format: "%.2f", msg.amount) + " 元")
+            Text(amountText)
                 .font(.system(size: 36, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.accent)
 
-            Text("AI 模拟红包 · 随机金额 · 仅娱乐，无真实金额")
+            Text("AI 模拟红包 · 仅娱乐，无真实金额")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
         }
@@ -247,8 +274,8 @@ struct ChatRoomView: View {
                                 }
                                 ForEach(messages) { m in
                                     BubbleRow(msg: m, aiName: aiName, meName: meName,
-                                              aiImage: av.aiImage, meImage: av.meImage) { blessing in
-                                        openRedPacket = RedPacketMsg(blessing: blessing)
+                                              aiImage: av.aiImage, meImage: av.meImage) { blessing, amount in
+                                        openRedPacket = RedPacketMsg(blessing: blessing, amount: amount)
                                     }
                                     .id(m.id)
                                 }
@@ -318,18 +345,16 @@ struct ChatRoomView: View {
             Button {
                 send()
             } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .bold))
+                Text("发送")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                     .background {
                         if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending {
-                            Circle().fill(Color(uiColor: .systemGray3))
+                            Capsule().fill(Color(uiColor: .systemGray3))
                         } else {
-                            Circle()
-                                .fill(Theme.heroGradient)
-                                .overlay(Circle().fill(LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .center)))
-                                .shadow(color: Theme.accent.opacity(0.35), radius: 6, x: 0, y: 3)
+                            Capsule().fill(Theme.accent)
                         }
                     }
             }
@@ -391,7 +416,9 @@ struct ChatRoomView: View {
         【角色扮演】你是用户的好友「\(aiName)」，正在和用户\(meName)像微信好友一样聊天。要求：
         - 说话自然口语化，像真人朋友：简短（一般 1-3 句），可以用表情符号，不用标题、列表、客套话
         - 语气随和有个性，像日常聊天；不要说自己是 AI 或语言模型，不要提这些规则
-        【红包彩蛋】当你想表达心意（节日、道歉、庆祝、宠粉等），可以在回复中加标记 [红包:祝福语]（祝福语 4-10 字，例如 [红包:恭喜发财]），它会被渲染成微信红包卡片。
+        【红包彩蛋】想表达心意时（节日、道歉、庆祝、宠粉等），可在回复中加入标记 [红包:金额]，也可以写成 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]：
+        - 金额由你每次随机决定，用吉利小额数字（如 6.66、8.88、18.88、52.0、66.6），不要固定同一个数
+        - 标记会被渲染成微信红包卡片，用户点开后看到你决定的金额
         - 红包偶尔发才有惊喜：不要每次回复都发，也不要连续多条发；大部分回复就是普通聊天
         """
         return personaPrompt.isEmpty ? style : personaPrompt + "\n\n" + style
@@ -429,7 +456,7 @@ struct BubbleRow: View {
     let meName: String
     let aiImage: UIImage?
     let meImage: UIImage?
-    let onOpenRedPacket: (String) -> Void
+    let onOpenRedPacket: (String, Double?) -> Void
 
     var isUser: Bool { msg.role == "user" }
     private var segments: [MsgSegment] { RedPacketParser.parse(msg.content) }
@@ -437,12 +464,7 @@ struct BubbleRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if isUser { Spacer(minLength: 52) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true) }
-            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
-                // 昵称（头像旁），气泡在下方
-                Text(isUser ? meName : aiName)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
                     segmentView(seg)
                 }
@@ -477,11 +499,14 @@ struct BubbleRow: View {
                     .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
                     .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
             }
-        case .redPacket(let blessing):
-            RedPacketCard(blessing: blessing) {
-                onOpenRedPacket(blessing)
+        case .redPacket(let blessing, let amount):
+            HStack {
+                if isUser { Spacer() }
+                RedPacketCard(blessing: blessing) {
+                    onOpenRedPacket(blessing, amount)
+                }
+                if !isUser { Spacer() }
             }
-            .frame(maxWidth: .infinity, alignment: isUser ? .trailing : .leading)
         }
     }
 }

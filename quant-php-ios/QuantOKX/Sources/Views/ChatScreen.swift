@@ -316,19 +316,10 @@ struct ChatScreen: View {
                 send()
             } label: {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 32, height: 32)
-                    .background {
-                        if (input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending {
-                            Circle().fill(Color(uiColor: .systemGray3))
-                        } else {
-                            Circle()
-                                .fill(Theme.heroGradient)
-                                .overlay(Circle().fill(LinearGradient(colors: [.white.opacity(0.3), .clear], startPoint: .top, endPoint: .center)))
-                                .shadow(color: Theme.accent.opacity(0.35), radius: 6, x: 0, y: 3)
-                        }
-                    }
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle((input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending
+                                     ? Color(uiColor: .systemGray3) : Theme.accent)
+                    .frame(width: 34, height: 34)
             }
             .disabled((input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && pendingAtts.isEmpty) || sending)
         }
