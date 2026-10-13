@@ -119,7 +119,7 @@ struct ProfileView: View {
                         .font(.system(size: 22, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
-                Text("AI 助手")
+                Text("Amore")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundStyle(.orange)
                 Text("登录后开始对话，历史会话云端同步")

@@ -23,9 +23,9 @@ targets:
     info:
       path: QuantOKX/Info.plist
       properties:
-        CFBundleDisplayName: AI 助手
-        CFBundleShortVersionString: "2.9"
-        CFBundleVersion: "20"
+        CFBundleDisplayName: Amore
+        CFBundleShortVersionString: "3.0"
+        CFBundleVersion: "21"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
