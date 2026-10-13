@@ -31,12 +31,7 @@ struct ChatScreen: View {
                         LazyVStack(spacing: 12) {
                             headerCard
                             if messages.isEmpty {
-                                VStack(spacing: 12) {
-                                    Image(systemName: "bubble.left.and.bubble.right")
-                                        .font(.system(size: 44)).foregroundStyle(.tertiary)
-                                    Text("开始新对话").font(.headline).foregroundStyle(.secondary)
-                                    Text("发送消息、图片或文件，AI 为你解答").font(.subheadline).foregroundStyle(.tertiary)
-                                }.padding(.top, 60)
+                                emptyState
                             }
                             ForEach(messages) { m in
                                 MessageBubble(msg: m).id(m.id)
@@ -70,10 +65,12 @@ struct ChatScreen: View {
             }
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 0) {
+                    Divider()
                     reasoningRow
                     attachBar
                     InputBar(text: $input, sending: sending, onSend: send)
                 }
+                .background(.regularMaterial)
             }
             .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 6, matching: .images)
             .photosPicker(isPresented: $showVideoPicker, selection: $videoItem, matching: .videos)
@@ -90,6 +87,56 @@ struct ChatScreen: View {
             .onChange(of: photoItems) { _, items in processPhotos(items) }
             .onChange(of: videoItem) { _, item in processVideo(item) }
         }
+    }
+
+    // MARK: - 空状态 + 建议
+
+    private let suggestions = ["帮我写一封请假邮件", "用通俗语言解释量子纠缠", "制定一周健身计划"]
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.10))
+                    .frame(width: 84, height: 84)
+                Image(systemName: "bubble.left.and.bubble.right")
+                    .font(.system(size: 32))
+                    .foregroundStyle(.blue)
+            }
+            .padding(.top, 36)
+            VStack(spacing: 5) {
+                Text("开始新对话").font(.headline).foregroundStyle(.secondary)
+                Text("发送消息、图片或文件，AI 为你解答").font(.footnote).foregroundStyle(.tertiary)
+            }
+            VStack(spacing: 8) {
+                ForEach(suggestions, id: \.self) { s in
+                    Button {
+                        input = s
+                        inputFocus = true
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "wand.and.stars")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                            Text(s)
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "arrow.up.circle")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 11)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 6)
+        }
+        .padding(.top, 20)
     }
 
     // MARK: - 顶部卡片：第一条消息 + 模型配置
@@ -177,24 +224,17 @@ struct ChatScreen: View {
             .frame(width: 228)
         }
         .padding(.horizontal, 16)
-        .padding(.top, 6)
+        .padding(.top, 10)
+        .padding(.bottom, 2)
     }
 
     private var attachBar: some View {
         VStack(spacing: 6) {
-            HStack(spacing: 20) {
-                Button { showPhotoPicker = true } label: {
-                    Image(systemName: "photo").font(.system(size: 17)).foregroundStyle(.blue)
-                }
-                Button { showVideoPicker = true } label: {
-                    Image(systemName: "video.fill").font(.system(size: 17)).foregroundStyle(.blue)
-                }
-                Button { showCamera = true } label: {
-                    Image(systemName: "camera.fill").font(.system(size: 17)).foregroundStyle(.blue)
-                }
-                Button { showFilePicker = true } label: {
-                    Image(systemName: "paperclip").font(.system(size: 17)).foregroundStyle(.blue)
-                }
+            HStack(spacing: 12) {
+                attachButton("photo", "照片") { showPhotoPicker = true }
+                attachButton("video.fill", "视频") { showVideoPicker = true }
+                attachButton("camera.fill", "拍照") { showCamera = true }
+                attachButton("paperclip", "文件") { showFilePicker = true }
                 if loadingAtt { ProgressView().controlSize(.small) }
                 Spacer()
                 if !pendingAtts.isEmpty {
@@ -204,7 +244,7 @@ struct ChatScreen: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.top, 6)
+            .padding(.top, 4)
 
             if !pendingAtts.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -217,6 +257,21 @@ struct ChatScreen: View {
                     }
                     .padding(.horizontal, 16)
                 }
+            }
+        }
+    }
+
+    private func attachButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .frame(width: 32, height: 32)
+                    .background(Color.blue.opacity(0.10), in: Circle())
+                Text(label)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -393,7 +448,9 @@ struct MessageBubble: View {
                     ? LinearGradient(colors: [.blue, Color(red: 0.2, green: 0.45, blue: 1.0)], startPoint: .topLeading, endPoint: .bottomTrailing)
                     : LinearGradient(colors: [Color(uiColor: .secondarySystemGroupedBackground)],
                                      startPoint: .top, endPoint: .bottom),
-                in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                in: isUser
+                    ? UnevenRoundedRectangle(topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 5, style: .continuous)
+                    : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 18, style: .continuous)
             )
             .shadow(color: Color.black.opacity(isUser ? 0.1 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }
@@ -479,8 +536,8 @@ struct InputBar: View {
             }
             .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending)
         }
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .background(.regularMaterial)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
     }
 }
 

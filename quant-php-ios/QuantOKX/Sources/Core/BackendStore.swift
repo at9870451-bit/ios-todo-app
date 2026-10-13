@@ -767,6 +767,9 @@ extension BackendStore {
     func deleteConversation(id: Int64) async throws {
         let _: EmptyData = try await client.post("/api/chat/session/delete", body: ["id": id], as: EmptyData.self)
     }
+    func renameConversation(id: Int64, title: String) async throws {
+        let _: EmptyData = try await client.post("/api/chat/session/rename", body: ["id": id, "title": title], as: EmptyData.self)
+    }
     func saveChatConfig(endpoint: String, key: String, model: String) async -> String {
         do {
             let _: EmptyData = try await client.post("/api/ai/config", body: ["name": "Chat", "api_url": endpoint, "api_key": key, "model": model, "enabled": true, "mode": "chat"], as: EmptyData.self)
