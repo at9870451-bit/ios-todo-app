@@ -8,6 +8,7 @@ struct MembershipView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var months: Int = 1
+    @State private var selectedLevel: String = ""   // 选中的套餐等级
     @State private var purchasing: String = ""      // 正在购买的 level（防重复点击）
     @State private var confirmTarget: MembershipPlanRow?
     @State private var loaded = false
@@ -210,7 +211,7 @@ struct MembershipView: View {
             )
         }
         .buttonStyle(.plain)
-        .disabled(paid)
+        .disabled(isCurrent)
     }
 
     // MARK: - 购买按钮
