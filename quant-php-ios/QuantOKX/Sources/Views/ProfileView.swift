@@ -44,93 +44,101 @@ struct ProfileView: View {
 
     private var loggedInSection: some View {
         VStack(spacing: 14) {
-            VStack(spacing: 14) {
+            // 账号卡：头像 + 名字/等级徽章 + 连接状态（对齐参考稿个人中心）
+            HStack(spacing: 14) {
                 ZStack {
                     Circle()
                         .fill(Theme.heroGradient)
-                        .frame(width: 66, height: 66)
+                        .frame(width: 58, height: 58)
                     Text(String(config.username.prefix(1)).uppercased())
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
-                VStack(spacing: 4) {
+                .shadow(color: Theme.accent.opacity(0.25), radius: 6, y: 3)
+                VStack(alignment: .leading, spacing: 5) {
                     Text(config.username)
-                        .font(.system(size: 20, weight: .semibold, design: .rounded))
-                    Text("已登录")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                    HStack(spacing: 6) {
+                        Text(levelBadge)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(isPaid ? Theme.accent : Color.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                isPaid ? AnyShapeStyle(Theme.accent.opacity(0.14))
+                                       : AnyShapeStyle(Color(uiColor: .tertiarySystemGroupedBackground)),
+                                in: Capsule()
+                            )
+                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Text("已连接")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                if config.membershipLevel != "" && config.membershipLevel != "free" {
-                    Text("会员")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.14), in: Capsule())
-                }
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 26)
-            .solidCard(18)
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .solidCard(Theme.radiusL)
 
-            // 会员中心入口
+            // 会员橙渐变卡（对齐参考稿「开通会员」）
             NavigationLink {
                 MembershipView()
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "crown.fill")
-                        .font(.system(size: 17))
-                        .foregroundStyle(Theme.accent)
-                        .frame(width: 26)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("会员中心")
-                            .font(.subheadline.weight(.semibold))
-                        Text(config.membershipLevel == "" || config.membershipLevel == "free"
-                             ? "开通会员享全部高级权益"
-                             : "\(amoreLevelName(config.membershipLevel)) · 查看权益与续费")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(Color.white.opacity(0.22), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(isPaid ? amoreLevelName(config.membershipLevel) : "开通会员")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                        Text(isPaid ? "查看权益与续费" : "解锁全部高级权益")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.white.opacity(0.88))
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.white.opacity(0.9))
                 }
                 .padding(14)
+                .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.8))
+                .shadow(color: Theme.accent.opacity(0.3), radius: 10, x: 0, y: 5)
             }
-            .buttonStyle(.plain)
-            .solidCard(14)
+            .buttonStyle(PressableButtonStyle())
 
-            VStack(spacing: 0) {
-                HStack {
-                    Label("服务状态", systemImage: "server.rack").font(.subheadline)
-                    Spacer()
-                    HStack(spacing: 5) {
-                        Circle().fill(Color.green).frame(width: 7, height: 7)
-                        Text("已连接")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .padding(14)
-            }
-            .solidCard(14)
-
+            // 退出登录（白卡）
             Button {
                 Task { await store.logout() }
             } label: {
-                HStack {
+                HStack(spacing: 8) {
                     if store.busy { ProgressView().tint(.red) }
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 14))
                     Text("退出登录")
                         .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 13)
-                .solidCard(14)
+                .padding(.vertical, 14)
+                .solidCard(Theme.radiusM)
                 .foregroundStyle(.red)
             }
             .disabled(store.busy)
         }
+    }
+
+    private var isPaid: Bool {
+        config.membershipLevel != "" && config.membershipLevel != "free"
+    }
+
+    private var levelBadge: String {
+        isPaid ? amoreLevelName(config.membershipLevel) : "免费版"
     }
 
     // MARK: - 未登录：登录 / 注册表单

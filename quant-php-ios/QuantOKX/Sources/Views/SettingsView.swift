@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// 设置页：分类入口（AI 模型配置 / 人设 / 外观）+ 朗读
+/// 视觉对齐设计稿「设置页」：白卡分组 + 线性图标 + chevron，全局橙白灰三色系
 struct SettingsScreen: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var config: AppConfig
@@ -20,7 +21,7 @@ struct SettingsScreen: View {
                             ProviderListView()
                         } label: {
                             HStack(spacing: 12) {
-                                settingIcon("cpu", Theme.accent)
+                                settingIcon("cpu")
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("AI 模型配置").font(.subheadline.weight(.medium))
                                     Text(subtitleForProviders)
@@ -35,7 +36,7 @@ struct SettingsScreen: View {
                             PersonaView()
                         } label: {
                             HStack(spacing: 12) {
-                                settingIcon("face.smiling", .orange)
+                                settingIcon("face.smiling")
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("人设").font(.subheadline.weight(.medium))
                                     Text(personaPrompt.isEmpty ? "未设置 · 使用默认助手" : "已设置 · \(personaPrompt.prefix(18))…")
@@ -50,7 +51,7 @@ struct SettingsScreen: View {
                             AppearanceView()
                         } label: {
                             HStack(spacing: 12) {
-                                settingIcon("paintbrush.fill", .purple)
+                                settingIcon("paintbrush")
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text("外观").font(.subheadline.weight(.medium))
                                     Text(bg.image == nil ? "默认蓝白渐变" : "自定义背景图")
@@ -68,7 +69,7 @@ struct SettingsScreen: View {
                             Label("语音模型", systemImage: "waveform").tag("model")
                         } label: {
                             HStack(spacing: 12) {
-                                settingIcon("speaker.wave.2", .teal)
+                                settingIcon("speaker.wave.2")
                                 Text("朗读引擎").font(.subheadline.weight(.medium))
                             }
                         }
@@ -78,7 +79,7 @@ struct SettingsScreen: View {
                                     ProviderListView()
                                 } label: {
                                     HStack(spacing: 12) {
-                                        settingIcon("waveform.badge.plus", .orange)
+                                        settingIcon("waveform.badge.plus")
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text("选择语音模型").font(.subheadline.weight(.medium))
                                             Text("尚未添加语音模型 · 点此前往添加")
@@ -96,7 +97,7 @@ struct SettingsScreen: View {
                                     }
                                 } label: {
                                     HStack(spacing: 12) {
-                                        settingIcon("waveform", .indigo)
+                                        settingIcon("waveform")
                                         Text("语音模型").font(.subheadline.weight(.medium))
                                     }
                                 }
@@ -109,6 +110,16 @@ struct SettingsScreen: View {
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }
+                    }
+
+                    Section {
+                        HStack(spacing: 12) {
+                            settingIcon("app.badge.fill")
+                            Text("版本").font(.subheadline.weight(.medium))
+                            Spacer()
+                            Text(Self.versionText).font(.caption).foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
                     }
                 }
                 .scrollContentBackground(.hidden)
@@ -129,10 +140,17 @@ struct SettingsScreen: View {
         return ps.providers.isEmpty ? "未添加 · 点进去配置" : "\(ps.providers.count) 个模型"
     }
 
-    private func settingIcon(_ name: String, _ color: Color) -> some View {
-        RoundedRectangle(cornerRadius: 9, style: .continuous)
-            .fill(color.gradient)
-            .frame(width: 32, height: 32)
-            .overlay(Image(systemName: name).font(.system(size: 13)).foregroundStyle(.white))
+    /// 对齐设计稿：线性图标（无彩色容器），主色层级
+    private func settingIcon(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(.primary.opacity(0.75))
+            .frame(width: 26)
+    }
+
+    private static var versionText: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "3.9"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "31"
+        return "v\(v) (\(b))"
     }
 }

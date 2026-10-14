@@ -76,7 +76,7 @@ struct DollStudioView: View {
     private var viewport: some View {
         DollSceneView(controller: scene)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous))
             .overlay(alignment: .topLeading) { genderControl.padding(12) }
             .overlay(alignment: .topTrailing) {
                 GlassIconButton(icon: "arrow.counterclockwise", size: 38) { scene.resetView() }
@@ -165,8 +165,7 @@ struct DollStudioView: View {
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 6)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) { Divider() }
+        .glassBar()
     }
 
     private var categoryBar: some View {

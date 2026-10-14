@@ -141,6 +141,159 @@ struct EmptyHint: View {
     }
 }
 
+// MARK: - Design Tokens（参考稿：苹果白 × 橙 × 蓝橙渐变 × Liquid Glass）
+
+extension Theme {
+    /// 统一圆角体系：视口/大卡 26 · 面板 18 · 卡片 14 · 小件 10
+    static let radiusXL: CGFloat = 26
+    static let radiusL: CGFloat = 18
+    static let radiusM: CGFloat = 14
+    static let radiusS: CGFloat = 10
+    /// 统一页面边距
+    static let pagePadding: CGFloat = 16
+}
+
+/// 橙色渐变圆角方块图标（快捷入口 / 列表行图标；参考稿核心组件）
+struct SquircleIcon: View {
+    let system: String
+    var size: CGFloat = 40
+    var tinted: Bool = false   // true = 浅橙底橙 glyph（辅助样式）
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
+                .fill(tinted ? AnyShapeStyle(Theme.accent.opacity(0.13)) : AnyShapeStyle(Theme.brandGradient))
+            Image(systemName: system)
+                .font(.system(size: size * 0.46, weight: .semibold))
+                .foregroundStyle(tinted ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color.white))
+        }
+        .frame(width: size, height: size)
+        .shadow(color: Theme.accent.opacity(tinted ? 0 : 0.22), radius: 5, x: 0, y: 3)
+    }
+}
+
+/// 蓝橙渐变欢迎卡：标题 + 副标题 + 右侧圆形箭头钮（参考稿首页 hero）
+struct HeroBanner: View {
+    let title: String
+    var subtitle: String = ""
+    var icon: String = "chevron.right"
+    var action: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.88))
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            if let action {
+                Button {
+                    Haptics.light()
+                    action()
+                } label: {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(Color.white.opacity(0.26), in: Circle())
+                        .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
+        }
+        .padding(17)
+        .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
+        .overlay(
+            // 顶部高光
+            LinearGradient(colors: [.white.opacity(0.22), .clear], startPoint: .top, endPoint: .center)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
+                .allowsHitTesting(false)
+        )
+        .overlay(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous)
+            .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8))
+        .shadow(color: Theme.accent.opacity(0.26), radius: 12, x: 0, y: 6)
+    }
+}
+
+/// 列表行（squircle 图标 + 标题/副标题 + chevron；外层配 solidCard / List 使用）
+struct ListRow: View {
+    let icon: String
+    let title: String
+    var subtitle: String? = nil
+    var size: CGFloat = 38
+    var tinted: Bool = false
+
+    var body: some View {
+        HStack(spacing: 12) {
+            SquircleIcon(system: icon, size: size, tinted: tinted)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(12)
+        .contentShape(Rectangle())
+    }
+}
+
+/// 辅助按钮（浅橙底橙字；参考稿「辅助按钮」）
+struct AuxButton: View {
+    let title: String
+    var icon: String? = nil
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.light()
+            action()
+        } label: {
+            HStack(spacing: 6) {
+                if let icon { Image(systemName: icon) }
+                Text(title).font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(Theme.accent)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Theme.accent.opacity(0.13), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+}
+
+/// 底栏 / 输入栏统一玻璃（材质 + 顶部高光线）
+extension View {
+    @ViewBuilder
+    func glassBar() -> some View {
+        self
+            .background(.regularMaterial)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.55))
+                    .frame(height: 0.8)
+                    .blur(radius: 0.5)
+                    .allowsHitTesting(false)
+            }
+    }
+}
+
 /// 加载中
 struct LoadingHint: View {
     var body: some View {

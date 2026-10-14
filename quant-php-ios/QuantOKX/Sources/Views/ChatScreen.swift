@@ -8,6 +8,7 @@ import AVFoundation
 struct ChatScreen: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var config: AppConfig
     @State private var input = ""
     @State private var messages: [ChatMessage] = []
     @State private var sessionId: Int64 = 0
@@ -114,7 +115,7 @@ struct ChatScreen: View {
                     inputPanel
                 }
                 .padding(.top, 8)
-                .background(.regularMaterial)
+                .glassBar()
             }
             .photosPicker(isPresented: $showPicker, selection: $pickedItems, maxSelectionCount: 6, matching: .any(of: [.images, .videos]))
             .sheet(isPresented: $showFilePicker) {
@@ -157,71 +158,101 @@ struct ChatScreen: View {
                 Text("开始新对话").font(.headline).foregroundStyle(.secondary)
                 Text("发送消息、图片或文件，AI 为你解答").font(.footnote).foregroundStyle(.tertiary)
             }
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 ForEach(suggestions, id: \.self) { s in
                     Button {
                         Haptics.light()
                         input = s
                         inputFocus = true
                     } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "wand.and.stars")
-                                .font(.caption)
-                                .foregroundStyle(Theme.accent)
+                        HStack(spacing: 12) {
+                            SquircleIcon(system: "wand.and.stars", size: 36)
                             Text(s)
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Spacer()
-                            Image(systemName: "arrow.up.circle")
-                                .font(.caption)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.white.opacity(0.3), lineWidth: 0.8))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .solidCard(Theme.radiusM)
                     }
                     .buttonStyle(PressableButtonStyle())
                 }
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 2)
         }
         .padding(.top, 20)
     }
 
-    // MARK: - 顶部卡片：第一条消息 + 模型配置
+    // MARK: - 顶部：问候 + 渐变卡 + 摘要/模型（对齐设计稿首页）
+
+    private var greetTitle: String {
+        let h = Calendar.current.component(.hour, from: Date())
+        switch h {
+        case 5..<11: return "早上好"
+        case 11..<13: return "中午好"
+        case 13..<18: return "下午好"
+        default: return "晚上好"
+        }
+    }
 
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            if let first = messages.first(where: { $0.role == "user" }) {
-                HStack(alignment: .top, spacing: 7) {
-                    Image(systemName: "text.quote")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
-                    Text(first.content.isEmpty ? "[附件消息]" : first.content)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            } else {
-                HStack(spacing: 7) {
-                    Image(systemName: "sparkles")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Text("新对话 · 发送第一条消息开始")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(greetTitle + "，" + (config.nickname.isEmpty ? config.username : config.nickname))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                Text("开启你的精彩对话")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 2)
+
+            HeroBanner(
+                title: messages.isEmpty ? "开始全新对话" : "继续当前对话",
+                subtitle: store.chatConfigured ? "模型 · \(store.chatModelName)" : "AI 未配置 · 点击前往设置",
+                icon: store.chatConfigured ? "plus" : "chevron.right"
+            ) {
+                if store.chatConfigured {
+                    newChat()
+                } else {
+                    router.tab = 3
                 }
             }
-            Divider()
-            modelRow
+
+            VStack(alignment: .leading, spacing: 9) {
+                if let first = messages.first(where: { $0.role == "user" }) {
+                    HStack(alignment: .top, spacing: 7) {
+                        Image(systemName: "text.quote")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 2)
+                        Text(first.content.isEmpty ? "[附件消息]" : first.content)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                } else {
+                    HStack(spacing: 7) {
+                        Image(systemName: "sparkles")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Text("发送第一条消息开始")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Divider()
+                modelRow
+            }
+            .padding(12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous).strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8))
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8))
-        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
 
     private var modelRow: some View {

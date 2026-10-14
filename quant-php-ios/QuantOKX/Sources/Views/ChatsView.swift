@@ -396,8 +396,7 @@ struct ChatRoomView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) { Divider() }
+        .glassBar()
     }
 
     // MARK: - 空状态
