@@ -55,6 +55,13 @@ public class QkApiApplication {
                         .allowedHeaders("*").allowCredentials(true).maxAge(3600);
             }
 
+            /** Doll Studio 3D 模型文件静态下发（data/doll-models/ → /doll-assets/**，无需认证） */
+            @Override
+            public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry r) {
+                String dir = System.getProperty("user.dir") + "/data/doll-models";
+                r.addResourceHandler("/doll-assets/**").addResourceLocations("file:" + dir + "/");
+            }
+
             @Override
             public void addInterceptors(InterceptorRegistry r) {
                 // ---- Console 管理后台：JWT ----
@@ -184,6 +191,7 @@ public class QkApiApplication {
             if (path.startsWith("/api/console/config")) return "config:manage";
             if (path.startsWith("/api/console/announcements")) return "announcements:manage";
             if (path.startsWith("/api/console/versions")) return "versions:manage";
+            if (path.startsWith("/api/console/doll")) return "doll:manage";
             return null;
         }
         public static String actionName(String path, String method) {
@@ -199,6 +207,7 @@ public class QkApiApplication {
             if (path.startsWith("/api/console/config")) return "修改系统配置";
             if (path.startsWith("/api/console/announcements")) return "DELETE".equals(method) ? "删除公告" : ("POST".equals(method) ? "新增公告" : "修改公告");
             if (path.startsWith("/api/console/versions")) return "DELETE".equals(method) ? "删除版本" : ("POST".equals(method) ? "新增版本" : "修改版本");
+            if (path.startsWith("/api/console/doll")) return "管理 Doll Studio（玩偶换装）";
             return method + " " + path;
         }
     }

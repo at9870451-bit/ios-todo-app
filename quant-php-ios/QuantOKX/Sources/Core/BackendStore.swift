@@ -841,4 +841,72 @@ extension BackendStore {
             // 拉取失败不阻塞 UI
         }
     }
+
+    // MARK: - Doll Studio 3D（玩偶换装）
+
+    @Published var dollCategories: [DollCategory] = DollCatalog.categories
+    @Published var dollItems: [DollItem] = DollCatalog.builtinItems()
+    @Published var dollOutfits: [DollOutfitRow] = []
+    private var dollCatalogLoaded = false
+
+    /// 拉取服装目录（失败时保留内置目录，玩偶功能可离线使用）
+    func loadDollCatalog() async {
+        guard !dollCatalogLoaded else { return }
+        do {
+            let data = try await client.get("/api/doll/catalog", as: DollCatalogData.self)
+            if !data.items.isEmpty {
+                dollItems = data.items
+                dollCategories = data.categories.isEmpty ? DollCatalog.categories : data.categories
+            }
+            dollCatalogLoaded = true
+        } catch {
+            // 网络失败：静默保留内置目录
+        }
+    }
+
+    func loadDollOutfits() async {
+        do { dollOutfits = try await client.get("/api/doll/outfits", as: [DollOutfitRow].self) }
+        catch { handle(error) }
+    }
+
+    func saveDollOutfit(name: String, state: DollOutfitState) async {
+        do {
+            struct Saved: Decodable { let id: Int64 }
+            _ = try await client.post(
+                "/api/doll/outfits",
+                body: ["name": name, "gender": state.gender, "skin": state.skin, "state": state.json],
+                as: Saved.self
+            )
+            await loadDollOutfits()
+            toast = "穿搭已保存"
+        } catch { handle(error) }
+    }
+
+    func deleteDollOutfit(id: Int64) async {
+        do {
+            _ = try await client.post("/api/doll/outfits/delete", body: ["id": id], as: EmptyData.self)
+            await loadDollOutfits()
+        } catch { handle(error) }
+    }
+
+    func favoriteDollOutfit(id: Int64, fav: Bool) async {
+        do {
+            _ = try await client.post("/api/doll/outfits/favorite", body: ["id": id, "favorite": fav], as: EmptyData.self)
+            await loadDollOutfits()
+        } catch { handle(error) }
+    }
+
+    /// AI 穿搭推荐（服务端持有 AI 密钥，客户端只传需求文本）
+    func dollRecommend(gender: String, prompt: String) async -> DollRecommendData? {
+        do {
+            return try await client.post(
+                "/api/doll/ai/recommend",
+                body: ["gender": gender, "prompt": prompt],
+                as: DollRecommendData.self
+            )
+        } catch {
+            handle(error)
+            return nil
+        }
+    }
 }

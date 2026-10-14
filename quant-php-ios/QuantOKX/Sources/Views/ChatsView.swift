@@ -137,7 +137,7 @@ enum RedPacketParser {
     }
 }
 
-// MARK: - 红包卡片（仿微信，未拆状态）
+// MARK: - 红包气泡（仿微信独立红包卡：竖版金橙卡 + 底部领取条）
 
 struct RedPacketCard: View {
     let blessing: String
@@ -149,36 +149,51 @@ struct RedPacketCard: View {
             Haptics.medium()
             onTap()
         } label: {
-            HStack(spacing: 10) {
+            VStack(spacing: 0) {
+                Spacer(minLength: 0)
                 ZStack {
                     Circle()
-                        .fill(Color.white.opacity(0.28))
-                        .frame(width: compact ? 30 : 36, height: compact ? 30 : 36)
+                        .fill(Color.white.opacity(0.20))
+                        .frame(width: 54, height: 54)
+                    Circle()
+                        .strokeBorder(Color(red: 1.0, green: 0.84, blue: 0.55).opacity(0.9), lineWidth: 2)
+                        .frame(width: 54, height: 54)
                     Image(systemName: "gift.fill")
-                        .font(.system(size: compact ? 14 : 17))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 23))
+                        .foregroundStyle(Color(red: 1.0, green: 0.9, blue: 0.68))
                 }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(blessing.isEmpty ? "恭喜发财，大吉大利" : blessing)
-                        .font(.system(size: compact ? 13 : 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                    Text("领取 AI 红包")
-                        .font(.system(size: compact ? 10 : 11))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
-                Spacer(minLength: 4)
+                Text(blessing.isEmpty ? "恭喜发财" : blessing)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .padding(.top, 12)
+                    .padding(.horizontal, 10)
+                Spacer(minLength: 0)
+                Text("领取 AI 红包")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color(red: 1.0, green: 0.9, blue: 0.68).opacity(0.95))
+                    .padding(.bottom, 13)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, compact ? 9 : 12)
-            .frame(width: compact ? 190 : 226, alignment: .leading)
+            .frame(width: compact ? 120 : 148, height: compact ? 160 : 196)
             .background(
                 LinearGradient(colors: [Color(red: 0.98, green: 0.62, blue: 0.23),
                                         Color(red: 0.91, green: 0.33, blue: 0.12)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                               startPoint: .top, endPoint: .bottom),
+                in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
-            .shadow(color: Color(red: 0.91, green: 0.33, blue: 0.12).opacity(0.3), radius: 6, y: 3)
+            .overlay(alignment: .bottom) {
+                // 底部微光翻盖
+                UnevenRoundedRectangle(topLeadingRadius: 64, topTrailingRadius: 64, style: .continuous)
+                    .fill(LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.02)],
+                                         startPoint: .top, endPoint: .bottom))
+                    .frame(height: 30)
+                    .allowsHitTesting(false)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
+            )
+            .shadow(color: Color(red: 0.91, green: 0.33, blue: 0.12).opacity(0.32), radius: 7, y: 4)
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -272,12 +287,12 @@ struct ChatRoomView: View {
                                 if messages.isEmpty {
                                     emptyState
                                 }
-                                ForEach(messages) { m in
-                                    BubbleRow(msg: m, aiName: aiName, meName: meName,
+                                ForEach(displayItems) { item in
+                                    BubbleRow(item: item, aiName: aiName, meName: meName,
                                               aiImage: av.aiImage, meImage: av.meImage) { blessing, amount in
                                         openRedPacket = RedPacketMsg(blessing: blessing, amount: amount)
                                     }
-                                    .id(m.id)
+                                    .id(item.id)
                                 }
                                 if sending {
                                     HStack {
@@ -302,7 +317,7 @@ struct ChatRoomView: View {
                             .padding(.top, 8)
                         }
                         .onChange(of: messages.count) { _, _ in
-                            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(messages.last?.id ?? -1, anchor: .bottom) }
+                            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(displayItems.last?.id ?? "", anchor: .bottom) }
                         }
                     }
                     inputBar
@@ -328,6 +343,25 @@ struct ChatRoomView: View {
 
     private var bubbleAIBg: Color {
         Color(uiColor: .secondarySystemGroupedBackground)
+    }
+
+    /// 消息按段拆成独立气泡（红包单独一个聊天气泡：文字与红包各自成行，各带头像）
+    private var displayItems: [ChatBubbleItem] {
+        var out: [ChatBubbleItem] = []
+        for m in messages {
+            for (i, seg) in RedPacketParser.parse(m.content).enumerated() {
+                switch seg {
+                case .text(let t):
+                    let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        out.append(ChatBubbleItem(id: "\(m.id)-t\(i)", msg: m, segment: .text(trimmed)))
+                    }
+                case .redPacket:
+                    out.append(ChatBubbleItem(id: "\(m.id)-r\(i)", msg: m, segment: seg))
+                }
+            }
+        }
+        return out
     }
 
     // MARK: - 输入栏（仿微信）
@@ -452,65 +486,66 @@ struct ChatRoomView: View {
     }
 }
 
-// MARK: - 微信风格气泡行（头像 + 多段内容：文字气泡 / 红包卡）
+// MARK: - 聊天气泡展示单元（一条消息按段拆分：文字气泡 / 红包各自独立成气泡）
+
+struct ChatBubbleItem: Identifiable {
+    let id: String
+    let msg: ChatMessage
+    let segment: MsgSegment
+}
+
+// MARK: - 微信风格气泡行（头像 + 单个独立气泡；红包为单独一个聊天气泡）
 
 struct BubbleRow: View {
-    let msg: ChatMessage
+    let item: ChatBubbleItem
     let aiName: String
     let meName: String
     let aiImage: UIImage?
     let meImage: UIImage?
     let onOpenRedPacket: (String, Double?) -> Void
 
-    var isUser: Bool { msg.role == "user" }
-    private var segments: [MsgSegment] { RedPacketParser.parse(msg.content) }
+    var isUser: Bool { item.msg.role == "user" }
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             if isUser { Spacer(minLength: 52) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true) }
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(segments.enumerated()), id: \.offset) { _, seg in
-                    segmentView(seg)
-                }
-            }
+            bubble
             if isUser { ChatAvatar(image: meImage, name: meName, size: 40) } else { Spacer(minLength: 52) }
         }
         .padding(.horizontal, 12)
     }
 
     @ViewBuilder
-    private func segmentView(_ seg: MsgSegment) -> some View {
-        switch seg {
+    private var bubble: some View {
+        switch item.segment {
         case .text(let t):
-            let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                Text(trimmed)
-                    .font(.system(size: 16))
-                    .foregroundStyle(isUser ? Color.black : .primary)
-                    .lineLimit(20)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .background(
-                        isUser ? AnyShapeStyle(Color(red: 0.584, green: 0.925, blue: 0.412))
-                               : AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)),
-                        in: UnevenRoundedRectangle(
-                            topLeadingRadius: isUser ? 8 : 3,
-                            bottomLeadingRadius: 8,
-                            bottomTrailingRadius: 8,
-                            topTrailingRadius: isUser ? 3 : 8,
-                            style: .continuous)
-                    )
-                    .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
-                    .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
-            }
+            Text(t)
+                .font(.system(size: 16))
+                .foregroundStyle(isUser ? Color.black : .primary)
+                .lineLimit(20)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(
+                    isUser ? AnyShapeStyle(Color(red: 0.584, green: 0.925, blue: 0.412))
+                           : AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)),
+                    in: UnevenRoundedRectangle(
+                        topLeadingRadius: isUser ? 8 : 3,
+                        bottomLeadingRadius: 8,
+                        bottomTrailingRadius: 8,
+                        topTrailingRadius: isUser ? 3 : 8,
+                        style: .continuous)
+                )
+                .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
+                .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
         case .redPacket(let blessing, let amount):
-            HStack {
-                if isUser { Spacer() }
+            HStack(spacing: 0) {
+                if isUser { Spacer(minLength: 0) }
                 RedPacketCard(blessing: blessing) {
                     onOpenRedPacket(blessing, amount)
                 }
-                if !isUser { Spacer() }
+                if !isUser { Spacer(minLength: 0) }
             }
+            .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
         }
     }
 }

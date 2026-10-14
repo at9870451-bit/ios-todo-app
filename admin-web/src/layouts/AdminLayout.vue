@@ -107,6 +107,7 @@ const menus = computed(() => {
   const all = [
     { path: '/', title: '控制台', icon: 'Odometer', perm: '' },
     { path: '/users', title: '用户管理', icon: 'User', perm: 'users:read' },
+    { path: '/doll', title: 'Doll Studio', icon: 'MagicStick', perm: 'doll:manage' },
     { path: '/admins', title: '管理员与角色', icon: 'UserFilled', perm: 'admins:manage' },
     { path: '/logs', title: '操作日志', icon: 'Document', perm: 'logs:read' },
     { path: '/config', title: '系统配置', icon: 'Setting', perm: 'config:manage' }

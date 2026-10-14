@@ -176,6 +176,7 @@ export const LEVELS = [
 export const PERM_GROUPS = [
   { name: '用户管理', perms: ['users:read', 'users:ban', 'users:resetpw'] },
   { name: '数据统计', perms: ['stats:read'] },
+  { name: 'Doll Studio', perms: ['doll:manage'] },
   { name: '系统管理', perms: ['admins:manage', 'roles:manage', 'logs:read', 'config:manage', 'announcements:manage', 'versions:manage'] }
 ]
 
@@ -189,5 +190,84 @@ export const PERM_LABELS: Record<string, string> = {
   'logs:read': '查看操作日志',
   'config:manage': '系统配置',
   'announcements:manage': '公告管理',
-  'versions:manage': '版本管理'
+  'versions:manage': '版本管理',
+  'doll:manage': 'Doll Studio 管理'
+}
+
+// ---------- Doll Studio 3D ----------
+
+export interface DollCategoryRow {
+  id: number
+  code: string
+  name: string
+  sort: number
+  enabled: boolean
+  item_count: number
+  created_at: string
+}
+
+export interface DollItemRow {
+  id: number
+  category: string
+  name: string
+  style: string
+  color: string
+  premium: boolean
+  sort: number
+  enabled: boolean
+  model_url: string | null
+  model_scale: number
+  model_offset_y: number
+  created_at: string
+}
+
+export interface DollOutfitRow {
+  id: number
+  user_id: number
+  username: string
+  name: string
+  gender: string
+  skin: string
+  state: string
+  favorite: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface DollAiLogRow {
+  id: number
+  user_id: number
+  username: string
+  prompt: string
+  status: string
+  message: string
+  duration_ms: number
+  created_at: string
+}
+
+export interface DollAiConfigRow {
+  id: number
+  user_id: number
+  username: string
+  name: string
+  provider_type: string
+  api_style: string
+  api_url: string
+  model: string
+  mode: string
+  enabled: boolean
+  run_count: number
+  last_run_at: string | null
+  api_key_masked: string
+}
+
+export interface DollMeta {
+  categories: number
+  items: number
+  enabled_items: number
+  outfits: number
+  favorites: number
+  ai_calls: number
+  ai_errors: number
+  styles: Record<string, string[]>
 }

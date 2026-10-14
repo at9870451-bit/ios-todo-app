@@ -10,6 +10,7 @@ const routes: RouteRecordRaw[] = [
       { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: '控制台', icon: 'Odometer' } },
       { path: 'users', name: 'users', component: () => import('@/views/UsersView.vue'), meta: { title: '用户管理', icon: 'User', perm: 'users:read' } },
       { path: 'users/:id', name: 'user-detail', component: () => import('@/views/UserDetailView.vue'), meta: { title: '用户详情', perm: 'users:read' } },
+      { path: 'doll', name: 'doll', component: () => import('@/views/DollView.vue'), meta: { title: 'Doll Studio', icon: 'MagicStick', perm: 'doll:manage' } },
       { path: 'admins', name: 'admins', component: () => import('@/views/AdminsView.vue'), meta: { title: '管理员与角色', icon: 'UserFilled', perm: 'admins:manage' } },
       { path: 'logs', name: 'logs', component: () => import('@/views/LogsView.vue'), meta: { title: '操作日志', icon: 'Document', perm: 'logs:read' } },
       { path: 'config', name: 'config', component: () => import('@/views/ConfigView.vue'), meta: { title: '系统配置', icon: 'Setting', perm: 'config:manage' } }

@@ -73,34 +73,40 @@ struct ToastView: View {
     }
 }
 
-/// 底部导航：聊天 / 对话 / 设置 / 我的
+/// 底部导航：聊天 / 对话 / 玩偶 / 设置 / 我的
 struct MainTabView: View {
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var router: Router
 
     var body: some View {
         TabView(selection: $router.tab) {
-            AuthGate(gotoProfile: { router.tab = 3 }) {
+            AuthGate(gotoProfile: { router.tab = 4 }) {
                 ChatRoomView()
             }
             .tabItem { Label("聊天", systemImage: "ellipsis.message.fill") }
             .tag(0)
 
-            AuthGate(gotoProfile: { router.tab = 3 }) {
+            AuthGate(gotoProfile: { router.tab = 4 }) {
                 ChatScreen()
             }
             .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
             .tag(1)
 
-            AuthGate(gotoProfile: { router.tab = 3 }) {
+            AuthGate(gotoProfile: { router.tab = 4 }) {
+                DollStudioView()
+            }
+            .tabItem { Label("玩偶", systemImage: "teddybear.fill") }
+            .tag(2)
+
+            AuthGate(gotoProfile: { router.tab = 4 }) {
                 SettingsScreen()
             }
             .tabItem { Label("设置", systemImage: "gearshape.fill") }
-            .tag(2)
+            .tag(3)
 
             ProfileView(onLoggedIn: { router.tab = 1 })
                 .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
-                .tag(3)
+                .tag(4)
         }
         .tint(Theme.accent)
     }

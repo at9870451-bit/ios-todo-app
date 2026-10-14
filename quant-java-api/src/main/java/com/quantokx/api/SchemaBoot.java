@@ -206,6 +206,32 @@ public final class SchemaBoot {
             "id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT NOT NULL, field VARCHAR(32), old_value VARCHAR(255)," +
             "new_value VARCHAR(255), operator VARCHAR(64), source VARCHAR(32), created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
             "KEY idx_chg_user(user_id)" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        // ---------- Doll Studio 3D（玩偶换装） ----------
+        "CREATE TABLE IF NOT EXISTS doll_categories(" +
+            "id BIGINT PRIMARY KEY AUTO_INCREMENT, code VARCHAR(32) NOT NULL UNIQUE, name VARCHAR(64) NOT NULL," +
+            "sort INT DEFAULT 0, enabled TINYINT DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS doll_items(" +
+            "id BIGINT PRIMARY KEY AUTO_INCREMENT, category VARCHAR(32) NOT NULL, name VARCHAR(64) NOT NULL," +
+            "style VARCHAR(64) NOT NULL, color VARCHAR(16) DEFAULT '#FFFFFF', premium TINYINT DEFAULT 0," +
+            "sort INT DEFAULT 0, enabled TINYINT DEFAULT 1, model_url VARCHAR(255) DEFAULT NULL," +
+            "model_scale DOUBLE DEFAULT 1, model_offset_y DOUBLE DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "KEY idx_dollitem_cat(category)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS doll_outfits(" +
+            "id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT NOT NULL, name VARCHAR(64) DEFAULT '未命名搭配'," +
+            "gender VARCHAR(16) DEFAULT 'neutral', skin VARCHAR(16) DEFAULT '#F6D7BE', state MEDIUMTEXT," +
+            "favorite TINYINT DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, KEY idx_dollout_user(user_id)" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
+        "CREATE TABLE IF NOT EXISTS doll_ai_logs(" +
+            "id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT, prompt VARCHAR(500), result MEDIUMTEXT," +
+            "status VARCHAR(16) DEFAULT 'ok', message VARCHAR(500), duration_ms INT DEFAULT 0," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP, KEY idx_dollai_user(user_id), KEY idx_dollai_created(created_at)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
     };
 
@@ -230,6 +256,20 @@ public final class SchemaBoot {
         cols.add(new String[]{"member_orders", "channel", "VARCHAR(16) DEFAULT 'alipay'"});
         cols.add(new String[]{"member_orders", "paid_at", "DATETIME DEFAULT NULL"});
         for (String[] t : cols) addColumn(c, t[0], t[1], t[2]);
+
+        // v2.1: 所有角色补 doll:manage 权限（超级管理员本就放行；这里保证运营/审计角色可见玩偶管理）
+        try {
+            for (var r : Db.rows("SELECT id,perms FROM sys_role")) {
+                String p = Svc.str(r.get("perms")).trim();
+                if (p.contains("\"doll:manage\"")) continue;
+                String inner = p;
+                if (inner.startsWith("[")) inner = inner.substring(1);
+                if (inner.endsWith("]")) inner = inner.substring(0, inner.length() - 1);
+                inner = inner.trim();
+                String np = inner.isEmpty() ? "[\"doll:manage\"]" : "[" + inner + ",\"doll:manage\"]";
+                Db.upd("UPDATE sys_role SET perms=? WHERE id=?", np, r.get("id"));
+            }
+        } catch (Exception ignore) { }
     }
 
     private static void addColumn(Connection c, String table, String column, String ddl) {
@@ -288,6 +328,56 @@ public final class SchemaBoot {
             Object ver = Db.scalar("SELECT COUNT(*) FROM app_version");
             if (num(ver) == 0) {
                 Db.upd("INSERT INTO app_version(platform,version,build,force_update,download_url,notes,enabled) VALUES('iOS','3.7',28,0,'','Amore 3.7 正式版',1)");
+            }
+
+            // ---------- Doll Studio 3D 种子：分类 + 款式目录（与 iOS 内置目录一致） ----------
+            if (num(Db.scalar("SELECT COUNT(*) FROM doll_categories")) == 0) {
+                String[][] cats = {
+                    {"hair", "发型", "1"}, {"top", "上衣", "2"}, {"bottom", "下装", "3"},
+                    {"scarf", "围巾", "4"}, {"hat", "帽子", "5"}, {"shoes", "鞋子", "6"}, {"accessory", "配饰", "7"}
+                };
+                for (String[] row : cats) Db.upd("INSERT INTO doll_categories(code,name,sort,enabled) VALUES(?,?,?,1)", row[0], row[1], row[2]);
+            }
+            if (num(Db.scalar("SELECT COUNT(*) FROM doll_items")) == 0) {
+                String[][] items = {
+                    {"hair", "short", "清爽短发", "#3B2B20", "0", "1"},
+                    {"hair", "bob", "波波头", "#4A3226", "0", "2"},
+                    {"hair", "long", "柔顺长发", "#5A3A22", "0", "3"},
+                    {"hair", "twintails", "双马尾", "#6B4423", "0", "4"},
+                    {"hair", "bun", "丸子头", "#2C2C2E", "0", "5"},
+                    {"hair", "spiky", "刺猬头", "#1F1F22", "0", "6"},
+                    {"top", "tee", "经典T恤", "#FFFFFF", "0", "1"},
+                    {"top", "hoodie", "连帽卫衣", "#5B7FD4", "0", "2"},
+                    {"top", "shirt", "衬衫", "#DDE5F0", "0", "3"},
+                    {"top", "vest", "针织背心", "#E8C468", "0", "4"},
+                    {"top", "sweater", "高领毛衣", "#C96F5E", "0", "5"},
+                    {"top", "jacket", "牛仔夹克", "#3E5C8A", "0", "6"},
+                    {"bottom", "shorts", "休闲短裤", "#3E5C8A", "0", "1"},
+                    {"bottom", "pants", "直筒长裤", "#2C2C2E", "0", "2"},
+                    {"bottom", "skirt", "百褶短裙", "#D96A7B", "0", "3"},
+                    {"bottom", "wide_leg", "阔腿裤", "#8A7F6A", "0", "4"},
+                    {"scarf", "scarf", "经典围巾", "#D9433B", "0", "1"},
+                    {"scarf", "bandana", "三角巾", "#E8C468", "0", "2"},
+                    {"hat", "beanie", "毛线帽", "#D9433B", "0", "1"},
+                    {"hat", "cap", "棒球帽", "#2C2C2E", "0", "2"},
+                    {"hat", "bucket", "渔夫帽", "#E8E2D4", "0", "3"},
+                    {"hat", "beret", "贝雷帽", "#B0565B", "0", "4"},
+                    {"shoes", "sneakers", "小白鞋", "#FFFFFF", "0", "1"},
+                    {"shoes", "boots", "马丁靴", "#3A2A20", "0", "2"},
+                    {"shoes", "loafers", "乐福鞋", "#5A3A22", "0", "3"},
+                    {"shoes", "sandals", "凉鞋", "#C9A06B", "0", "4"},
+                    {"accessory", "glasses", "圆框眼镜", "#2C2C2E", "0", "1"},
+                    {"accessory", "necklace", "小金链", "#E8C468", "0", "2"},
+                    {"accessory", "backpack", "双肩包", "#D96A7B", "0", "3"},
+                    {"accessory", "earrings", "星星耳钉", "#E8C468", "0", "4"},
+                    {"accessory", "flower", "头花", "#FF8FA3", "0", "5"},
+                    {"accessory", "watch", "运动手表", "#2C2C2E", "0", "6"}
+                };
+                for (String[] it : items) {
+                    // it = {category, style, name, color, premium, sort}
+                    Db.upd("INSERT INTO doll_items(category,style,name,color,premium,sort,enabled) VALUES(?,?,?,?,?,?,1)",
+                            it[0], it[1], it[2], it[3], it[4], it[5]);
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException("种子数据写入失败: " + e.getMessage(), e);

@@ -1,7 +1,8 @@
 import http from './client'
 import type {
   ApiResponse, Paged, AdminInfo, UserRow, UserStats, LoginLog, DeviceInfo, ChangeLog,
-  Overview, TrendItem, RetentionCohort, AdminRow, RoleRow, OpLog, Announcement, AppVersion, ConfigMap
+  Overview, TrendItem, RetentionCohort, AdminRow, RoleRow, OpLog, Announcement, AppVersion, ConfigMap,
+  DollCategoryRow, DollItemRow, DollOutfitRow, DollAiLogRow, DollAiConfigRow, DollMeta
 } from '@/types'
 
 // ---------- 认证 ----------
@@ -86,4 +87,34 @@ export const versionApi = {
   create: (payload: Partial<AppVersion>) => http.post<any, ApiResponse<{ id: number }>>('/versions', payload),
   update: (id: number, payload: Partial<AppVersion>) => http.put<any, ApiResponse<null>>(`/versions/${id}`, payload),
   remove: (id: number) => http.delete<any, ApiResponse<null>>(`/versions/${id}`)
+}
+
+// ---------- Doll Studio 3D ----------
+
+export const dollApi = {
+  meta: () => http.get<any, ApiResponse<DollMeta>>('/doll/meta'),
+  categories: () => http.get<any, ApiResponse<{ items: DollCategoryRow[] }>>('/doll/categories'),
+  updateCategory: (id: number, payload: { name?: string; sort?: number; enabled?: boolean }) =>
+    http.put<any, ApiResponse<null>>(`/doll/categories/${id}`, payload),
+  items: (params: { page?: number; size?: number; category?: string; keyword?: string }) =>
+    http.get<any, ApiResponse<Paged<DollItemRow>>>('/doll/items', { params }),
+  createItem: (payload: Partial<DollItemRow>) => http.post<any, ApiResponse<{ id: number }>>('/doll/items', payload),
+  updateItem: (id: number, payload: Partial<DollItemRow>) => http.put<any, ApiResponse<null>>(`/doll/items/${id}`, payload),
+  removeItem: (id: number) => http.delete<any, ApiResponse<null>>(`/doll/items/${id}`),
+  uploadModel: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return http.post<any, ApiResponse<{ url: string; name: string; size: number }>>('/doll/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000
+    })
+  },
+  outfits: (params: { page?: number; size?: number; keyword?: string }) =>
+    http.get<any, ApiResponse<Paged<DollOutfitRow>>>('/doll/outfits', { params }),
+  removeOutfit: (id: number) => http.delete<any, ApiResponse<null>>(`/doll/outfits/${id}`),
+  aiLogs: (params: { page?: number; size?: number; status?: string }) =>
+    http.get<any, ApiResponse<Paged<DollAiLogRow>>>('/doll/ai-logs', { params }),
+  aiLogDetail: (id: number) => http.get<any, ApiResponse<DollAiLogRow & { result: string }>>(`/doll/ai-logs/${id}`),
+  aiConfigs: (params: { page?: number; size?: number }) =>
+    http.get<any, ApiResponse<Paged<DollAiConfigRow>>>('/doll/ai-configs', { params })
 }

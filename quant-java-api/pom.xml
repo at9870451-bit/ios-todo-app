@@ -11,9 +11,9 @@
     </parent>
     <groupId>com.quantokx</groupId>
     <artifactId>quant-java-api</artifactId>
-    <version>2.0.0</version>
+    <version>2.1.0</version>
     <name>quant-java-api</name>
-    <description>Amore iOS App 后端 + Web 管理后台</description>
+    <description>Amore iOS App 后端 + Web 管理后台 + Doll Studio 3D</description>
     <properties><java.version>21</java.version></properties>
     <dependencies>
         <dependency>

@@ -226,7 +226,7 @@ struct ChatScreen: View {
 
     private var modelRow: some View {
         Button {
-            if !store.chatConfigured { router.tab = 2 }
+            if !store.chatConfigured { router.tab = 3 }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
