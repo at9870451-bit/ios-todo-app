@@ -172,6 +172,57 @@ final class DollSceneController: NSObject, ObservableObject {
 
     // MARK: 几何 / 材质工具
 
+    /// 程序化胶囊网格（iOS 26 SDK 移除了 MeshResource.generateCapsule，用 MeshDescriptor 自建，
+    /// 外形与原生成器一致：中间圆柱段 + 上下半球端盖，总高 = height + 2*radius）
+    private func capsuleMesh(height: Float, radius: Float, segments: Int = 24) -> MeshResource {
+        let halfH = height / 2
+        let rings = 10
+        // 轮廓：顶极点 → 顶半球 → 圆柱 → 底半球 → 底极点（y, 半径）
+        var profile: [(y: Float, r: Float)] = []
+        for i in 0...rings {
+            let a = Float(i) / Float(rings) * Float.pi / 2
+            profile.append((cos(a) * radius + halfH, sin(a) * radius))
+        }
+        for i in 1...rings {
+            let a = Float.pi / 2 + Float(i) / Float(rings) * Float.pi / 2
+            profile.append((cos(a) * radius - halfH, sin(a) * radius))
+        }
+        var positions: [SIMD3<Float>] = []
+        var normals: [SIMD3<Float>] = []
+        var indices: [UInt32] = []
+        let n = profile.count
+        for p in profile {
+            for j in 0..<segments {
+                let a = Float(j) / Float(segments) * 2 * Float.pi
+                let x = cos(a) * p.r, z = sin(a) * p.r
+                positions.append(SIMD3<Float>(x, p.y, z))
+                // 法线：端部按球心，中段按径向
+                if p.y > halfH {
+                    normals.append(SIMD3<Float>(x, p.y - halfH, z))
+                } else if p.y < -halfH {
+                    normals.append(SIMD3<Float>(x, p.y + halfH, z))
+                } else {
+                    normals.append(SIMD3<Float>(x, 0, z))
+                }
+            }
+        }
+        for i in 0..<(n - 1) {
+            for j in 0..<segments {
+                let j2 = (j + 1) % segments
+                let a0 = UInt32(i * segments + j)
+                let a1 = UInt32(i * segments + j2)
+                let b0 = UInt32((i + 1) * segments + j)
+                let b1 = UInt32((i + 1) * segments + j2)
+                indices += [a0, b0, b1, a0, b1, a1]
+            }
+        }
+        var desc = MeshDescriptor(name: "capsule")
+        desc.positions = MeshBuffers.Positions(positions)
+        desc.normals = MeshBuffers.Normals(normals)
+        desc.primitives = .triangles(indices)
+        return (try? MeshResource.generate(from: [desc])) ?? MeshResource.generateSphere(radius: max(radius, 0.001))
+    }
+
     private func material(_ hex: String, rough: Float = 0.62, metal: Float = 0.0) -> PhysicallyBasedMaterial {
         var m = PhysicallyBasedMaterial()
         m.baseColor = .init(tint: DollColor.ui(hex))
@@ -207,7 +258,7 @@ final class DollSceneController: NSObject, ObservableObject {
             let pivot = Entity()
             pivot.position = SIMD3<Float>(sx * 0.082, 0.50, 0)
             root.addChild(pivot)
-            pivot.addChild(mesh(.generateCapsule(height: 0.36, radius: p.legR), skin, SIMD3<Float>(0, -0.21, 0)))
+            pivot.addChild(mesh(capsuleMesh(height: 0.36, radius: p.legR), skin, SIMD3<Float>(0, -0.21, 0)))
             pivot.addChild(mesh(.generateBox(size: SIMD3<Float>(0.13, 0.06, 0.22), cornerRadius: 0.028),
                                 material(state.skin, rough: 0.6), SIMD3<Float>(0, -0.452, 0.045)))
         }
@@ -215,7 +266,7 @@ final class DollSceneController: NSObject, ObservableObject {
         // 髋 + 躯干
         root.addChild(mesh(.generateSphere(radius: p.torsoR + 0.02), skin,
                            SIMD3<Float>(0, 0.50, 0), scale: SIMD3<Float>(p.hipWide, 0.78, 0.9)))
-        root.addChild(mesh(.generateCapsule(height: 0.26, radius: p.torsoR), skin,
+        root.addChild(mesh(capsuleMesh(height: 0.26, radius: p.torsoR), skin,
                            SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.06, 1.0, 0.88)))
 
         // 肩 + 手臂（枢轴供衣袖挂载）
@@ -225,7 +276,7 @@ final class DollSceneController: NSObject, ObservableObject {
             pivot.position = SIMD3<Float>(sx * p.shoulderX, 0.795, 0)
             pivot.orientation = rotZ(sx * 0.10)
             root.addChild(pivot)
-            pivot.addChild(mesh(.generateCapsule(height: 0.26, radius: p.armR), skin, SIMD3<Float>(0, -0.155, 0)))
+            pivot.addChild(mesh(capsuleMesh(height: 0.26, radius: p.armR), skin, SIMD3<Float>(0, -0.155, 0)))
             pivot.addChild(mesh(.generateSphere(radius: p.armR + 0.009), skin, SIMD3<Float>(0, -0.325, 0)))
             armPivots.append(pivot)
         }
@@ -280,17 +331,17 @@ final class DollSceneController: NSObject, ObservableObject {
         case "bob":
             hairCap(m, into: e)
             for sx in [Float(-1), 1] {
-                e.addChild(mesh(.generateCapsule(height: 0.14, radius: 0.085), m,
+                e.addChild(mesh(capsuleMesh(height: 0.14, radius: 0.085), m,
                                 SIMD3<Float>(sx * 0.255, 1.06, 0.02), scale: SIMD3<Float>(0.9, 1, 0.8)))
             }
-            e.addChild(mesh(.generateCapsule(height: 0.10, radius: 0.16), m,
+            e.addChild(mesh(capsuleMesh(height: 0.10, radius: 0.16), m,
                             SIMD3<Float>(0, 1.02, -0.15), scale: SIMD3<Float>(1.25, 1, 0.55)))
         case "long":
             hairCap(m, into: e)
-            e.addChild(mesh(.generateCapsule(height: 0.34, radius: 0.15), m,
+            e.addChild(mesh(capsuleMesh(height: 0.34, radius: 0.15), m,
                             SIMD3<Float>(0, 0.86, -0.165), scale: SIMD3<Float>(1.28, 1, 0.5)))
             for sx in [Float(-1), 1] {
-                e.addChild(mesh(.generateCapsule(height: 0.20, radius: 0.06), m,
+                e.addChild(mesh(capsuleMesh(height: 0.20, radius: 0.06), m,
                                 SIMD3<Float>(sx * 0.25, 0.94, 0.0), scale: SIMD3<Float>(0.9, 1, 0.8)))
             }
         case "twintails":
@@ -300,7 +351,7 @@ final class DollSceneController: NSObject, ObservableObject {
                 tail.position = SIMD3<Float>(sx * 0.30, 1.24, -0.04)
                 tail.orientation = rotZ(sx * 0.26)
                 e.addChild(tail)
-                tail.addChild(mesh(.generateCapsule(height: 0.24, radius: 0.062), m, SIMD3<Float>(0, -0.17, 0)))
+                tail.addChild(mesh(capsuleMesh(height: 0.24, radius: 0.062), m, SIMD3<Float>(0, -0.17, 0)))
                 tail.addChild(mesh(.generateSphere(radius: 0.05), material("#FFFFFF", rough: 0.7), SIMD3<Float>(0, -0.015, 0)))
             }
         case "bun":
@@ -327,20 +378,20 @@ final class DollSceneController: NSObject, ObservableObject {
         let m = material(hex, rough: 0.7)
         switch style {
         case "hoodie":
-            e.addChild(mesh(.generateCapsule(height: 0.28, radius: p.torsoR + 0.028), m,
+            e.addChild(mesh(capsuleMesh(height: 0.28, radius: p.torsoR + 0.028), m,
                             SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.1, 1.0, 0.92)))
             for pivot in arms {
-                pivot.addChild(mesh(.generateCapsule(height: 0.22, radius: p.armR + 0.017), m, SIMD3<Float>(0, -0.17, 0)))
+                pivot.addChild(mesh(capsuleMesh(height: 0.22, radius: p.armR + 0.017), m, SIMD3<Float>(0, -0.17, 0)))
             }
             e.addChild(mesh(.generateSphere(radius: 0.16), m, SIMD3<Float>(0, 0.875, -0.105),
                             scale: SIMD3<Float>(1.15, 0.72, 0.85)))
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.17, 0.10, 0.05), cornerRadius: 0.025), m,
                             SIMD3<Float>(0, 0.565, 0.152)))
         case "shirt":
-            e.addChild(mesh(.generateCapsule(height: 0.27, radius: p.torsoR + 0.013), m,
+            e.addChild(mesh(capsuleMesh(height: 0.27, radius: p.torsoR + 0.013), m,
                             SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.08, 1.0, 0.9)))
             for pivot in arms {
-                pivot.addChild(mesh(.generateCapsule(height: 0.22, radius: p.armR + 0.015), m, SIMD3<Float>(0, -0.17, 0)))
+                pivot.addChild(mesh(capsuleMesh(height: 0.22, radius: p.armR + 0.015), m, SIMD3<Float>(0, -0.17, 0)))
             }
             for sx in [Float(-1), 1] {
                 e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.07, 0.05, 0.02), cornerRadius: 0.008), m,
@@ -349,23 +400,23 @@ final class DollSceneController: NSObject, ObservableObject {
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.022, 0.22, 0.014), cornerRadius: 0.006),
                             material("#FFFFFF", rough: 0.5), SIMD3<Float>(0, 0.70, 0.148)))
         case "vest":
-            e.addChild(mesh(.generateCapsule(height: 0.27, radius: p.torsoR + 0.018), m,
+            e.addChild(mesh(capsuleMesh(height: 0.27, radius: p.torsoR + 0.018), m,
                             SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.06, 1.0, 0.88)))
             e.addChild(mesh(.generateSphere(radius: 0.10), m, SIMD3<Float>(0, 0.825, 0), scale: SIMD3<Float>(1, 0.5, 1)))
         case "sweater":
-            e.addChild(mesh(.generateCapsule(height: 0.27, radius: p.torsoR + 0.02), m,
+            e.addChild(mesh(capsuleMesh(height: 0.27, radius: p.torsoR + 0.02), m,
                             SIMD3<Float>(0, 0.66, 0), scale: SIMD3<Float>(1.08, 1.0, 0.9)))
             for pivot in arms {
-                pivot.addChild(mesh(.generateCapsule(height: 0.22, radius: p.armR + 0.016), m, SIMD3<Float>(0, -0.17, 0)))
+                pivot.addChild(mesh(capsuleMesh(height: 0.22, radius: p.armR + 0.016), m, SIMD3<Float>(0, -0.17, 0)))
             }
             e.addChild(mesh(.generateSphere(radius: 0.095), m, SIMD3<Float>(0, 0.848, 0), scale: SIMD3<Float>(1, 0.74, 1)))
             e.addChild(mesh(.generateSphere(radius: p.torsoR + 0.032), m,
                             SIMD3<Float>(0, 0.545, 0), scale: SIMD3<Float>(1.05, 0.42, 0.9)))
         case "jacket":
-            e.addChild(mesh(.generateCapsule(height: 0.28, radius: p.torsoR + 0.022), m,
+            e.addChild(mesh(capsuleMesh(height: 0.28, radius: p.torsoR + 0.022), m,
                             SIMD3<Float>(0, 0.66, 0), scale: SIMD3<Float>(1.1, 1.0, 0.92)))
             for pivot in arms {
-                pivot.addChild(mesh(.generateCapsule(height: 0.22, radius: p.armR + 0.016), m, SIMD3<Float>(0, -0.17, 0)))
+                pivot.addChild(mesh(capsuleMesh(height: 0.22, radius: p.armR + 0.016), m, SIMD3<Float>(0, -0.17, 0)))
             }
             for sx in [Float(-1), 1] {
                 e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.075, 0.045, 0.02), cornerRadius: 0.008), m,
@@ -374,10 +425,10 @@ final class DollSceneController: NSObject, ObservableObject {
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.024, 0.24, 0.014), cornerRadius: 0.006),
                             material("#C9CDD4", rough: 0.4), SIMD3<Float>(0, 0.685, 0.152)))
         default: // tee 经典T恤
-            e.addChild(mesh(.generateCapsule(height: 0.26, radius: p.torsoR + 0.014), m,
+            e.addChild(mesh(capsuleMesh(height: 0.26, radius: p.torsoR + 0.014), m,
                             SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.08, 1.0, 0.9)))
             for pivot in arms {
-                pivot.addChild(mesh(.generateCapsule(height: 0.12, radius: p.armR + 0.013), m, SIMD3<Float>(0, -0.105, 0)))
+                pivot.addChild(mesh(capsuleMesh(height: 0.12, radius: p.armR + 0.013), m, SIMD3<Float>(0, -0.105, 0)))
             }
         }
     }
@@ -389,7 +440,7 @@ final class DollSceneController: NSObject, ObservableObject {
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.30, 0.16, 0.21), cornerRadius: 0.06), m,
                             SIMD3<Float>(0, 0.50, 0), scale: SIMD3<Float>(p.hipWide, 1, 1)))
             for sx in [Float(-1), 1] {
-                e.addChild(mesh(.generateCapsule(height: 0.22, radius: p.legR + 0.014), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
+                e.addChild(mesh(capsuleMesh(height: 0.22, radius: p.legR + 0.014), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
             }
         case "skirt":
             e.addChild(mesh(.generateCone(height: 0.30, radius: 0.235), m,
@@ -400,13 +451,13 @@ final class DollSceneController: NSObject, ObservableObject {
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.30, 0.16, 0.21), cornerRadius: 0.06), m,
                             SIMD3<Float>(0, 0.50, 0), scale: SIMD3<Float>(p.hipWide, 1, 1)))
             for sx in [Float(-1), 1] {
-                e.addChild(mesh(.generateCapsule(height: 0.20, radius: p.legR + 0.042), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
+                e.addChild(mesh(capsuleMesh(height: 0.20, radius: p.legR + 0.042), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
             }
         default: // shorts 短裤
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.30, 0.14, 0.21), cornerRadius: 0.055), m,
                             SIMD3<Float>(0, 0.495, 0), scale: SIMD3<Float>(p.hipWide, 1, 1)))
             for sx in [Float(-1), 1] {
-                e.addChild(mesh(.generateCapsule(height: 0.05, radius: p.legR + 0.012), m, SIMD3<Float>(sx * 0.082, 0.42, 0)))
+                e.addChild(mesh(capsuleMesh(height: 0.05, radius: p.legR + 0.012), m, SIMD3<Float>(sx * 0.082, 0.42, 0)))
             }
         }
     }
@@ -454,7 +505,7 @@ final class DollSceneController: NSObject, ObservableObject {
             for sx in [Float(-1), 1] {
                 e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.15, 0.20, 0.23), cornerRadius: 0.035), m,
                                 SIMD3<Float>(sx * 0.082, 0.135, 0.04)))
-                e.addChild(mesh(.generateCapsule(height: 0.05, radius: 0.088), m, SIMD3<Float>(sx * 0.082, 0.28, 0)))
+                e.addChild(mesh(capsuleMesh(height: 0.05, radius: 0.088), m, SIMD3<Float>(sx * 0.082, 0.28, 0)))
             }
         case "loafers":
             for sx in [Float(-1), 1] {
