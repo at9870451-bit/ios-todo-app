@@ -24,6 +24,12 @@ quant-okx-ios/icon-preview.png
 quant-okx-ios/*.xcodeproj/
 quant-okx-ios/QuantOKX/Info.plist
 
+# Amore 管理后台前端
+admin-web/node_modules/
+admin-web/dist/
+# 前端构建产物（由 CI / 本地 npm run build 生成，打进 jar）
+quant-java-api/src/main/resources/static/panel/
+
 # QuantOKX PHP iOS
 quant-php-ios/build/
 quant-php-ios/Payload/

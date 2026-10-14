@@ -1,14 +1,20 @@
 package com.quantokx.api;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 
+/**
+ * iOS App 会话（QBSESSID Cookie + CSRF）。
+ * v2.0：会话存储由进程内 Map 改为 Redis（重启不掉登录态），Redis 不可用时自动降级进程内 Map。
+ * 对外 API 与 v1.x 完全一致；密码 PBKDF2 哈希（$qk$12000$salt_hex$hash_hex）保持不变，旧数据迁移后可直接登录。
+ */
 public final class Sess {
     public static final String COOKIE = "QBSESSID";
+    public static final long TTL = 7 * 86400L;
     private static final SecureRandom RND = new SecureRandom();
-    private static final Map<String, String[]> SESSIONS = new ConcurrentHashMap<>();
 
     public record AuthUser(long id, String username, String nickname, String email, String role, String membershipLevel, boolean liveTrading) {}
     public record Reg(boolean ok, String message, long userId) {}
@@ -22,11 +28,33 @@ public final class Sess {
     }
     public static String newToken() { return hex(24); }
     public static String newCsrf() { return hex(24); }
-    public static String create(long uid) { String t = newToken(); SESSIONS.put(t, new String[]{String.valueOf(uid), newCsrf()}); return t; }
-    public static String createWith(String token) { SESSIONS.put(token, new String[]{"0", newCsrf()}); return token; }
-    public static String csrfOf(String t) { String[] s = SESSIONS.get(t); return s == null ? "" : s[1]; }
-    public static Long userIdOf(String t) { String[] s = SESSIONS.get(t); return s == null ? null : Long.valueOf(s[0]); }
-    public static void drop(String t) { SESSIONS.remove(t); }
+
+    private static String key(String t) { return "qb:sess:" + t; }
+
+    public static String create(long uid) {
+        String t = newToken();
+        Rds.set(key(t), uid + "|" + newCsrf(), TTL);
+        return t;
+    }
+    public static String createWith(String token) {
+        Rds.set(key(token), "0|" + newCsrf(), TTL);
+        return token;
+    }
+    public static String csrfOf(String t) {
+        String v = Rds.get(key(t));
+        if (v == null) return "";
+        Rds.expire(key(t), TTL); // 滑动续期
+        int i = v.indexOf('|');
+        return i < 0 ? "" : v.substring(i + 1);
+    }
+    public static Long userIdOf(String t) {
+        String v = Rds.get(key(t));
+        if (v == null) return null;
+        Rds.expire(key(t), TTL);
+        try { return Long.parseLong(v.substring(0, v.indexOf('|'))); }
+        catch (Exception e) { return null; }
+    }
+    public static void drop(String t) { Rds.del(key(t)); }
 
     public static Reg register(String username, String password, String email) {
         if (username == null || username.isBlank()) return new Reg(false, "请输入用户名", 0);

@@ -1,4 +1,4 @@
-name: Build QuantOKX Java API
+name: Build Amore Java API + Admin Console
 
 on:
   workflow_dispatch:
@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - "quant-java-api/**"
+      - "admin-web/**"
       - ".github/workflows/quant-java-api.yml"
 
 permissions:
@@ -14,21 +15,36 @@ permissions:
 
 jobs:
   build:
-    name: 编译 Java API
+    name: 编译后端 + 管理后台
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+
+      - name: 构建 Vue 管理后台
+        uses: actions/setup-node@v4
         with:
-          java-version: '21'
+          node-version: "20"
+      - name: npm 构建（产物输出到后端 static/panel）
+        working-directory: admin-web
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          echo "--- panel 产物 ---"
+          ls -la ../quant-java-api/src/main/resources/static/panel | head
+
+      - name: 编译打包 Java 后端
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
           distribution: temurin
-      - name: 编译
+      - name: mvn package
+        working-directory: quant-java-api
         run: |
           set -o pipefail
-          cd quant-java-api
-          mvn package -DskipTests 2>&1 | tail -30
+          mvn -B package -DskipTests 2>&1 | tail -30
           ls -la target/*.jar
+
       - name: 上传产物
         uses: actions/upload-artifact@v4
         with:

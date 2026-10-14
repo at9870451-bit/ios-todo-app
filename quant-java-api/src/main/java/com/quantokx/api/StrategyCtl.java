@@ -23,7 +23,7 @@ public class StrategyCtl {
     String sym = Svc.str(b.getOrDefault("symbol", b.getOrDefault("symbols", "BTC-USDT-SWAP")));
     List<String> symbols = Svc.normalizeSymbols(sym, Svc.str(b.getOrDefault("market_type", "swap")));
     String symStr = String.join(",", symbols);
-    long id = Db.ins("INSERT INTO strategies(user_id,name,class_name,market_type,direction_mode,symbol,symbols,interval,mode,position_percent,leverage,min_confidence,quantity,td_mode,parameters) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    long id = Db.ins("INSERT INTO strategies(user_id,name,class_name,market_type,direction_mode,symbol,symbols,`interval`,mode,position_percent,leverage,min_confidence,quantity,td_mode,parameters) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       uid, name, Svc.str(b.get("class_name")), Svc.str(b.getOrDefault("market_type","swap")), Svc.str(b.getOrDefault("direction_mode","long_only")), symbols.get(0), symStr, Svc.str(b.getOrDefault("interval","15m")), Svc.str(b.getOrDefault("mode","paper")), Svc.num(b.get("position_percent"),5), ((Number)b.getOrDefault("leverage",3)).intValue(), Svc.num(b.get("min_confidence"),0.6), Svc.str(b.getOrDefault("quantity","0.001")), Svc.str(b.getOrDefault("td_mode","cross")), Svc.str(b.getOrDefault("parameters","{}")));
     return Resp.ok("策略已创建", Db.one("SELECT * FROM strategies WHERE id=?", id));
   }

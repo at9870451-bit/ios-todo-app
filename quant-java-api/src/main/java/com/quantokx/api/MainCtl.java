@@ -19,7 +19,7 @@ public class MainCtl {
   @PostMapping("/system/refresh") public Object refresh(HttpServletRequest q) { return Resp.ok("已刷新", Resp.eo()); }
   @PostMapping("/system/emergency-stop") public Object emStop(@RequestBody Map<String, Object> b, HttpServletRequest q) {
     long uid = uid(q); boolean en = Boolean.TRUE.equals(b.get("enabled"));
-    Db.upd("INSERT INTO risk_configs(user_id,emergency_stop) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET emergency_stop=excluded.emergency_stop", uid, en?1:0);
+    Db.upd("INSERT INTO risk_configs(user_id,emergency_stop) VALUES(?,?) ON DUPLICATE KEY UPDATE emergency_stop=VALUES(emergency_stop)", uid, en?1:0);
     return Resp.ok(en?"紧急停止已开启":"紧急停止已解除", Resp.map("emergency_stop", en));
   }
   @PostMapping("/system/live-trading") public Object liveTrade(@RequestBody Map<String, Object> b, HttpServletRequest q) {

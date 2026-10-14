@@ -1,0 +1,38 @@
+server:
+  port: 8080
+  tomcat:
+    max-http-form-post-size: 30MB
+
+spring:
+  application:
+    name: quant-java-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/quantokx?useUnicode=true&characterEncoding=UTF-8&serverTimezone=SYSTEM&useSSL=false&allowPublicKeyRetrieval=true&rewriteBatchedStatements=true}
+    username: ${DB_USER:quantokx}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 8000
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2s
+  jackson:
+    default-property-inclusion: always
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 30MB
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+
+logging:
+  level:
+    root: INFO

@@ -26,7 +26,7 @@ public class ChatCtl {
   public Object newSession(@RequestBody Map<String, Object> b, HttpServletRequest q) {
     long uid = uid(q);
     String title = Svc.str(b.getOrDefault("title", "新对话"));
-    long id = Db.ins("INSERT INTO chat_sessions(user_id,title,updated_at) VALUES(?,?,datetime('now','localtime'))", uid, title);
+    long id = Db.ins("INSERT INTO chat_sessions(user_id,title,updated_at) VALUES(?,?,NOW())", uid, title);
     return Resp.ok(Resp.map("id", id, "title", title));
   }
 
@@ -73,7 +73,7 @@ public class ChatCtl {
     if (sessionId <= 0 || Db.one("SELECT id FROM chat_sessions WHERE id=? AND user_id=?", sessionId, uid) == null) {
       String title = content.isEmpty() ? (atts.isEmpty() ? "新对话" : Svc.str(atts.get(0).get("name"))) : content;
       if (title.length() > 20) title = title.substring(0, 20);
-      sessionId = Db.ins("INSERT INTO chat_sessions(user_id,title,updated_at) VALUES(?,?,datetime('now','localtime'))", uid, title);
+      sessionId = Db.ins("INSERT INTO chat_sessions(user_id,title,updated_at) VALUES(?,?,NOW())", uid, title);
     }
     final long sid = sessionId;
     Db.ins("INSERT INTO chat_messages(session_id,role,content) VALUES(?,'user',?)", sid, content.isEmpty() ? "[附件]" : content);
@@ -117,7 +117,7 @@ public class ChatCtl {
     try {
       String reply = callAI(cfg, msgs, reasoning);
       Db.ins("INSERT INTO chat_messages(session_id,role,content) VALUES(?,'assistant',?)", sid, reply);
-      Db.upd("UPDATE chat_sessions SET updated_at=datetime('now','localtime') WHERE id=?", sid);
+      Db.upd("UPDATE chat_sessions SET updated_at=NOW() WHERE id=?", sid);
       return Resp.ok(Resp.map("session_id", sid, "reply", reply));
     } catch (MultimodalUnsupportedException e) {
       // 模型不支持图片输入：去除 base64 图片降级为纯文本重试
@@ -131,7 +131,7 @@ public class ChatCtl {
         }
         String reply = callAI(cfg, fallback, reasoning);
         Db.ins("INSERT INTO chat_messages(session_id,role,content) VALUES(?,'assistant',?)", sid, reply);
-        Db.upd("UPDATE chat_sessions SET updated_at=datetime('now','localtime') WHERE id=?", sid);
+        Db.upd("UPDATE chat_sessions SET updated_at=NOW() WHERE id=?", sid);
         return Resp.ok(Resp.map("session_id", sid, "reply", reply, "degraded", true));
       } catch (Exception e2) {
         return Resp.map("code", "CHAT_ERROR", "message", e2.getMessage(), "data", Resp.map("session_id", sid));
