@@ -48,6 +48,11 @@ final class BackendStore: ObservableObject {
     @Published var automation: AutomationStatus?
     // 模拟盘
     @Published var paperStatus: PaperStatus?
+    // Doll Studio 3D（玩偶换装）
+    @Published var dollCategories: [DollCategory] = DollCatalog.categories
+    @Published var dollItems: [DollItem] = DollCatalog.builtinItems()
+    @Published var dollOutfits: [DollOutfitRow] = []
+    var dollCatalogLoaded = false
 
     @Published var lastError: String = ""
     @Published var toast: String = ""
@@ -843,11 +848,6 @@ extension BackendStore {
     }
 
     // MARK: - Doll Studio 3D（玩偶换装）
-
-    @Published var dollCategories: [DollCategory] = DollCatalog.categories
-    @Published var dollItems: [DollItem] = DollCatalog.builtinItems()
-    @Published var dollOutfits: [DollOutfitRow] = []
-    private var dollCatalogLoaded = false
 
     /// 拉取服装目录（失败时保留内置目录，玩偶功能可离线使用）
     func loadDollCatalog() async {

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // MARK: - Doll Studio 3D 数据模型（与后端 /api/doll/** 对齐）
 
@@ -224,9 +225,9 @@ enum DollColor {
         var v: UInt64 = 0
         Scanner(string: h).scanHexInt64(&v)
         guard h.count == 6 else { return .systemGray }
-        return UIColor(red: CGFloat((v >> 16) & 0xFF) / 255.0,
-                       green: CGFloat((v >> 8) & 0xFF) / 255.0,
-                       blue: CGFloat(v & 0xFF) / 255.0,
-                       alpha: alpha)
+        let r = CGFloat((v >> 16) & 0xFF) / 255.0
+        let g = CGFloat((v >> 8) & 0xFF) / 255.0
+        let b = CGFloat(v & 0xFF) / 255.0
+        return UIColor(red: r, green: g, blue: b, alpha: alpha)
     }
 }
