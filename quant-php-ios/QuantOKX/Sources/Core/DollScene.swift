@@ -259,31 +259,39 @@ final class DollSceneController: NSObject, ObservableObject {
             }
         }
         if capBottom, let base = profile.first, base.r > 0.001 {
-            let ci = UInt32(positions.count)
+            let centerIdx = positions.count
             positions.append(SIMD3<Float>(0, base.y, 0))
             normals.append(SIMD3<Float>(0, -1, 0))
+            var ring: [UInt32] = []
             for j in 0..<segments {
                 let a = Float(j) / Float(segments) * 2 * Float.pi
                 positions.append(SIMD3<Float>(cos(a) * base.r, base.y, sin(a) * base.r))
                 normals.append(SIMD3<Float>(0, -1, 0))
+                ring.append(UInt32(centerIdx + 1 + j))
             }
             for j in 0..<segments {
                 let j2 = (j + 1) % segments
-                indices += [ci, UInt32(ci + 1 + j2), UInt32(ci + 1 + j)]
+                indices.append(UInt32(centerIdx))
+                indices.append(ring[j2])
+                indices.append(ring[j])
             }
         }
         if capTop, let top = profile.last, top.r > 0.001 {
-            let ci = UInt32(positions.count)
+            let centerIdx = positions.count
             positions.append(SIMD3<Float>(0, top.y, 0))
             normals.append(SIMD3<Float>(0, 1, 0))
+            var ring: [UInt32] = []
             for j in 0..<segments {
                 let a = Float(j) / Float(segments) * 2 * Float.pi
                 positions.append(SIMD3<Float>(cos(a) * top.r, top.y, sin(a) * top.r))
                 normals.append(SIMD3<Float>(0, 1, 0))
+                ring.append(UInt32(centerIdx + 1 + j))
             }
             for j in 0..<segments {
                 let j2 = (j + 1) % segments
-                indices += [ci, UInt32(ci + 1 + j), UInt32(ci + 1 + j2)]
+                indices.append(UInt32(centerIdx))
+                indices.append(ring[j])
+                indices.append(ring[j2])
             }
         }
         var desc = MeshDescriptor(name: "lathe")
