@@ -73,6 +73,34 @@ struct ProfileView: View {
             .padding(.vertical, 26)
             .solidCard(18)
 
+            // 会员中心入口
+            NavigationLink {
+                MembershipView()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 17))
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("会员中心")
+                            .font(.subheadline.weight(.semibold))
+                        Text(config.membershipLevel == "" || config.membershipLevel == "free"
+                             ? "开通会员享全部高级权益"
+                             : "\(amoreLevelName(config.membershipLevel)) · 查看权益与续费")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(14)
+            }
+            .buttonStyle(.plain)
+            .solidCard(14)
+
             VStack(spacing: 0) {
                 HStack {
                     Label("服务状态", systemImage: "server.rack").font(.subheadline)

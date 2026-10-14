@@ -182,8 +182,8 @@ public class IosCtl {
             "membership_level", level,
             "live_trading_enabled", num(u.get("live_trading")) == 1
         );
-        Map<String, Object> badge = Resp.map("level", level, "name", Member.levelName(level), "is_admin", "admin".equals(role),
-                "expire_at", null, "days_left", null, "auto_renew", false);
+        Map<String, Object> badge = MemberSvc.badgeOf(uid);
+        badge.put("is_admin", "admin".equals(role));
         return Resp.ok(message, Resp.map("user", user, "csrf_token", csrf, "badge", badge));
     }
 

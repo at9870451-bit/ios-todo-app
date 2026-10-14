@@ -49,6 +49,7 @@ public final class SchemaBoot {
             "register_ip VARCHAR(64) DEFAULT NULL," +
             "ban_reason VARCHAR(255) DEFAULT NULL," +
             "ban_until DATETIME DEFAULT NULL," +
+            "membership_expire DATETIME DEFAULT NULL," +
             "KEY idx_users_created(created_at), KEY idx_users_status(status), KEY idx_users_email(email)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci",
 
@@ -133,7 +134,8 @@ public final class SchemaBoot {
 
         "CREATE TABLE IF NOT EXISTS member_orders(" +
             "id BIGINT PRIMARY KEY AUTO_INCREMENT, user_id BIGINT NOT NULL, trade_no VARCHAR(64), level VARCHAR(16) NOT NULL," +
-            "months INT DEFAULT 1, amount VARCHAR(32) DEFAULT '0', status VARCHAR(16) DEFAULT 'paid', created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "months INT DEFAULT 1, amount VARCHAR(32) DEFAULT '0', status VARCHAR(16) DEFAULT 'paid', channel VARCHAR(16) DEFAULT 'alipay'," +
+            "paid_at DATETIME DEFAULT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
             "KEY idx_mo_user(user_id), KEY idx_mo_created(created_at)" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
@@ -219,11 +221,14 @@ public final class SchemaBoot {
         cols.add(new String[]{"users", "register_ip", "VARCHAR(64) DEFAULT NULL"});
         cols.add(new String[]{"users", "ban_reason", "VARCHAR(255) DEFAULT NULL"});
         cols.add(new String[]{"users", "ban_until", "DATETIME DEFAULT NULL"});
+        cols.add(new String[]{"users", "membership_expire", "DATETIME DEFAULT NULL"});
         cols.add(new String[]{"ai_configs", "api_style", "VARCHAR(32) DEFAULT 'chat_completions'"});
         cols.add(new String[]{"ai_configs", "mode", "VARCHAR(16) DEFAULT 'analysis'"});
         cols.add(new String[]{"ai_configs", "enabled", "TINYINT DEFAULT 0"});
         cols.add(new String[]{"chat_messages", "attachments", "TEXT"});
         cols.add(new String[]{"member_orders", "trade_no", "VARCHAR(64)"});
+        cols.add(new String[]{"member_orders", "channel", "VARCHAR(16) DEFAULT 'alipay'"});
+        cols.add(new String[]{"member_orders", "paid_at", "DATETIME DEFAULT NULL"});
         for (String[] t : cols) addColumn(c, t[0], t[1], t[2]);
     }
 

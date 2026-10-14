@@ -488,6 +488,14 @@ struct MemberOrdersData: Decodable {
     let items: [MemberOrderRow]
 }
 
+/// /api/member/status 的 data
+struct MemberStatusData: Decodable {
+    let badge: BadgeInfo
+    let limits: MembershipLimits
+    let usage: MembershipUsage?
+    let payment: PaymentInfo?
+}
+
 // MARK: - OKX 账户
 
 struct OkxConfigData: Decodable {

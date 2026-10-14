@@ -3,9 +3,9 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 
 // 管理后台构建：产物输出到 ../quant-java-api/src/main/resources/static/panel
-// base 使用相对路径，便于挂在 /panel/ 子路径下（hash 路由）
+// base 使用绝对路径 /panel/，保证 /panel（无尾斜杠）与 /panel/ 下资源都能正确解析
 export default defineConfig({
-  base: './',
+  base: '/panel/',
   plugins: [vue()],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) }

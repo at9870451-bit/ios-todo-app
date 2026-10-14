@@ -43,6 +43,7 @@ final class BackendStore: ObservableObject {
     // 会员
     @Published var memberPlans: MembershipPlansData?
     @Published var memberOrders: [MemberOrderRow] = []
+    @Published var memberStatus: MemberStatusData?
     // 自动化
     @Published var automation: AutomationStatus?
     // 模拟盘
@@ -253,6 +254,15 @@ final class BackendStore: ObservableObject {
 
     func loadMemberOrders() async {
         do { memberOrders = try await client.get("/api/member/orders", as: MemberOrdersData.self).items }
+        catch { handle(error) }
+    }
+
+    func loadMemberStatus() async {
+        do {
+            memberStatus = try await client.get("/api/member/status", as: MemberStatusData.self)
+            // 同步本地会员等级（购买/过期降级后保持一致）
+            if let lv = memberStatus?.badge.level { config.membershipLevel = lv }
+        }
         catch { handle(error) }
     }
 

@@ -88,7 +88,9 @@ public final class Db {
 
     public static Object sc(String q, Object... a) {
         List<Map<String, Object>> r = rows(q, a);
-        return r.isEmpty() ? null : r.get(0).values().iterator().next();
+        // 行不存在或整行值均为 NULL（rows 会跳过 null 列）=> 返回 null 而非抛异常
+        if (r.isEmpty() || r.get(0).isEmpty()) return null;
+        return r.get(0).values().iterator().next();
     }
 
     private Db() {}

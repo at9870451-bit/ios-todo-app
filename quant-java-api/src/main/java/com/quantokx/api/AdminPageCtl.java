@@ -15,7 +15,12 @@ import java.io.InputStream;
 @Controller
 public class AdminPageCtl {
 
-    @GetMapping({"/panel", "/panel/", "/panel/index.html"})
+    @GetMapping({"/panel", "/panel.html"})
+    public void indexRedirect(HttpServletResponse r) throws Exception {
+        r.sendRedirect("/panel/");
+    }
+
+    @GetMapping({"/panel/", "/panel/index.html"})
     public void index(HttpServletResponse r) throws Exception {
         serve(r, "/static/panel/index.html");
     }

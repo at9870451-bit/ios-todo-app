@@ -39,7 +39,7 @@ public class QkApiApplication {
     /** iOS App 侧免认证白名单 */
     static final String[] OPEN = {
         "/api/ios/ping", "/api/ios/login", "/api/ios/register", "/api/ios/announcement", "/api/ios/config",
-        "/api/ai/cron", "/api/strategy/cron", "/api/member/pay", "/api/pay/notify", "/api/pay/return"
+        "/api/ai/cron", "/api/strategy/cron", "/api/member/notify", "/api/pay/notify", "/api/pay/return"
     };
 
     /** Console 侧免认证白名单 */
