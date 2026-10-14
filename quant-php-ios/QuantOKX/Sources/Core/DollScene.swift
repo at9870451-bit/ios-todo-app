@@ -223,6 +223,76 @@ final class DollSceneController: NSObject, ObservableObject {
         return (try? MeshResource.generate(from: [desc])) ?? MeshResource.generateSphere(radius: max(radius, 0.001))
     }
 
+    /// 旋转体网格（profile: 从底到顶的 (y, r) 轮廓；iOS 26 SDK 移除了 generateCone，用于锥台/锥体）
+    private func latheMesh(profile: [(y: Float, r: Float)], segments: Int = 24, capTop: Bool = false, capBottom: Bool = false) -> MeshResource {
+        var positions: [SIMD3<Float>] = []
+        var normals: [SIMD3<Float>] = []
+        var indices: [UInt32] = []
+        let n = profile.count
+        for p in profile {
+            for j in 0..<segments {
+                let a = Float(j) / Float(segments) * 2 * Float.pi
+                positions.append(SIMD3<Float>(cos(a) * p.r, p.y, sin(a) * p.r))
+            }
+        }
+        // 侧面法线：轮廓切向 (dr, dy) → 外法线 (dy, -dr)
+        for i in 0..<n {
+            let y0 = profile[max(i - 1, 0)].y, y1 = profile[min(i + 1, n - 1)].y
+            let r0 = profile[max(i - 1, 0)].r, r1 = profile[min(i + 1, n - 1)].r
+            let dy = y1 - y0, dr = r1 - r0
+            let len = sqrt(dy * dy + dr * dr)
+            let nr: Float = len > 0.0001 ? dy / len : 1
+            let ny: Float = len > 0.0001 ? -dr / len : 0
+            for j in 0..<segments {
+                let a = Float(j) / Float(segments) * 2 * Float.pi
+                normals.append(SIMD3<Float>(cos(a) * nr, ny, sin(a) * nr))
+            }
+        }
+        for i in 0..<(n - 1) {
+            for j in 0..<segments {
+                let j2 = (j + 1) % segments
+                let a0 = UInt32(i * segments + j)
+                let a1 = UInt32(i * segments + j2)
+                let b0 = UInt32((i + 1) * segments + j)
+                let b1 = UInt32((i + 1) * segments + j2)
+                indices += [a0, b0, b1, a0, b1, a1]
+            }
+        }
+        if capBottom, let base = profile.first, base.r > 0.001 {
+            let ci = UInt32(positions.count)
+            positions.append(SIMD3<Float>(0, base.y, 0))
+            normals.append(SIMD3<Float>(0, -1, 0))
+            for j in 0..<segments {
+                let a = Float(j) / Float(segments) * 2 * Float.pi
+                positions.append(SIMD3<Float>(cos(a) * base.r, base.y, sin(a) * base.r))
+                normals.append(SIMD3<Float>(0, -1, 0))
+            }
+            for j in 0..<segments {
+                let j2 = (j + 1) % segments
+                indices += [ci, UInt32(ci + 1 + j2), UInt32(ci + 1 + j)]
+            }
+        }
+        if capTop, let top = profile.last, top.r > 0.001 {
+            let ci = UInt32(positions.count)
+            positions.append(SIMD3<Float>(0, top.y, 0))
+            normals.append(SIMD3<Float>(0, 1, 0))
+            for j in 0..<segments {
+                let a = Float(j) / Float(segments) * 2 * Float.pi
+                positions.append(SIMD3<Float>(cos(a) * top.r, top.y, sin(a) * top.r))
+                normals.append(SIMD3<Float>(0, 1, 0))
+            }
+            for j in 0..<segments {
+                let j2 = (j + 1) % segments
+                indices += [ci, UInt32(ci + 1 + j), UInt32(ci + 1 + j2)]
+            }
+        }
+        var desc = MeshDescriptor(name: "lathe")
+        desc.positions = MeshBuffers.Positions(positions)
+        desc.normals = MeshBuffers.Normals(normals)
+        desc.primitives = .triangles(indices)
+        return (try? MeshResource.generate(from: [desc])) ?? MeshResource.generateSphere(radius: 0.1)
+    }
+
     private func material(_ hex: String, rough: Float = 0.62, metal: Float = 0.0) -> PhysicallyBasedMaterial {
         var m = PhysicallyBasedMaterial()
         m.baseColor = .init(tint: DollColor.ui(hex))
@@ -365,7 +435,7 @@ final class DollSceneController: NSObject, ObservableObject {
                 let a = Float(i) / 5.0 * 2.0 * Float.pi
                 let dir = SIMD3<Float>(cos(a), 0, sin(a))
                 let axis = SIMD3<Float>(-sin(a), 0, cos(a))
-                e.addChild(mesh(.generateCone(height: 0.17, radius: 0.055), m,
+                e.addChild(mesh(latheMesh(profile: [(y: -0.085, r: 0.055), (y: 0.085, r: 0.004)]), m,
                                 SIMD3<Float>(dir.x * 0.13, 1.40, dir.z * 0.13 - 0.02),
                                 quat: simd_quatf(angle: 0.38, axis: axis)))
             }
@@ -443,7 +513,7 @@ final class DollSceneController: NSObject, ObservableObject {
                 e.addChild(mesh(capsuleMesh(height: 0.22, radius: p.legR + 0.014), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
             }
         case "skirt":
-            e.addChild(mesh(.generateCone(height: 0.30, radius: 0.235), m,
+            e.addChild(mesh(latheMesh(profile: [(y: -0.15, r: 0.235), (y: 0.155, r: 0.02)], capBottom: true), m,
                             SIMD3<Float>(0, 0.40, 0), scale: SIMD3<Float>(1.05, 1, 0.85)))
             e.addChild(mesh(.generateSphere(radius: p.torsoR), m,
                             SIMD3<Float>(0, 0.545, 0), scale: SIMD3<Float>(1.04, 0.42, 0.9)))
@@ -466,8 +536,8 @@ final class DollSceneController: NSObject, ObservableObject {
         let m = material(hex, rough: 0.78)
         switch style {
         case "bandana":
-            e.addChild(mesh(.generateCone(height: 0.17, radius: 0.15), m,
-                            SIMD3<Float>(0, 0.775, 0.148), quat: rotX(Float.pi), scale: SIMD3<Float>(1.15, 1, 0.55)))
+            e.addChild(mesh(latheMesh(profile: [(y: 0.085, r: 0.15), (y: -0.085, r: 0.004)]), m,
+                            SIMD3<Float>(0, 0.775, 0.148), scale: SIMD3<Float>(1.15, 1, 0.55)))
             e.addChild(mesh(.generateSphere(radius: 0.045), m, SIMD3<Float>(0, 0.862, 0.135)))
         default: // scarf 经典围巾
             e.addChild(mesh(.generateSphere(radius: 0.135), m, SIMD3<Float>(0, 0.855, 0), scale: SIMD3<Float>(1, 0.74, 1)))
