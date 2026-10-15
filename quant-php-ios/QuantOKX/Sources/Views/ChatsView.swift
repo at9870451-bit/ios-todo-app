@@ -55,6 +55,11 @@ struct ChatAvatar: View {
     var isAI: Bool = false
     var size: CGFloat = 40
 
+    /// 头像形状：可在「聊天资料」里切换圆角方形 / 圆形
+    @AppStorage("chat.avatarCircle") private var circleShape = false
+
+    private var corner: CGFloat { circleShape ? size / 2 : size * 0.22 }
+
     var body: some View {
         Group {
             if let image {
@@ -63,8 +68,13 @@ struct ChatAvatar: View {
                     .scaledToFill()
             } else {
                 ZStack {
-                    RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                        .fill(isAI ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.ok))
+                    if circleShape {
+                        Circle()
+                            .fill(isAI ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.ok))
+                    } else {
+                        RoundedRectangle(cornerRadius: corner, style: .continuous)
+                            .fill(isAI ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.ok))
+                    }
                     Text(String(name.prefix(1)).uppercased())
                         .font(.system(size: size * 0.42, weight: .semibold))
                         .foregroundStyle(.white)
@@ -72,7 +82,7 @@ struct ChatAvatar: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.22, style: .continuous))
+        .clipShape(circleShape ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner, style: .continuous)))
     }
 }
 
@@ -292,23 +302,26 @@ final class VoicePlayer: NSObject, ObservableObject {
     }
 
     /// 点击语音条：播放中再点即停止；播放新的一条会自动停掉上一条
-    func toggle(id: String, text: String) {
+    func toggle(id: String, text: String, baseURL: String) {
         if playingId == id { stop(); return }
         stop()
         currentId = id
         let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "local"
-        if engine == "edge" {
+        if engine == "server" {
+            // 开源语音库（自建 Piper · 中文华严）：立即进入播放态，合成完成即出声
+            playingId = id
             Task { @MainActor in
                 do {
-                    let voice = UserDefaults.standard.string(forKey: "tts.edgeVoice") ?? EdgeTTS.defaultVoiceID
-                    let data = try await EdgeTTS.synthesize(text: text, voiceID: voice)
+                    let data = try await VoicePlayer.serverSynth(text: text, baseURL: baseURL)
+                    guard self.currentId == id else { return }
                     let pl = try AVAudioPlayer(data: data)
                     pl.delegate = self
                     self.player = pl
                     pl.play()
-                    self.playingId = id
                     Haptics.light()
                 } catch {
+                    guard self.currentId == id else { return }
+                    self.playingId = nil
                     self.speakLocal(id: id, text: text)
                 }
             }
@@ -341,6 +354,21 @@ final class VoicePlayer: NSObject, ObservableObject {
         synth.stopSpeaking(at: .immediate)
         currentId = nil
         playingId = nil
+    }
+
+    /// 自建开源语音库（服务器 /api/tts，Piper · 中文华严）
+    @MainActor
+    static func serverSynth(text: String, baseURL: String) async throws -> Data {
+        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
+        guard let url = URL(string: base + "/api/tts?text=" + q) else { throw URLError(.badURL) }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 45
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200, data.count > 44 else {
+            throw URLError(.badServerResponse)
+        }
+        return data
     }
 
     private func speakLocal(id: String, text: String) {
@@ -377,6 +405,7 @@ struct VoiceBubble: View {
     let id: String
     let text: String
     @ObservedObject private var vp = VoicePlayer.shared
+    @EnvironmentObject private var config: AppConfig
 
     private var secs: Int { max(1, min(99, Int((Double(text.count) / 4.0).rounded()))) }
     /// 宽度 = 基础 92 + 每秒 5pt，最长 238（配合气泡 maxWidth 268）
@@ -385,7 +414,7 @@ struct VoiceBubble: View {
 
     var body: some View {
         Button {
-            VoicePlayer.shared.toggle(id: id, text: text)
+            VoicePlayer.shared.toggle(id: id, text: text, baseURL: config.serverURL)
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: playing ? "stop.fill" : "play.fill")
@@ -396,7 +425,9 @@ struct VoiceBubble: View {
                         Capsule()
                             .fill(Theme.heroBlue.opacity(0.65))
                             .frame(width: 3, height: playing ? 14 : 6)
-                            .animation(.easeInOut(duration: 0.32).repeatForever().delay(Double(i) * 0.11), value: playing)
+                            // 播放中才挂 repeatForever 动画，停止时置 nil 释放，
+                            // 修复「播放完动画卡住不复位 / 无法再次互动」
+                            .animation(playing ? .easeInOut(duration: 0.32).repeatForever(autoreverses: true).delay(Double(i) * 0.11) : nil, value: playing)
                     }
                 }
                 .frame(height: 16)
@@ -458,7 +489,7 @@ struct ChatRoomView: View {
                                 }
                                 if sending {
                                     HStack {
-                                        ChatAvatar(image: av.aiImage, name: aiName, isAI: true)
+                                        ChatAvatar(image: av.aiImage, name: aiName, isAI: true, size: 48)
                                         HStack(spacing: 4) {
                                             ForEach(0..<3, id: \.self) { i in
                                                 Circle().fill(Color.secondary).frame(width: 6, height: 6)
@@ -675,9 +706,9 @@ struct BubbleRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
-            if isUser { Spacer(minLength: 52) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true) }
+            if isUser { Spacer(minLength: 60) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true, size: 48) }
             bubble
-            if isUser { ChatAvatar(image: meImage, name: meName, size: 40) } else { Spacer(minLength: 52) }
+            if isUser { ChatAvatar(image: meImage, name: meName, size: 48) } else { Spacer(minLength: 60) }
         }
         .padding(.horizontal, 12)
     }
@@ -744,6 +775,8 @@ struct ChatProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("ai.displayName") private var aiName = "Amore"
     @AppStorage("me.displayName") private var meName = "我"
+    /// 头像形状（与 ChatAvatar 共享）：false 圆角方形 / true 圆形
+    @AppStorage("chat.avatarCircle") private var circleShape = false
     @State private var aiItem: PhotosPickerItem?
     @State private var meItem: PhotosPickerItem?
     @State private var processing = false
@@ -797,6 +830,16 @@ struct ChatProfileView: View {
                             .multilineTextAlignment(.trailing)
                             .font(.subheadline)
                             .foregroundStyle(.primary)
+                    }
+                    HStack {
+                        Text("头像形状").font(.subheadline)
+                        Spacer()
+                        Picker("头像形状", selection: $circleShape) {
+                            Text("圆角方形").tag(false)
+                            Text("圆形").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 156)
                     }
                 }
 

@@ -461,8 +461,8 @@ struct ChatScreen: View {
         }
         if ttsEngine == "model" {
             Task { await speakWithModel(last.content) }
-        } else if ttsEngine == "edge" {
-            Task { await speakWithEdge(last.content) }
+        } else if ttsEngine == "server" {
+            Task { await speakWithServer(last.content) }
         } else {
             speakLocal(String(last.content.prefix(600)))
         }
@@ -475,18 +475,17 @@ struct ChatScreen: View {
         synthesizer.speak(u)
     }
 
-    /// Edge 神经语音朗读（免费在线合成），失败回退本地语音
-    private func speakWithEdge(_ content: String) async {
+    /// 开源语音库朗读（自建 Piper · 中文华严），失败回退本地语音
+    private func speakWithServer(_ content: String) async {
         store.toast = "正在合成语音…"
         do {
-            let voice = UserDefaults.standard.string(forKey: "tts.edgeVoice") ?? EdgeTTS.defaultVoiceID
-            let data = try await EdgeTTS.synthesize(text: String(content.prefix(1200)), voiceID: voice)
+            let data = try await VoicePlayer.serverSynth(text: String(content.prefix(500)), baseURL: config.serverURL)
             audioPlayer = try AVAudioPlayer(data: data)
             audioPlayer?.prepareToPlay()
             audioPlayer?.play()
             store.toast = ""
         } catch {
-            store.toast = "Edge 语音合成失败，已用本地朗读"
+            store.toast = "语音库合成失败，已用本地朗读"
             speakLocal(String(content.prefix(600)))
         }
     }

@@ -9,7 +9,6 @@ struct SettingsScreen: View {
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("tts.engine") private var ttsEngine = "local"
     @AppStorage("tts.providerId") private var ttsProviderId = ""
-    @AppStorage("tts.edgeVoice") private var edgeVoice = EdgeTTS.defaultVoiceID
 
     var body: some View {
         NavigationStack {
@@ -69,14 +68,14 @@ struct SettingsScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("朗读引擎")
                         .font(.subheadline.weight(.semibold))
-                    Text(ttsEngine == "local" ? "使用设备内置语音" : (ttsEngine == "edge" ? "免费在线神经音色" : "使用已配置的语音模型"))
+                    Text(ttsEngine == "local" ? "使用设备内置语音" : (ttsEngine == "server" ? "自建开源神经音色" : "使用已配置的语音模型"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 Picker("朗读引擎", selection: $ttsEngine) {
                     Text("本地语音").tag("local")
-                    Text("Edge 神经语音").tag("edge")
+                    Text("开源语音库").tag("server")
                     Text("语音模型").tag("model")
                 }
                 .pickerStyle(.menu)
@@ -85,26 +84,22 @@ struct SettingsScreen: View {
             .padding(.horizontal, Theme.cardPadding)
             .padding(.vertical, 12)
 
-            if ttsEngine == "edge" {
+            if ttsEngine == "server" {
                 rowDivider.padding(.leading, 62)
                 HStack(spacing: 12) {
                     SquircleIcon(system: "waveform.badge.magnifyingglass", size: 38, tinted: true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("音色")
+                        Text("开源语音库 · 华严")
                             .font(.subheadline.weight(.semibold))
-                        Text(edgeVoiceName)
+                        Text("Piper 神经语音（MIT 开源）· 中文女声 · 服务器合成")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                            .lineLimit(2)
                     }
-                    Spacer(minLength: 8)
-                    Picker("音色", selection: $edgeVoice) {
-                        ForEach(EdgeTTS.voices) { v in
-                            Text(v.name).tag(v.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .tint(Theme.accent)
+                    Spacer(minLength: 0)
+                    Text("已启用")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Theme.ok)
                 }
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
@@ -131,7 +126,7 @@ struct SettingsScreen: View {
                 }
             }
 
-            Text(edgeHint)
+            Text(engineHint)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, Theme.cardPadding)
@@ -202,13 +197,9 @@ struct SettingsScreen: View {
             .frame(height: 0.8)
     }
 
-    private var edgeVoiceName: String {
-        EdgeTTS.voices.first { $0.id == edgeVoice }?.name ?? "晓晓 · 女 · 温柔"
-    }
-
-    private var edgeHint: String {
+    private var engineHint: String {
         switch ttsEngine {
-        case "edge": return "Edge 神经语音（开源 edge-tts 协议）：在线合成中文音色，免费无需密钥；失败自动回退本地语音"
+        case "server": return "自建开源语音库（Piper · 中文华严）：服务器合成、免密钥；长句首播约 3~6 秒"
         case "model": return "朗读将调用所选语音模型合成（需支持 /v1/audio/speech）"
         default: return "使用设备内置语音离线朗读，无需网络"
         }
