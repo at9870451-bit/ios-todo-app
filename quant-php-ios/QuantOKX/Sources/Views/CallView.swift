@@ -115,7 +115,7 @@ struct CallView: View {
     @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
 
-    private enum Phase { case connecting, active }
+    private enum Phase { case connecting, active, ended }
     @State private var phase: Phase = .connecting
     @State private var secs = 0
     @State private var tick: Timer?
@@ -125,6 +125,8 @@ struct CallView: View {
     @State private var busy = false
     @State private var player: AVAudioPlayer?
     @StateObject private var mic = MicTranscriber()
+    @State private var lastActivity = Date()
+    @State private var connectedOnce = false
 
     var body: some View {
         ZStack {
@@ -178,7 +180,7 @@ struct CallView: View {
                     }
                     .accessibilityLabel("挂断")
 
-                    // 说话 / 发送
+                    // 说话（再点即发送）
                     Button {
                         Haptics.light()
                         if listening {
@@ -198,7 +200,7 @@ struct CallView: View {
                     .accessibilityLabel(listening ? "结束并发送" : "说话")
                 }
 
-                Text(busy ? "AI 正在回应…" : (listening ? "点击结束并发送" : "点击说话"))
+                Text(busy ? "AI 正在回应…" : (listening ? "说完点一下就发送" : "点击说话"))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.6))
                 Spacer()
@@ -207,6 +209,22 @@ struct CallView: View {
         }
         .onAppear(perform: connect)
         .onDisappear { endAll() }
+        .onChange(of: mic.text) { _, partial in
+            // 实时回显部分识别结果
+            if listening { transcript = partial }
+            // 静音判定：持续有部分识别但 2.5s 无新增 → 自动提交
+            if listening, !partial.isEmpty {
+                lastActivity = Date()
+            }
+        }
+        .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
+            // 通话中免按：说完停顿 2.5 秒自动发送
+            guard listening, !busy else { return }
+            let partial = mic.text.trimmingCharacters(in: .whitespaces)
+            guard !partial.isEmpty else { return }
+            guard Date().timeIntervalSince(lastActivity) >= 2.5 else { return }
+            stopAndReply()
+        }
     }
 
     private var callPrompt: String {
@@ -229,11 +247,10 @@ struct CallView: View {
             tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in secs += 1 }
             speak("喂？我在呢，有什么想说的吗？")
         }
-    }
-
-    private func startListening() {
+    }    private func startListening() {
         transcript = ""
         listening = true
+        lastActivity = Date()
         player?.stop()
         mic.start()
     }
@@ -242,16 +259,19 @@ struct CallView: View {
         let said = mic.stop()
         listening = false
         transcript = said
-        guard !said.trimmingCharacters(in: .whitespaces).isEmpty else {
+        lastActivity = Date()
+        let trimmed = said.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
             replyText = "没听清，再说一次？"
             return
         }
         busy = true
+        lastActivity = Date()
         Task {
             do {
                 let reply = try await store.sendChat(
                     sessionId: Int64(roomSessionIdStr) ?? 0,
-                    content: said,
+                    content: trimmed,
                     attachments: [],
                     reasoning: reasoning,
                     systemPrompt: callPrompt

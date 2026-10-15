@@ -313,26 +313,8 @@ final class VoicePlayer: NSObject, ObservableObject {
         if playingId == id { stop(); return }
         stop()
         currentId = id
-        let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "local"
-        if engine == "server" {
-            // 开源语音库（自建 Piper · 中文华严）：立即进入播放态，合成完成即出声
-            playingId = id
-            Task { @MainActor in
-                do {
-                    let data = try await VoicePlayer.serverSynth(text: text, baseURL: baseURL)
-                    guard self.currentId == id else { return }
-                    let pl = try AVAudioPlayer(data: data)
-                    pl.delegate = self
-                    self.player = pl
-                    pl.play()
-                    Haptics.light()
-                } catch {
-                    guard self.currentId == id else { return }
-                    self.playingId = nil
-                    self.speakLocal(id: id, text: text)
-                }
-            }
-        } else if engine == "model" {
+        let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "server"
+        if engine == "model" {
             Task { @MainActor in
                 guard let p = VoicePlayer.ttsProvider() else {
                     self.speakLocal(id: id, text: text)
@@ -350,8 +332,26 @@ final class VoicePlayer: NSObject, ObservableObject {
                     self.speakLocal(id: id, text: text)
                 }
             }
-        } else {
+        } else if engine == "local" {
             speakLocal(id: id, text: text)
+        } else {
+            // 开源语音库（server）：立即进入播放态，热态合成秒回
+            playingId = id
+            Task { @MainActor in
+                do {
+                    let data = try await VoicePlayer.serverSynth(text: text, baseURL: baseURL)
+                    guard self.currentId == id else { return }
+                    let pl = try AVAudioPlayer(data: data)
+                    pl.delegate = self
+                    self.player = pl
+                    pl.play()
+                    Haptics.light()
+                } catch {
+                    guard self.currentId == id else { return }
+                    self.playingId = nil
+                    self.speakLocal(id: id, text: text)
+                }
+            }
         }
     }
 
@@ -379,14 +379,15 @@ final class VoicePlayer: NSObject, ObservableObject {
         } catch { /* 播放失败静默 */ }
     }
 
-    /// 自建开源语音库（服务器 /api/tts，Piper · 中文华严）
+    /// 自建开源语音库（服务器 Piper 常驻热态服务，热态合成 <0.2s）
     @MainActor
-    static func serverSynth(text: String, baseURL: String) async throws -> Data {
+    static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
-        guard let url = URL(string: base + "/api/tts?text=" + q) else { throw URLError(.badURL) }
+        let voice = fast ? "huayan_fast" : "huayan"
+        guard let url = URL(string: base + "/api/tts?text=" + q + "&voice=" + voice) else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
-        req.timeoutInterval = 45
+        req.timeoutInterval = 20
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, http.statusCode == 200, data.count > 44 else {
             throw URLError(.badServerResponse)

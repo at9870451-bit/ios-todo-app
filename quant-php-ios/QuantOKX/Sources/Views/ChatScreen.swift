@@ -476,7 +476,7 @@ struct ChatScreen: View {
         synthesizer.speak(u)
     }
 
-    /// 开源语音库朗读（自建 Piper · 中文华严），失败回退本地语音
+    /// 开源语音库朗读（服务器热态服务），失败回退本地语音
     private func speakWithServer(_ content: String) async {
         store.toast = "正在合成语音…"
         do {
