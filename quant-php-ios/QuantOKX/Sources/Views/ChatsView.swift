@@ -379,12 +379,24 @@ final class VoicePlayer: NSObject, ObservableObject {
         } catch { /* 播放失败静默 */ }
     }
 
-    /// 自建开源语音库（直连服务器热态 Piper 服务 :8765，热态合成 <0.2s）
+    /// 自建开源语音库（直连服务器热态 Piper :8765 / Sherpa :8766，热态合成 <0.2s）
     @MainActor
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
         let voice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
-        // 优先直连常驻热态服务（毫秒级），失败再走 Java 后端代理
+        // Sherpa 音色（theresa 多说话人）: 8766
+        if voice == "theresa" || voice.hasPrefix("sherpa") {
+            let sid = voice == "theresa2" ? "1" : "0"
+            if let url = URL(string: "http://\(URL(string: baseURL)?.host ?? ""):8766/tts2?text=" + q + "&sid=" + sid) {
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 15
+                if let (data, resp) = try? await URLSession.shared.data(for: req),
+                   let http = resp as? HTTPURLResponse, http.statusCode == 200, data.count > 44 {
+                    return data
+                }
+            }
+        }
+        // Piper 音色：8765 直连（毫秒级），失败走 Java 后端代理
         if let host = URL(string: baseURL)?.host, !host.isEmpty {
             let directURL = "http://\(host):8765/tts?text=" + q + "&voice=" + voice
             if let url = URL(string: directURL) {

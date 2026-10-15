@@ -103,6 +103,8 @@ struct SettingsScreen: View {
                         Text("华严·高清").tag("huayan")
                         Text("沧元·男声").tag("chaowen")
                         Text("小雅·女声").tag("xiaoya")
+                        Text("特蕾莎·女声").tag("theresa")
+                        Text("特蕾莎·声线2").tag("theresa2")
                     }
                     .pickerStyle(.menu)
                     .tint(Theme.accent)
@@ -208,6 +210,8 @@ struct SettingsScreen: View {
         case "huayan": return "华严 · 高清女声"
         case "chaowen": return "沧元 · 男声"
         case "xiaoya": return "小雅 · 女声"
+        case "theresa": return "特蕾莎 · 女声（VITS）"
+        case "theresa2": return "特蕾莎 · 女声 · 声线2"
         default: return "华严 · 极速女声"
         }
     }
