@@ -641,7 +641,7 @@ struct AttChip: View {
 struct ChatMessage: Identifiable {
     let id: Int64
     let role: String
-    let content: String
+    var content: String
     var attachments: [ChatAttachment] = []
 }
 
