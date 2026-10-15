@@ -357,9 +357,7 @@ struct ChatScreen: View {
         .padding(.leading, 12)
         .padding(.trailing, 8)
         .padding(.vertical, 7)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
-        .shadow(color: Color.black.opacity(0.07), radius: 12, x: 0, y: 5)
+        .glassPanel(22)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
     }
@@ -647,9 +645,15 @@ struct MessageBubble: View {
             .background(
                 isUser ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Theme.card),
                 in: isUser
-                    ? UnevenRoundedRectangle(topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 5, style: .continuous)
-                    : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 18, style: .continuous)
+                    ? UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 6, style: .continuous)
+                    : UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
             )
+            .overlay {
+                if !isUser {
+                    UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
+                        .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
+                }
+            }
             .shadow(color: Color.black.opacity(isUser ? 0.0 : 0.05), radius: 7, x: 0, y: 2)
             .shadow(color: Color.black.opacity(isUser ? 0.12 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }

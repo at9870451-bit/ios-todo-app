@@ -25,7 +25,7 @@ enum Theme {
     static let textPrimary = Color(red: 0.110, green: 0.110, blue: 0.118)
     static let textSecondary = Color(red: 0.557, green: 0.557, blue: 0.576)
     /// 玻璃底色 rgba(255,255,255,0.65)
-    static let glassFill = Color.white.opacity(0.65)
+    static let glassFill = Color.white.opacity(0.42)
 
     // MARK: 语义色（全部落在 蓝-橙 系内，不引入第四种色系）
 
@@ -111,17 +111,23 @@ enum Theme {
 // MARK: - Liquid Glass 液态玻璃
 
 extension View {
-    /// 液态玻璃面板：毛玻璃 rgba(255,255,255,0.65) + 模糊 + 1pt 白色内描边 + 轻微阴影
+    /// 液态玻璃面板（对齐 Operit LiquidGlass 配比）：
+    /// 磨砂模糊 + 白色 surface tint + 1pt 白内描边 + 顶部 gloss 高光 + 柔影
     @ViewBuilder
     func glassPanel(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .background(Theme.glassFill, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.9), lineWidth: 1)
+                Theme.glossGradient
+                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+                    .allowsHitTesting(false)
             )
-            .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 5)
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.6), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 5)
     }
 
     /// 白卡：#FFFFFF + 1pt 玻璃内描边 + 柔影

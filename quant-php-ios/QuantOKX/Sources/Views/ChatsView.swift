@@ -392,7 +392,9 @@ struct ChatRoomView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .glassBar()
+        .glassPanel(22)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 6)
     }
 
     // MARK: - 空状态
@@ -517,19 +519,31 @@ struct BubbleRow: View {
             Text(t)
                 .font(.system(size: 16))
                 .foregroundStyle(isUser ? Color.white : .primary)
+                .textSelection(.enabled)
                 .lineLimit(20)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(
                     isUser ? AnyShapeStyle(Theme.heroGradient)
-                           : AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)),
+                           : AnyShapeStyle(Theme.card),
                     in: UnevenRoundedRectangle(
-                        topLeadingRadius: isUser ? 8 : 3,
-                        bottomLeadingRadius: 8,
-                        bottomTrailingRadius: 8,
-                        topTrailingRadius: isUser ? 3 : 8,
+                        topLeadingRadius: isUser ? 20 : 6,
+                        bottomLeadingRadius: 20,
+                        bottomTrailingRadius: 20,
+                        topTrailingRadius: isUser ? 6 : 20,
                         style: .continuous)
                 )
+                .overlay {
+                    if !isUser {
+                        UnevenRoundedRectangle(
+                            topLeadingRadius: 6,
+                            bottomLeadingRadius: 20,
+                            bottomTrailingRadius: 20,
+                            topTrailingRadius: 20,
+                            style: .continuous)
+                            .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
+                    }
+                }
                 .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
                 .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
         case .redPacket(let blessing, let amount):
