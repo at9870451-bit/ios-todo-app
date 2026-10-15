@@ -9,6 +9,7 @@ struct SettingsScreen: View {
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("tts.engine") private var ttsEngine = "local"
     @AppStorage("tts.providerId") private var ttsProviderId = ""
+    @AppStorage("tts.serverVoice") private var serverVoice = "huayan_fast"
 
     var body: some View {
         NavigationStack {
@@ -89,17 +90,22 @@ struct SettingsScreen: View {
                 HStack(spacing: 12) {
                     SquircleIcon(system: "waveform.badge.magnifyingglass", size: 38, tinted: true)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("开源语音库 · 华严")
+                        Text("音色")
                             .font(.subheadline.weight(.semibold))
-                        Text("Piper 神经语音（MIT 开源）· 中文女声 · 服务器合成")
+                        Text(serverVoiceName)
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                            .lineLimit(2)
+                            .lineLimit(1)
                     }
-                    Spacer(minLength: 0)
-                    Text("已启用")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(Theme.ok)
+                    Spacer(minLength: 8)
+                    Picker("音色", selection: $serverVoice) {
+                        Text("华严·极速").tag("huayan_fast")
+                        Text("华严·高清").tag("huayan")
+                        Text("沧元·男声").tag("chaowen")
+                        Text("小雅·女声").tag("xiaoya")
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
                 }
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
@@ -197,9 +203,18 @@ struct SettingsScreen: View {
             .frame(height: 0.8)
     }
 
+    private var serverVoiceName: String {
+        switch serverVoice {
+        case "huayan": return "华严 · 高清女声"
+        case "chaowen": return "沧元 · 男声"
+        case "xiaoya": return "小雅 · 女声"
+        default: return "华严 · 极速女声"
+        }
+    }
+
     private var engineHint: String {
         switch ttsEngine {
-        case "server": return "自建开源语音库（Piper · 中文华严）：服务器合成、免密钥；长句首播约 3~6 秒"
+        case "server": return "自建开源语音库（Piper · MIT）：服务器热态合成、免密钥；首次用新音色约需数秒预热"
         case "model": return "朗读将调用所选语音模型合成（需支持 /v1/audio/speech）"
         default: return "使用设备内置语音离线朗读，无需网络"
         }

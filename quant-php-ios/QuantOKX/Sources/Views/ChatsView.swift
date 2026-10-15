@@ -383,7 +383,7 @@ final class VoicePlayer: NSObject, ObservableObject {
     @MainActor
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
-        let voice = fast ? "huayan_fast" : "huayan"
+        let voice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
         // 优先直连常驻热态服务（毫秒级），失败再走 Java 后端代理
         if let host = URL(string: baseURL)?.host, !host.isEmpty {
             let directURL = "http://\(host):8765/tts?text=" + q + "&voice=" + voice
