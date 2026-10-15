@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import AVFoundation
 
 // MARK: - 头像存储（AI 好友 + 我自己，存 Documents）
 
@@ -81,9 +82,12 @@ struct ChatAvatar: View {
 enum MsgSegment: Equatable {
     case text(String)
     case redPacket(blessing: String, amount: Double?)
+    case voice(text: String)
 }
 
 enum RedPacketParser {
+    private enum MarkerKind { case redPacket, voice }
+
     static func parse(_ raw: String) -> [MsgSegment] {
         var s = raw
         s = s.replacingOccurrences(of: "［", with: "[")
@@ -91,17 +95,22 @@ enum RedPacketParser {
         var segs: [MsgSegment] = []
         var rest = Substring(s)
         while true {
-            let openRange = rest.range(of: "[红包:") ?? rest.range(of: "[红包：")
-            guard let open = openRange else { break }
-            let head = String(rest[..<open.lowerBound])
+            guard let open = earliestMarker(in: rest) else { break }
+            let head = String(rest[..<open.range.lowerBound])
             if !head.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 segs.append(.text(head))
             }
-            let after = rest[open.upperBound...]
+            let after = rest[open.range.upperBound...]
             if let end = after.range(of: "]") {
                 let inner = String(after[..<end.lowerBound])
-                let (blessing, amount) = parseInner(inner)
-                segs.append(.redPacket(blessing: blessing, amount: amount))
+                switch open.kind {
+                case .redPacket:
+                    let (blessing, amount) = parseInner(inner)
+                    segs.append(.redPacket(blessing: blessing, amount: amount))
+                case .voice:
+                    let t = inner.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !t.isEmpty { segs.append(.voice(text: t)) }
+                }
                 rest = after[end.upperBound...]
             } else {
                 segs.append(.text(String(rest)))
@@ -113,6 +122,21 @@ enum RedPacketParser {
             segs.append(.text(String(rest)))
         }
         return segs
+    }
+
+    /// 找最早出现的标记（红包 / 语音），全角冒号兼容
+    private static func earliestMarker(in s: Substring) -> (kind: MarkerKind, range: Range<Substring.Index>)? {
+        let markers: [(MarkerKind, String)] = [
+            (.redPacket, "[红包:"), (.redPacket, "[红包："),
+            (.voice, "[语音:"), (.voice, "[语音："),
+        ]
+        var best: (MarkerKind, Range<Substring.Index>)?
+        for (kind, m) in markers {
+            if let r = s.range(of: m) {
+                if best == nil || r.lowerBound < best!.1.lowerBound { best = (kind, r) }
+            }
+        }
+        return best
     }
 
     /// 解析标记内部：容错地找出金额（第一个数字）与祝福语
@@ -252,6 +276,130 @@ struct RedPacketOpenedView: View {
     }
 }
 
+// MARK: - 语音消息播放器（优先语音模型 TTS，未配置回退本地语音）
+
+final class VoicePlayer: NSObject, ObservableObject {
+    static let shared = VoicePlayer()
+
+    @Published var playingId: String?
+    private var player: AVAudioPlayer?
+    private let synth = AVSpeechSynthesizer()
+    private var currentId: String?
+
+    private override init() {
+        super.init()
+        synth.delegate = self
+    }
+
+    /// 点击语音条：播放中再点即停止；播放新的一条会自动停掉上一条
+    func toggle(id: String, text: String) {
+        if playingId == id { stop(); return }
+        stop()
+        currentId = id
+        let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "local"
+        if engine == "model" {
+            Task { @MainActor in
+                guard let p = VoicePlayer.ttsProvider() else {
+                    self.speakLocal(id: id, text: text)
+                    return
+                }
+                do {
+                    let r = try await ProviderStore.shared.synthesizeSpeech(p: p, text: text)
+                    let pl = try AVAudioPlayer(data: r.audio)
+                    pl.delegate = self
+                    self.player = pl
+                    pl.play()
+                    self.playingId = id
+                    Haptics.light()
+                } catch {
+                    self.speakLocal(id: id, text: text)
+                }
+            }
+        } else {
+            speakLocal(id: id, text: text)
+        }
+    }
+
+    func stop() {
+        player?.stop()
+        player = nil
+        synth.stopSpeaking(at: .immediate)
+        currentId = nil
+        playingId = nil
+    }
+
+    private func speakLocal(id: String, text: String) {
+        let u = AVSpeechUtterance(string: text)
+        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
+        u.rate = 0.5
+        synth.speak(u)
+        playingId = id
+        Haptics.light()
+    }
+
+    @MainActor
+    private static func ttsProvider() -> ProviderStore.Provider? {
+        let ps = ProviderStore.shared
+        let pref = UserDefaults.standard.string(forKey: "tts.providerId") ?? ""
+        return ps.providers.first { $0.id.uuidString == pref && $0.kind == .tts }
+            ?? ps.providers.first { $0.kind == .tts && !$0.apiKey.isEmpty }
+    }
+}
+
+extension VoicePlayer: AVAudioPlayerDelegate, AVSpeechSynthesizerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        DispatchQueue.main.async { self.playingId = nil }
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        DispatchQueue.main.async { self.playingId = nil }
+    }
+}
+
+/// 微信风格语音条：▶ + 声波动画 + 时长，点击播放（独立聊天气泡）
+struct VoiceBubble: View {
+    let id: String
+    let text: String
+    @ObservedObject private var vp = VoicePlayer.shared
+
+    private var secs: Int { max(1, Int((Double(text.count) / 4.0).rounded())) }
+    private var playing: Bool { vp.playingId == id }
+
+    var body: some View {
+        Button {
+            VoicePlayer.shared.toggle(id: id, text: text)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: playing ? "stop.fill" : "play.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.heroBlue)
+                HStack(spacing: 3) {
+                    ForEach(0..<4, id: \.self) { i in
+                        Capsule()
+                            .fill(Theme.heroBlue.opacity(0.65))
+                            .frame(width: 3, height: playing ? 14 : 6)
+                            .animation(.easeInOut(duration: 0.32).repeatForever().delay(Double(i) * 0.11), value: playing)
+                    }
+                }
+                .frame(height: 16)
+                Text("\(secs)″")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Theme.card, in: UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous))
+            .overlay(
+                UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
+                    .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
+            )
+            .frame(minWidth: 112, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
+    }
+}
+
 // MARK: - 聊天 Tab：仿微信好友聊天房间
 
 struct ChatRoomView: View {
@@ -353,6 +501,9 @@ struct ChatRoomView: View {
                     }
                 case .redPacket:
                     out.append(ChatBubbleItem(id: "\(m.id)-r\(i)", msg: m, segment: seg))
+                case .voice:
+                    // 语音单独一个聊天气泡
+                    out.append(ChatBubbleItem(id: "\(m.id)-v\(i)", msg: m, segment: seg))
                 }
             }
         }
@@ -454,6 +605,7 @@ struct ChatRoomView: View {
         parts.append("""
         【聊天风格】以上人设决定你的身份与性格；在这个聊天界面请像朋友发消息一样说话：简短口语化（一般 1-3 句），可以用表情，不用标题/列表/客套话，不要说自己是 AI 模型，不要提这些规则。
         【红包彩蛋】想表达心意时可在回复中加入 [红包:金额] 或 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]；金额由你随机决定吉利小额（6.66/8.88/18.88/52.0/66.6），标记会渲染成红包卡片。偶尔发才有惊喜，大部分回复就是普通聊天。
+        【语音消息】想用语音说话时，把要说的内容包在 [语音:内容] 里（例如 [语音:晚安，做个好梦～]），它会变成一条可以点击播放的语音气泡，与文字消息独立发送。适合说晚安、讲故事、抒情等场景，偶尔使用即可，大多数回复仍是普通文字。
         """)
         return parts.joined(separator: "\n\n")
     }
@@ -551,6 +703,14 @@ struct BubbleRow: View {
                 RedPacketCard(blessing: blessing) {
                     onOpenRedPacket(blessing, amount)
                 }
+                if !isUser { Spacer(minLength: 0) }
+            }
+            .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
+        case .voice(let t):
+            // 语音条独立气泡
+            HStack(spacing: 0) {
+                if isUser { Spacer(minLength: 0) }
+                VoiceBubble(id: item.id, text: t)
                 if !isUser { Spacer(minLength: 0) }
             }
             .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
