@@ -126,7 +126,7 @@ struct CallView: View {
     @State private var player: AVAudioPlayer?
     @StateObject private var mic = MicTranscriber()
     @State private var lastActivity = Date()
-    @State private var connectedOnce = false
+    @State private var lastSilenceCheck = Date()
 
     var body: some View {
         ZStack {
@@ -224,8 +224,7 @@ struct CallView: View {
             guard !partial.isEmpty else { return }
             guard Date().timeIntervalSince(lastActivity) >= 2.5 else { return }
             stopAndReply()
-        }
-    }
+        }    }
 
     private var callPrompt: String {
         let persona = personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines)

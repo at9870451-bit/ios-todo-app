@@ -379,12 +379,25 @@ final class VoicePlayer: NSObject, ObservableObject {
         } catch { /* 播放失败静默 */ }
     }
 
-    /// 自建开源语音库（服务器 Piper 常驻热态服务，热态合成 <0.2s）
+    /// 自建开源语音库（直连服务器热态 Piper 服务 :8765，热态合成 <0.2s）
     @MainActor
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
-        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
         let voice = fast ? "huayan_fast" : "huayan"
+        // 优先直连常驻热态服务（毫秒级），失败再走 Java 后端代理
+        if let host = URL(string: baseURL)?.host, !host.isEmpty {
+            let directURL = "http://\(host):8765/tts?text=" + q + "&voice=" + voice
+            if let url = URL(string: directURL) {
+                var req = URLRequest(url: url)
+                req.timeoutInterval = 8
+                if let (data, resp) = try? await URLSession.shared.data(for: req),
+                   let http = resp as? HTTPURLResponse, http.statusCode == 200, data.count > 44 {
+                    return data
+                }
+            }
+        }
+        // 回退：Java 后端代理（piper CLI，约 5s）
+        let base = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
         guard let url = URL(string: base + "/api/tts?text=" + q + "&voice=" + voice) else { throw URLError(.badURL) }
         var req = URLRequest(url: url)
         req.timeoutInterval = 20
