@@ -62,7 +62,7 @@ struct MembershipView: View {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(currentBadge?.level == "free" || currentBadge == nil
                               ? LinearGradient(colors: [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                              : LinearGradient(colors: [Color.orange, Color(red: 1.0, green: 0.45, blue: 0.1)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                              : Theme.heroGradient)
                         .frame(width: 54, height: 54)
                     Image(systemName: "crown.fill")
                         .font(.system(size: 24))
@@ -75,10 +75,10 @@ struct MembershipView: View {
                         if currentBadge?.level != "free" && currentBadge != nil {
                             Text("生效中")
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Theme.ok)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
-                                .background(Color.green.opacity(0.14), in: Capsule())
+                                .background(Theme.ok.opacity(0.14), in: Capsule())
                         }
                     }
                     if let exp = currentBadge?.expireAt, !exp.isEmpty {
@@ -176,10 +176,10 @@ struct MembershipView: View {
                         if isCurrent {
                             Text("当前")
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.green)
+                                .foregroundStyle(Theme.ok)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 2)
-                                .background(Color.green.opacity(0.13), in: Capsule())
+                                .background(Theme.ok.opacity(0.13), in: Capsule())
                         }
                     }
                     Text(featureLines(p))
@@ -341,8 +341,8 @@ struct MembershipView: View {
 
     private func statusColor(_ s: String) -> Color {
         switch s {
-        case "paid": return .green
-        case "pending": return .orange
+        case "paid": return Theme.ok
+        case "pending": return Theme.warn
         default: return .secondary
         }
     }

@@ -262,7 +262,7 @@ struct ChatScreen: View {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
                     .font(.caption)
-                    .foregroundStyle(store.chatConfigured ? Theme.accent : Color.red)
+                    .foregroundStyle(store.chatConfigured ? Theme.accent : Theme.danger)
                 if store.chatConfigured {
                     Text("模型：\(store.chatModelName)")
                         .font(.footnote.weight(.medium))
@@ -271,11 +271,11 @@ struct ChatScreen: View {
                     Spacer()
                     Text("已配置")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Theme.ok)
                 } else {
                     Text("AI 模型未添加")
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.warn)
                     Spacer()
                     Text("去添加 ›")
                         .font(.footnote.weight(.semibold))

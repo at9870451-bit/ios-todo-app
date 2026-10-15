@@ -63,7 +63,7 @@ struct ChatAvatar: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                        .fill(isAI ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Color.green.gradient))
+                        .fill(isAI ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Theme.ok.gradient))
                     Text(String(name.prefix(1)).uppercased())
                         .font(.system(size: size * 0.42, weight: .semibold))
                         .foregroundStyle(.white)
@@ -156,11 +156,11 @@ struct RedPacketCard: View {
                         .fill(Color.white.opacity(0.20))
                         .frame(width: 54, height: 54)
                     Circle()
-                        .strokeBorder(Color(red: 1.0, green: 0.84, blue: 0.55).opacity(0.9), lineWidth: 2)
+                        .strokeBorder(Color.white.opacity(0.86), lineWidth: 2)
                         .frame(width: 54, height: 54)
                     Image(systemName: "gift.fill")
                         .font(.system(size: 23))
-                        .foregroundStyle(Color(red: 1.0, green: 0.9, blue: 0.68))
+                        .foregroundStyle(Color.white.opacity(0.92))
                 }
                 Text(blessing.isEmpty ? "恭喜发财" : blessing)
                     .font(.system(size: 14, weight: .semibold))
@@ -171,14 +171,12 @@ struct RedPacketCard: View {
                 Spacer(minLength: 0)
                 Text("领取 AI 红包")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color(red: 1.0, green: 0.9, blue: 0.68).opacity(0.95))
+                    .foregroundStyle(Color.white.opacity(0.92))
                     .padding(.bottom, 13)
             }
             .frame(width: compact ? 120 : 148, height: compact ? 160 : 196)
             .background(
-                LinearGradient(colors: [Color(red: 0.98, green: 0.62, blue: 0.23),
-                                        Color(red: 0.91, green: 0.33, blue: 0.12)],
-                               startPoint: .top, endPoint: .bottom),
+                Theme.brandGradient,
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
             .overlay(alignment: .bottom) {
@@ -193,7 +191,7 @@ struct RedPacketCard: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
             )
-            .shadow(color: Color(red: 0.91, green: 0.33, blue: 0.12).opacity(0.32), radius: 7, y: 4)
+            .shadow(color: Theme.accentDeep.opacity(0.32), radius: 7, y: 4)
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -221,15 +219,13 @@ struct RedPacketOpenedView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(LinearGradient(colors: [Color(red: 0.98, green: 0.62, blue: 0.23),
-                                                  Color(red: 0.91, green: 0.33, blue: 0.12)],
-                                         startPoint: .top, endPoint: .bottom))
+                    .fill(Theme.brandGradient)
                     .frame(width: 108, height: 108)
                 Image(systemName: "gift.fill")
                     .font(.system(size: 42))
                     .foregroundStyle(.white)
             }
-            .shadow(color: Color(red: 0.91, green: 0.33, blue: 0.12).opacity(0.35), radius: 12, y: 6)
+            .shadow(color: Theme.accentDeep.opacity(0.35), radius: 12, y: 6)
 
             Text("AI 红包").font(.headline)
             Text(msg.blessing.isEmpty ? "恭喜发财，大吉大利" : msg.blessing)
@@ -520,12 +516,12 @@ struct BubbleRow: View {
         case .text(let t):
             Text(t)
                 .font(.system(size: 16))
-                .foregroundStyle(isUser ? Color.black : .primary)
+                .foregroundStyle(isUser ? Color.white : .primary)
                 .lineLimit(20)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(
-                    isUser ? AnyShapeStyle(Color(red: 0.584, green: 0.925, blue: 0.412))
+                    isUser ? AnyShapeStyle(Theme.heroGradient)
                            : AnyShapeStyle(Color(uiColor: .secondarySystemGroupedBackground)),
                     in: UnevenRoundedRectangle(
                         topLeadingRadius: isUser ? 8 : 3,
@@ -620,6 +616,8 @@ struct ChatProfileView: View {
             }
             .navigationTitle("聊天资料")
             .navigationBarTitleDisplayMode(.inline)
+            .scrollContentBackground(.hidden)
+            .background(AppBackground())
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("完成") { dismiss() }

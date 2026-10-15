@@ -70,7 +70,7 @@ struct ProfileView: View {
                                        : AnyShapeStyle(Color(uiColor: .tertiarySystemGroupedBackground)),
                                 in: Capsule()
                             )
-                        Circle().fill(Color.green).frame(width: 6, height: 6)
+                        Circle().fill(Theme.ok).frame(width: 6, height: 6)
                         Text("已连接")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
@@ -118,7 +118,7 @@ struct ProfileView: View {
                 Task { await store.logout() }
             } label: {
                 HStack(spacing: 8) {
-                    if store.busy { ProgressView().tint(.red) }
+                    if store.busy { ProgressView().tint(Theme.danger) }
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14))
                     Text("退出登录")
@@ -127,7 +127,7 @@ struct ProfileView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .solidCard(Theme.radiusM)
-                .foregroundStyle(.red)
+                .foregroundStyle(Theme.danger)
             }
             .disabled(store.busy)
         }
@@ -156,7 +156,7 @@ struct ProfileView: View {
                 }
                 Text("Amore")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.warn)
                 Text("登录后开始对话，历史会话云端同步")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -235,7 +235,7 @@ struct ProfileView: View {
             if let ok = connOK {
                 HStack(spacing: 6) {
                     Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(ok ? Color.green : Color.red)
+                        .foregroundStyle(ok ? Theme.ok : Theme.danger)
                     Text(connMsg)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -245,12 +245,12 @@ struct ProfileView: View {
             if !(store.loginError.isEmpty ? localError : store.loginError).isEmpty {
                 let msg = !store.loginError.isEmpty ? store.loginError : localError
                 HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warn)
                     Text(msg).font(.footnote).foregroundStyle(.primary)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Theme.warn.opacity(0.12), in: RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous))
             }
         }
     }

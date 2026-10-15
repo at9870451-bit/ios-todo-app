@@ -134,7 +134,12 @@ struct AppearanceView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                    }
+                    .shadow(color: Theme.shadowGlow, radius: 9, x: 0, y: 4)
                     .foregroundStyle(.white)
                 }
 
@@ -153,17 +158,17 @@ struct AppearanceView: View {
                         }
                     }
                     .padding(14)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .glassPanel(Theme.radiusM)
 
                     Button {
                         bg.clear()
                     } label: {
                         Text("恢复默认渐变背景")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Theme.danger)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            .background(Theme.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                     }
                 }
 
@@ -255,7 +260,7 @@ struct PersonaView: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(Theme.card, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .solidCard(Theme.radiusS)
                             }
                             .buttonStyle(.plain)
                         }

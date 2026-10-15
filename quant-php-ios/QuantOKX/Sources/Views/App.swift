@@ -109,6 +109,10 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(Theme.accent)
+        // 保留系统 TabView 的原生交互，同时统一为通透玻璃底栏。
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
+        .toolbarColorScheme(.light, for: .tabBar)
     }
 }
 

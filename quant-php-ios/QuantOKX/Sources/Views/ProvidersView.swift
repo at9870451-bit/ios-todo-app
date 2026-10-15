@@ -76,7 +76,7 @@ struct ProviderListView: View {
         } label: {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(p.apiKey.isEmpty ? Color(uiColor: .systemGray3) : Color.green)
+                    .fill(p.apiKey.isEmpty ? Color(uiColor: .systemGray3) : Theme.ok)
                     .frame(width: 9, height: 9)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -138,10 +138,10 @@ struct ProviderTypePicker: View {
     }
 
     private let official: [Option] = [
-        Option(id: "openai", name: "OpenAI", sub: "GPT · o 系列与官方端点", icon: "brain.filled.head.profile", color: .green, label: "OpenAI"),
+        Option(id: "openai", name: "OpenAI", sub: "GPT · o 系列与官方端点", icon: "brain.filled.head.profile", color: Theme.heroBlue, label: "OpenAI"),
         Option(id: "deepseek", name: "DeepSeek", sub: "深度求索官方 API", icon: "whale", color: Theme.accent, label: "DeepSeek"),
         Option(id: "moonshot", name: "Moonshot Kimi", sub: "Kimi 系列模型", icon: "moon.stars.fill", color: Theme.heroBlue, label: "Kimi"),
-        Option(id: "grok", name: "xAI (Grok)", sub: "支持 Grok 系列模型", icon: "x.squareroot", color: .black, label: "Grok"),
+        Option(id: "grok", name: "xAI (Grok)", sub: "支持 Grok 系列模型", icon: "x.squareroot", color: Theme.heroBlue, label: "Grok"),
         Option(id: "openrouter", name: "OpenRouter", sub: "聚合 GPT、Claude、Gemini 等主流模型", icon: "arrow.triangle.branch", color: Theme.heroSky, label: "OpenRouter"),
     ]
 
@@ -169,12 +169,12 @@ struct ProviderTypePicker: View {
                                     }
                                     Spacer()
                                     if kind == k {
-                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(kind == .tts ? .orange : Theme.accent)
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(kind == .tts ? Theme.warn : Theme.accent)
                                     }
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(kind == k ? (k == .tts ? Color.orange.opacity(0.10) : Theme.accent.opacity(0.10)) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .background(kind == k ? (k == .tts ? Theme.warn.opacity(0.10) : Theme.accent.opacity(0.10)) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -334,10 +334,10 @@ struct ProviderEditView: View {
                     if let ok = verifyOK {
                         HStack(alignment: .top, spacing: 6) {
                             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(ok ? Color.green : Color.red)
+                                .foregroundStyle(ok ? Theme.ok : Theme.danger)
                             Text(verifyMsg)
                                 .font(.caption)
-                                .foregroundStyle(ok ? Color.green : Color.red)
+                                .foregroundStyle(ok ? Theme.ok : Theme.danger)
                         }
                     }
 
@@ -451,10 +451,10 @@ struct ProviderEditView: View {
                         } label: {
                             Text("删除此模型")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Theme.danger)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .background(Theme.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                         }
                     }
                 }

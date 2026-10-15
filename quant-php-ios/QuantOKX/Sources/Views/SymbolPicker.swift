@@ -17,7 +17,7 @@ struct MultiSymbolEditor: View {
             Text(title).font(.caption).foregroundStyle(.secondary)
 
             if symbols.isEmpty {
-                Text("至少保留 1 个币种").font(.caption2).foregroundStyle(.orange)
+                Text("至少保留 1 个币种").font(.caption2).foregroundStyle(Theme.warn)
             }
             ForEach(symbols, id: \.self) { s in
                 HStack {
@@ -27,7 +27,7 @@ struct MultiSymbolEditor: View {
                     Button {
                         if symbols.count > 1 { symbols.removeAll { $0 == s } }
                     } label: {
-                        Image(systemName: "minus.circle.fill").foregroundStyle(.red.opacity(0.8))
+                        Image(systemName: "minus.circle.fill").foregroundStyle(Theme.danger.opacity(0.8))
                     }
                 }
                 .padding(.vertical, 5)

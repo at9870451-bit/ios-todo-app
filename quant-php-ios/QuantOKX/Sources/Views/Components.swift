@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 页面容器：分组浅灰背景 + 标题 + 下拉刷新（Apple 风格）
+/// 页面容器：原生导航标题下的白色内容区（保留给旧页面使用）
 struct PageScaffold<Content: View>: View {
     let title: String
     var subtitle: String? = nil
@@ -8,37 +8,44 @@ struct PageScaffold<Content: View>: View {
 
     var body: some View {
         ZStack {
-            ZStack { Color(uiColor: .systemGroupedBackground).ignoresSafeArea(); LinearGradient(colors: [Color.white.opacity(0.65), .clear], startPoint: .top, endPoint: .bottom).ignoresSafeArea() }
+            AppBackground()
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: Theme.cardSpacing) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(title)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.accent)
+                            .font(Theme.largeTitle)
+                            .foregroundStyle(.primary)
                         if let subtitle {
-                            Text(subtitle).font(.footnote).foregroundStyle(.secondary)
+                            Text(subtitle)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .padding(.top, 6)
+                    .padding(.top, 4)
                     content()
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 24)
+                .padding(.horizontal, Theme.pagePadding)
+                .padding(.bottom, Theme.spaceXXL)
             }
         }
     }
 }
 
-/// 卡片容器：纯白圆角卡片、无描边
+/// 卡片容器：白色主体 + 玻璃高光 + 统一圆角
 struct Card<Content: View>: View {
-    var padding: CGFloat = 16
+    var padding: CGFloat = Theme.cardPadding
     @ViewBuilder var content: () -> Content
 
     var body: some View {
         content()
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.72), lineWidth: 0.8)
+            }
+            .shadow(color: Theme.shadowCard.0, radius: Theme.shadowCard.1, x: 0, y: Theme.shadowCard.2)
     }
 }
 
@@ -63,14 +70,14 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Theme.inset, in: RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous))
     }
 }
 
 /// 状态徽章
 struct StatusBadge: View {
     let text: String
-    var color: Color = .gray
+    var color: Color = Theme.accent
 
     var body: some View {
         Text(text)
@@ -101,7 +108,7 @@ struct InfoRow: View {
     }
 }
 
-/// 主按钮：系统蓝、白字、圆角
+/// 主按钮：蓝橙渐变、玻璃高光、统一按压反馈
 struct PrimaryButton: View {
     let title: String
     var icon: String? = nil
@@ -110,17 +117,30 @@ struct PrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            Haptics.medium()
+            action()
+        } label: {
             HStack(spacing: 7) {
                 if let icon { Image(systemName: icon) }
                 Text(title).font(.subheadline.weight(.semibold))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(disabled ? AnyShapeStyle(color.opacity(0.3)) : AnyShapeStyle(Theme.heroGradient), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: disabled ? .clear : Theme.accent.opacity(0.28), radius: 7, x: 0, y: 3)
-            .foregroundStyle(.white)
+            .padding(.vertical, 13)
+            .background {
+                RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous)
+                    .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.heroGradient))
+                    .overlay {
+                        if !disabled {
+                            Theme.glossGradient
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous))
+                        }
+                    }
+                    .shadow(color: disabled ? .clear : Theme.shadowGlow, radius: 9, x: 0, y: 4)
+            }
+            .foregroundStyle(disabled ? Color.secondary : Color.white)
         }
+        .buttonStyle(PressableButtonStyle())
         .disabled(disabled)
     }
 }
@@ -131,26 +151,19 @@ struct EmptyHint: View {
     let text: String
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 30)).foregroundStyle(.quaternary)
+        VStack(spacing: 10) {
+            ZStack {
+                Circle().fill(Theme.heroGradient.opacity(0.11)).frame(width: 64, height: 64)
+                Image(systemName: icon)
+                    .font(.system(size: 26, weight: .medium))
+                    .foregroundStyle(Theme.heroBlue)
+            }
             Text(text).font(.footnote).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 30)
     }
-}
-
-// MARK: - Design Tokens（参考稿：苹果白 × 橙 × 蓝橙渐变 × Liquid Glass）
-
-extension Theme {
-    /// 统一圆角体系：视口/大卡 26 · 面板 18 · 卡片 14 · 小件 10
-    static let radiusXL: CGFloat = 26
-    static let radiusL: CGFloat = 18
-    static let radiusM: CGFloat = 14
-    static let radiusS: CGFloat = 10
-    /// 统一页面边距
-    static let pagePadding: CGFloat = 16
 }
 
 /// 橙色渐变圆角方块图标（快捷入口 / 列表行图标；参考稿核心组件）
@@ -278,22 +291,6 @@ struct AuxButton: View {
     }
 }
 
-/// 底栏 / 输入栏统一玻璃（材质 + 顶部高光线）
-extension View {
-    @ViewBuilder
-    func glassBar() -> some View {
-        self
-            .background(.regularMaterial)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(Color.white.opacity(0.55))
-                    .frame(height: 0.8)
-                    .blur(radius: 0.5)
-                    .allowsHitTesting(false)
-            }
-    }
-}
-
 /// 加载中
 struct LoadingHint: View {
     var body: some View {
@@ -332,7 +329,7 @@ enum Fmt {
 
     static func pnlColor(_ s: String?) -> Color {
         guard let s, let d = Double(s) else { return .secondary }
-        return d >= 0 ? Color.green : Color.red
+        return d >= 0 ? Theme.ok : Theme.danger
     }
 
     static func time(_ s: String?) -> String {
