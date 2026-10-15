@@ -89,7 +89,6 @@ public class MemberCtl {
         String tradeNo = "AM" + new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new Date()) + (int) (Math.random() * 9000 + 1000);
         double amount = MemberSvc.priceFor(level, months);
         boolean configured = payConfigured();
-
         if (!configured) {
             // 演示模式：直接开通
             Db.ins("INSERT INTO member_orders(user_id,trade_no,level,months,amount,status,created_at) VALUES(?,?,?,?,?, 'paid', NOW())",
@@ -104,7 +103,9 @@ public class MemberCtl {
         // 真实支付：建待支付订单，返回收银台地址（易支付对接见 PaymentSvc）
         Db.ins("INSERT INTO member_orders(user_id,trade_no,level,months,amount,status,channel,created_at) VALUES(?,?,?,?,?, 'pending',?, NOW())",
                 uid, tradeNo, level, months, String.format("%.2f", amount), channel);
-        String payUrl = PaymentSvc.buildPayUrl(tradeNo, amount, channel);
+        String xff = q.getHeader("X-Forwarded-For");
+        String clientIp = (xff == null || xff.isBlank()) ? q.getRemoteAddr() : xff.split(",")[0].trim();
+        String payUrl = PaymentSvc.buildPayUrl(tradeNo, amount, channel, clientIp);
         if (payUrl == null) {
             // 配置不完整 → 回退演示开通，避免用户卡死
             Db.upd("UPDATE member_orders SET status='paid' WHERE trade_no=?", tradeNo);

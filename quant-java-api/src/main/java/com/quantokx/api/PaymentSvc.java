@@ -11,33 +11,63 @@ import java.util.*;
  */
 public final class PaymentSvc {
 
-    /** 构造收银台跳转地址；配置不完整返回 null */
-    public static String buildPayUrl(String tradeNo, double amount, String channel) {
+    /**
+     * 通过易支付 mapi.php（POST）创建支付单，返回网关收银台 payurl；失败返回 null。
+     * 注意：①新版彩虹网关必须带 clientip ②name 需纯 ASCII（含中文/空格时部分网关签名校验失败）
+     */
+    public static String buildPayUrl(String tradeNo, double amount, String channel, String clientIp) {
         String api = IosCtl.cfg("pay_api_url", "");
         String pid = IosCtl.cfg("pay_pid", "");
         String key = IosCtl.cfg("pay_key", "");
         if (api.isBlank() || pid.isBlank() || key.isBlank()) return null;
+        String endpoint = api.endsWith("/") ? api + "mapi.php" : api + "/mapi.php";
         String notifyUrl = IosCtl.cfg("site_base_url", "http://154.12.16.204:8080") + "/api/member/notify";
         String returnUrl = IosCtl.cfg("pay_return_url", "http://154.12.16.204:8080/panel");
-        Map<String, String> p = new LinkedHashMap<>();
+        // TreeMap：参数名字典序，与签名顺序一致
+        Map<String, String> p = new TreeMap<>();
         p.put("pid", pid);
         p.put("type", channel.isBlank() ? "alipay" : channel);
         p.put("out_trade_no", tradeNo);
         p.put("notify_url", notifyUrl);
         p.put("return_url", returnUrl);
-        p.put("name", "Amore 会员 " + tradeNo);
+        p.put("name", "Amore VIP");
         p.put("money", String.format("%.2f", amount));
-        p.put("sign", sign(p, key));
+        p.put("clientip", clientIp == null || clientIp.isBlank() ? "154.12.16.204" : clientIp);
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> e : p.entrySet()) {
+            if (sb.length() > 0) sb.append('&');
+            sb.append(e.getKey()).append('=').append(e.getValue());
+        }
+        sb.append(key);
+        p.put("sign", md5(sb.toString()));
         p.put("sign_type", "MD5");
-        StringBuilder sb = new StringBuilder(api);
-        sb.append(api.contains("?") ? "&" : "?");
+        StringBuilder body = new StringBuilder();
         boolean first = true;
         for (Map.Entry<String, String> e : p.entrySet()) {
-            if (!first) sb.append('&');
-            sb.append(e.getKey()).append('=').append(urlEncode(e.getValue()));
+            if (!first) body.append('&');
+            body.append(e.getKey()).append('=').append(urlEncode(e.getValue()));
             first = false;
         }
-        return sb.toString();
+        try {
+            java.net.http.HttpClient http = java.net.http.HttpClient.newHttpClient();
+            java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create(endpoint))
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .timeout(java.time.Duration.ofSeconds(15))
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(body.toString()))
+                    .build();
+            java.net.http.HttpResponse<String> resp =
+                    http.send(req, java.net.http.HttpResponse.BodyHandlers.ofString());
+            String out = resp.body() == null ? "" : resp.body();
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("\"payurl\"\\s*:\\s*\"([^\"]+)\"").matcher(out);
+            if (m.find()) return m.group(1).replace("\\/", "/");
+            System.out.println("[Pay] mapi no payurl: " + out);
+            return null;
+        } catch (Exception e) {
+            System.out.println("[Pay] mapi error: " + e);
+            return null;
+        }
     }
 
     /** 异步通知验签 */
