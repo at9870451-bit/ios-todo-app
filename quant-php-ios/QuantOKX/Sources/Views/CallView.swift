@@ -247,7 +247,9 @@ struct CallView: View {
             tick = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in secs += 1 }
             speak("喂？我在呢，有什么想说的吗？")
         }
-    }    private func startListening() {
+    }
+
+    private func startListening() {
         transcript = ""
         listening = true
         lastActivity = Date()
