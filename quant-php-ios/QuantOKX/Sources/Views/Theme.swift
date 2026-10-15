@@ -47,6 +47,28 @@ enum Theme {
     /// 红包红 #E64340（🧧）
     static let packetRed = Color(red: 0.902, green: 0.263, blue: 0.251)
 
+    // MARK: 会员等级主题（对齐参考稿：黄金 / 钻石·黑钻蓝 / 至尊·黑金）
+
+    /// 按等级返回（底色, 主文字, 次文字）；free 走品牌橙
+    static func tierTheme(_ level: String?) -> (bg: Color, fg: Color, sub: Color) {
+        switch level {
+        case "gold":
+            return (Color(red: 0.965, green: 0.845, blue: 0.440),
+                    Color(red: 0.420, green: 0.290, blue: 0.050),
+                    Color(red: 0.420, green: 0.290, blue: 0.050).opacity(0.78))
+        case "diamond":
+            return (Color(red: 0.275, green: 0.330, blue: 0.545),
+                    Color.white,
+                    Color.white.opacity(0.80))
+        case "ultimate":
+            return (Color(red: 0.118, green: 0.098, blue: 0.063),
+                    Color(red: 0.910, green: 0.784, blue: 0.478),
+                    Color(red: 0.910, green: 0.784, blue: 0.478).opacity(0.80))
+        default:
+            return (accent, .white, Color.white.opacity(0.88))
+        }
+    }
+
     // MARK: 自适应底色（固定苹果白系，不受深色模式影响）
 
     static var bg: Color { bgLight }

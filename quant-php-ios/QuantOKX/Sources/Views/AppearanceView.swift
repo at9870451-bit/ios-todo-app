@@ -66,19 +66,22 @@ struct AppBackground: View {
                         Circle()
                             .fill(Theme.heroBlue.opacity(0.16))
                             .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.95)
-                            .blur(radius: 64)
+                            .blur(radius: 45)
                             .offset(x: -geo.size.width * 0.38, y: -geo.size.height * 0.28)
                         Circle()
                             .fill(Theme.accent.opacity(0.14))
                             .frame(width: geo.size.width * 0.85, height: geo.size.width * 0.85)
-                            .blur(radius: 72)
+                            .blur(radius: 50)
                             .offset(x: geo.size.width * 0.42, y: geo.size.height * 0.38)
                         Circle()
                             .fill(Theme.heroSky.opacity(0.10))
                             .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
-                            .blur(radius: 60)
+                            .blur(radius: 42)
                             .offset(x: 0, y: -geo.size.height * 0.45)
                     }
+                    // 关键性能优化：把三个实时模糊光斑合并为单个离屏纹理，
+                    // 避免每帧对 3 个大半径 blur 重新采样（低端机滚动卡顿主因）
+                    .drawingGroup()
                 }
                 .ignoresSafeArea()
             }

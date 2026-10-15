@@ -82,34 +82,35 @@ struct ProfileView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .solidCard(Theme.radiusL)
 
-            // 会员橙渐变卡（对齐参考稿「开通会员」）
+            // 会员入口卡：跟随等级主题（黄金/钻石/至尊），未登录为橙色引导
             NavigationLink {
                 MembershipView()
             } label: {
+                let t = Theme.tierTheme(isPaid ? config.membershipLevel : nil)
                 HStack(spacing: 12) {
                     Image(systemName: "crown.fill")
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(isPaid ? AnyShapeStyle(t.fg) : AnyShapeStyle(Color.white))
                         .frame(width: 38, height: 38)
                         .background(Color.white.opacity(0.22), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     VStack(alignment: .leading, spacing: 3) {
                         Text(isPaid ? amoreLevelName(config.membershipLevel) : "开通会员")
                             .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(isPaid ? AnyShapeStyle(t.fg) : AnyShapeStyle(Color.white))
                         Text(isPaid ? "查看权益与续费" : "解锁全部高级权益")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.88))
+                            .foregroundStyle(isPaid ? AnyShapeStyle(t.sub) : AnyShapeStyle(Color.white.opacity(0.88)))
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(isPaid ? AnyShapeStyle(t.fg) : AnyShapeStyle(Color.white.opacity(0.9)))
                 }
                 .padding(14)
-                .background(Theme.brandGradient, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+                .background(isPaid ? AnyShapeStyle(t.bg) : AnyShapeStyle(Theme.accent), in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.8))
-                .shadow(color: Theme.accent.opacity(0.3), radius: 10, x: 0, y: 5)
+                .shadow(color: Color.black.opacity(0.10), radius: 10, x: 0, y: 5)
             }
             .buttonStyle(PressableButtonStyle())
 

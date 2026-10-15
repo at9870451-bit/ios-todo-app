@@ -7,6 +7,7 @@ import UIKit
 
 struct DollStudioView: View {
     @EnvironmentObject var store: BackendStore
+    @EnvironmentObject var router: Router
     @StateObject private var scene = DollSceneController()
 
     @State private var outfit: DollOutfitState = .preset
@@ -52,6 +53,12 @@ struct DollStudioView: View {
             scene.baseURL = store.config.serverURL
             scene.apply(state: newValue, lookup: lookup)
         }
+        .onChange(of: router.tab) { _, tab in
+            // 切回玩偶页时重建的 3D 视口需要重新应用当前穿搭
+            guard tab == 2 else { return }
+            scene.baseURL = store.config.serverURL
+            scene.apply(state: outfit, lookup: lookup)
+        }
         .alert("保存穿搭", isPresented: $showSaveAlert) {
             TextField("搭配名称", text: $saveName)
             Button("保存") { Task { await saveOutfit() } }
@@ -74,8 +81,22 @@ struct DollStudioView: View {
     // MARK: - 3D 视口
 
     private var viewport: some View {
-        DollSceneView(controller: scene)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Group {
+            if router.tab == 2 {
+                // 仅在玩偶页签激活时创建 RealityKit 视图：
+                // TabView 常驻所有子页，ARView 若一直存活会持续渲染拖慢全局帧率（卡顿主因之二）
+                DollSceneView(controller: scene)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous)
+                        .fill(Theme.inset)
+                    Image(systemName: "teddybear")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Theme.accent.opacity(0.45))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous))
             .overlay(alignment: .topLeading) { genderControl.padding(12) }
             .overlay(alignment: .topTrailing) {

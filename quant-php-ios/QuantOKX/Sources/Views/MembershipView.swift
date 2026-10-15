@@ -12,6 +12,14 @@ struct MembershipView: View {
     @State private var purchasing: String = ""      // 正在购买的 level（防重复点击）
     @State private var confirmTarget: MembershipPlanRow?
     @State private var loaded = false
+    @State private var channel: String = "alipay"   // 支付渠道：alipay / wxpay / qqpay
+
+    /// 支付渠道（对接易支付标准通道名）
+    private let payChannels: [(key: String, name: String, icon: String, tint: Color)] = [
+        ("alipay", "支付宝", "creditcard.fill", Color(red: 0.086, green: 0.467, blue: 1.0)),
+        ("wxpay", "微信支付", "message.fill", Color(red: 0.027, green: 0.757, blue: 0.376)),
+        ("qqpay", "QQ 钱包", "bubble.left.and.bubble.right.fill", Color(red: 0.071, green: 0.718, blue: 0.961)),
+    ]
 
     var body: some View {
         ZStack {
@@ -21,6 +29,7 @@ struct MembershipView: View {
                     statusCard
                     periodPicker
                     planList
+                    payChannelPicker
                     buyButton
                     ordersCard
                 }
@@ -55,48 +64,62 @@ struct MembershipView: View {
 
     private var currentBadge: BadgeInfo? { store.memberStatus?.badge }
 
+    private var isPaidNow: Bool {
+        if let b = currentBadge { return b.level != "free" && !b.level.isEmpty }
+        return false
+    }
+
+    private var tier: (bg: Color, fg: Color, sub: Color) { Theme.tierTheme(currentBadge?.level) }
+
     private var statusCard: some View {
-        VStack(spacing: 14) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(currentBadge?.level == "free" || currentBadge == nil
-                              ? AnyShapeStyle(Color(uiColor: .systemGray3))
-                              : AnyShapeStyle(Theme.accent))
-                        .frame(width: 54, height: 54)
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.white)
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 8) {
-                        Text(currentBadge?.name ?? "免费版")
-                            .font(.system(size: 19, weight: .bold, design: .rounded))
-                        if currentBadge?.level != "free" && currentBadge != nil {
-                            Text("生效中")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(Theme.ok)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Theme.ok.opacity(0.14), in: Capsule())
-                        }
-                    }
-                    if let exp = currentBadge?.expireAt, !exp.isEmpty {
-                        Text("到期时间：\(String(exp.prefix(10))) · 剩余 \(currentBadge?.daysLeft ?? 0) 天")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Text("尚未开通会员，开通后享全部高级权益")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                Spacer(minLength: 0)
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(isPaidNow ? AnyShapeStyle(Color.white.opacity(0.22)) : AnyShapeStyle(Theme.accent.opacity(0.14)))
+                    .frame(width: 54, height: 54)
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(isPaidNow ? AnyShapeStyle(tier.fg) : AnyShapeStyle(Theme.accent))
             }
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 8) {
+                    Text(currentBadge?.name ?? "免费版")
+                        .font(.system(size: 20, weight: .heavy, design: .rounded))
+                        .foregroundStyle(isPaidNow ? AnyShapeStyle(tier.fg) : AnyShapeStyle(Color.primary))
+                    if isPaidNow {
+                        Text("生效中")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(isPaidNow ? AnyShapeStyle(tier.fg) : AnyShapeStyle(Theme.ok))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.white.opacity(0.25), in: Capsule())
+                    }
+                }
+                if let exp = currentBadge?.expireAt, !exp.isEmpty {
+                    Text("有效期至 \(String(exp.prefix(10)).replacingOccurrences(of: "-", with: ".")) · 剩余 \(currentBadge?.daysLeft ?? 0) 天")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(isPaidNow ? AnyShapeStyle(tier.sub) : AnyShapeStyle(Color.secondary))
+                } else {
+                    Text("尚未开通会员，开通后享全部高级权益")
+                        .font(.caption)
+                        .foregroundStyle(Color.secondary)
+                }
+            }
+            Spacer(minLength: 0)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .solidCard(16)
+        .background(
+            isPaidNow ? AnyShapeStyle(tier.bg) : AnyShapeStyle(Theme.card),
+            in: RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous)
+        )
+        .overlay {
+            if isPaidNow {
+                RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.35), lineWidth: 1)
+            }
+        }
+        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
     }
 
     // MARK: - 周期选择
@@ -156,18 +179,19 @@ struct MembershipView: View {
     private func planCard(_ p: MembershipPlanRow) -> some View {
         let isCurrent = currentBadge?.level == p.level && (currentBadge?.expireAt ?? "").isEmpty == false
         let isSelected = selectedLevel == p.level || (selectedLevel.isEmpty && isCurrent)
+        let t = Theme.tierTheme(p.level)
         return Button {
             Haptics.tap()
             selectedLevel = p.level
         } label: {
             HStack(spacing: 13) {
-                // 选中标记
+                // 选中标记（等级主题色）
                 ZStack {
                     Circle()
-                        .strokeBorder(isSelected ? Theme.accent : Color(uiColor: .systemGray4), lineWidth: 2)
+                        .strokeBorder(isSelected ? AnyShapeStyle(t.bg) : AnyShapeStyle(Color(uiColor: .systemGray4)), lineWidth: 2)
                         .frame(width: 22, height: 22)
                     if isSelected {
-                        Circle().fill(Theme.accent).frame(width: 12, height: 12)
+                        Circle().fill(t.bg).frame(width: 12, height: 12)
                     }
                 }
                 VStack(alignment: .leading, spacing: 6) {
@@ -217,22 +241,23 @@ struct MembershipView: View {
     // MARK: - 购买按钮
 
     private var buyButton: some View {
-        Button {
+        let t = Theme.tierTheme(selectedLevelOrCurrent)
+        return Button {
             guard let lv = selectedLevelOrCurrent else { return }
             if let p = store.memberPlans?.plans.first(where: { $0.level == lv }) {
                 confirmTarget = p
             }
         } label: {
             HStack {
-                if !purchasing.isEmpty { ProgressView().tint(.white) }
+                if !purchasing.isEmpty { ProgressView().tint(t.fg) }
                 Text(buyTitle)
                     .font(.subheadline.weight(.bold))
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: Theme.accent.opacity(0.3), radius: 8, x: 0, y: 3)
-            .foregroundStyle(.white)
+            .background(t.bg, in: Capsule())
+            .shadow(color: Color.black.opacity(0.14), radius: 8, x: 0, y: 3)
+            .foregroundStyle(t.fg)
         }
         .buttonStyle(PressableButtonStyle())
         .disabled(!purchasing.isEmpty)
@@ -295,12 +320,53 @@ struct MembershipView: View {
         .solidCard(14)
     }
 
+    // MARK: - 支付渠道选择（支付宝 / 微信 / QQ）
+
+    private var payChannelPicker: some View {
+        HStack(spacing: 10) {
+            ForEach(payChannels, id: \.key) { c in
+                let on = channel == c.key
+                Button {
+                    Haptics.tap()
+                    channel = c.key
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: c.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(on ? c.tint : Color.secondary)
+                        Text(c.name)
+                            .font(.caption.weight(on ? .semibold : .regular))
+                            .foregroundStyle(on ? Color.primary : Color.secondary)
+                        Spacer(minLength: 0)
+                        if on {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(c.tint)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 11)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        on ? AnyShapeStyle(c.tint.opacity(0.10)) : AnyShapeStyle(Theme.card),
+                        in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                            .strokeBorder(on ? c.tint.opacity(0.45) : Theme.hairline.opacity(0.5), lineWidth: on ? 1.2 : 0.8)
+                    )
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
+        }
+    }
+
     // MARK: - 购买动作
 
     private func purchase(_ plan: MembershipPlanRow) async {
         purchasing = plan.level
         defer { purchasing = "" }
-        let payUrl = await store.subscribe(level: plan.level, months: months, channel: "alipay")
+        let payUrl = await store.subscribe(level: plan.level, months: months, channel: channel)
         Haptics.success()
         await store.loadMemberStatus()
         await store.loadMemberOrders()
@@ -351,9 +417,9 @@ struct MembershipView: View {
 /// 会员等级本地名称映射
 func amoreLevelName(_ level: String) -> String {
     switch level {
-    case "gold": return "黄金版"
-    case "diamond": return "钻石版"
-    case "ultimate": return "至尊版"
+    case "gold": return "黄金会员"
+    case "diamond": return "钻石会员"
+    case "ultimate": return "至尊会员"
     default: return "免费版"
     }
 }
