@@ -143,13 +143,17 @@ body {
 @media (max-width: 768px) {
   .am-sidebar { display: none; }
   .am-stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .am-content { padding: 12px; }
+  /* 只保留一个纵向滚动面；横向滚动交给 el-table 内部滚动条（否则会出现两层滚动，
+     内层滚动范围被 CSS 撑宽干扰，导致手机上左滑永远到不了最右列） */
+  .am-content { padding: 12px; overflow-x: hidden; }
   .am-header { padding: 0 12px; }
   .am-toolbar .el-input, .am-toolbar .el-select { width: 100%; }
-  .am-table-wrap { overflow-x: auto; }
-  .el-table { min-width: 640px; }
+  .am-table-wrap { overflow: visible; }
   .am-profile-meta { grid-template-columns: 1fr 1fr; }
 }
+/* el-table 自身会按列宽计算并启用内部横向滚动（fixed="right" 操作列保持悬浮），
+   禁止外部强制撑宽干扰其滚动范围计算 */
+.el-table { min-width: 0 !important; width: 100%; }
 
 /* 登录页 */
 .am-login-wrap {
