@@ -297,7 +297,22 @@ final class VoicePlayer: NSObject, ObservableObject {
         stop()
         currentId = id
         let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "local"
-        if engine == "model" {
+        if engine == "edge" {
+            Task { @MainActor in
+                do {
+                    let voice = UserDefaults.standard.string(forKey: "tts.edgeVoice") ?? EdgeTTS.defaultVoiceID
+                    let data = try await EdgeTTS.synthesize(text: text, voiceID: voice)
+                    let pl = try AVAudioPlayer(data: data)
+                    pl.delegate = self
+                    self.player = pl
+                    pl.play()
+                    self.playingId = id
+                    Haptics.light()
+                } catch {
+                    self.speakLocal(id: id, text: text)
+                }
+            }
+        } else if engine == "model" {
             Task { @MainActor in
                 guard let p = VoicePlayer.ttsProvider() else {
                     self.speakLocal(id: id, text: text)
@@ -357,12 +372,15 @@ extension VoicePlayer: AVAudioPlayerDelegate, AVSpeechSynthesizerDelegate {
 }
 
 /// 微信风格语音条：▶ + 声波动画 + 时长，点击播放（独立聊天气泡）
+/// 气泡宽度随时长（即文字多少）增长，对齐微信语音条形态
 struct VoiceBubble: View {
     let id: String
     let text: String
     @ObservedObject private var vp = VoicePlayer.shared
 
-    private var secs: Int { max(1, Int((Double(text.count) / 4.0).rounded())) }
+    private var secs: Int { max(1, min(99, Int((Double(text.count) / 4.0).rounded()))) }
+    /// 宽度 = 基础 92 + 每秒 5pt，最长 238（配合气泡 maxWidth 268）
+    private var bubbleWidth: CGFloat { min(238, 92 + CGFloat(secs) * 5) }
     private var playing: Bool { vp.playingId == id }
 
     var body: some View {
@@ -382,6 +400,7 @@ struct VoiceBubble: View {
                     }
                 }
                 .frame(height: 16)
+                Spacer(minLength: 8)
                 Text("\(secs)″")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
@@ -393,7 +412,7 @@ struct VoiceBubble: View {
                 UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
                     .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
             )
-            .frame(minWidth: 112, alignment: .leading)
+            .frame(width: bubbleWidth, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableButtonStyle())

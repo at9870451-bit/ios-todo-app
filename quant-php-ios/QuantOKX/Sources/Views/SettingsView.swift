@@ -9,6 +9,7 @@ struct SettingsScreen: View {
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("tts.engine") private var ttsEngine = "local"
     @AppStorage("tts.providerId") private var ttsProviderId = ""
+    @AppStorage("tts.edgeVoice") private var edgeVoice = EdgeTTS.defaultVoiceID
 
     var body: some View {
         NavigationStack {
@@ -68,13 +69,14 @@ struct SettingsScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("朗读引擎")
                         .font(.subheadline.weight(.semibold))
-                    Text(ttsEngine == "local" ? "使用设备内置语音" : "使用已配置的语音模型")
+                    Text(ttsEngine == "local" ? "使用设备内置语音" : (ttsEngine == "edge" ? "免费在线神经音色" : "使用已配置的语音模型"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 8)
                 Picker("朗读引擎", selection: $ttsEngine) {
                     Text("本地语音").tag("local")
+                    Text("Edge 神经语音").tag("edge")
                     Text("语音模型").tag("model")
                 }
                 .pickerStyle(.menu)
@@ -83,7 +85,30 @@ struct SettingsScreen: View {
             .padding(.horizontal, Theme.cardPadding)
             .padding(.vertical, 12)
 
-            if ttsEngine == "model" {
+            if ttsEngine == "edge" {
+                rowDivider.padding(.leading, 62)
+                HStack(spacing: 12) {
+                    SquircleIcon(system: "waveform.badge.magnifyingglass", size: 38, tinted: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("音色")
+                            .font(.subheadline.weight(.semibold))
+                        Text(edgeVoiceName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Picker("音色", selection: $edgeVoice) {
+                        ForEach(EdgeTTS.voices) { v in
+                            Text(v.name).tag(v.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
+                }
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.vertical, 10)
+            } else if ttsEngine == "model" {
                 rowDivider.padding(.leading, 62)
                 if ttsProviders.isEmpty {
                     settingLink(icon: "waveform.badge.plus", title: "选择语音模型", subtitle: "尚未添加语音模型 · 点此前往添加") {
@@ -106,7 +131,7 @@ struct SettingsScreen: View {
                 }
             }
 
-            Text(ttsEngine == "local" ? "使用设备内置语音离线朗读，无需网络" : "朗读将调用所选语音模型合成（需支持 /v1/audio/speech）")
+            Text(edgeHint)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, Theme.cardPadding)
@@ -175,6 +200,18 @@ struct SettingsScreen: View {
         Rectangle()
             .fill(Color.white.opacity(0.62))
             .frame(height: 0.8)
+    }
+
+    private var edgeVoiceName: String {
+        EdgeTTS.voices.first { $0.id == edgeVoice }?.name ?? "晓晓 · 女 · 温柔"
+    }
+
+    private var edgeHint: String {
+        switch ttsEngine {
+        case "edge": return "Edge 神经语音（开源 edge-tts 协议）：在线合成中文音色，免费无需密钥；失败自动回退本地语音"
+        case "model": return "朗读将调用所选语音模型合成（需支持 /v1/audio/speech）"
+        default: return "使用设备内置语音离线朗读，无需网络"
+        }
     }
 
     private var ttsProviders: [ProviderStore.Provider] {

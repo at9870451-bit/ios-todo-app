@@ -461,6 +461,8 @@ struct ChatScreen: View {
         }
         if ttsEngine == "model" {
             Task { await speakWithModel(last.content) }
+        } else if ttsEngine == "edge" {
+            Task { await speakWithEdge(last.content) }
         } else {
             speakLocal(String(last.content.prefix(600)))
         }
@@ -471,6 +473,22 @@ struct ChatScreen: View {
         u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
         u.rate = 0.5
         synthesizer.speak(u)
+    }
+
+    /// Edge 神经语音朗读（免费在线合成），失败回退本地语音
+    private func speakWithEdge(_ content: String) async {
+        store.toast = "正在合成语音…"
+        do {
+            let voice = UserDefaults.standard.string(forKey: "tts.edgeVoice") ?? EdgeTTS.defaultVoiceID
+            let data = try await EdgeTTS.synthesize(text: String(content.prefix(1200)), voiceID: voice)
+            audioPlayer = try AVAudioPlayer(data: data)
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+            store.toast = ""
+        } catch {
+            store.toast = "Edge 语音合成失败，已用本地朗读"
+            speakLocal(String(content.prefix(600)))
+        }
     }
 
     /// 用配置的语音模型合成并播放；失败或未配置时自动回退本地朗读
