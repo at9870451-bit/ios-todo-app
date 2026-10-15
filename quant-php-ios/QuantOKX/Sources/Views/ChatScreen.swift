@@ -54,6 +54,7 @@ struct ChatScreen: View {
                         }
                         .padding(.horizontal, 14)
                     }
+                    .defaultScrollAnchor(.bottom)
                     .onChange(of: messages.count) { _, _ in
                         withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(messages.last?.id ?? 0, anchor: .bottom) }
                     }
