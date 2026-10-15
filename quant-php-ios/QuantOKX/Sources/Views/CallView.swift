@@ -210,11 +210,10 @@ struct CallView: View {
         .onAppear(perform: connect)
         .onDisappear { endAll() }
         .onChange(of: mic.text) { _, partial in
-            // 实时回显部分识别结果
-            if listening { transcript = partial }
-            // 静音判定：持续有部分识别但 2.5s 无新增 → 自动提交
-            if listening, !partial.isEmpty {
-                lastActivity = Date()
+            // 实时回显部分识别结果 + 静默计时
+            if listening {
+                transcript = partial
+                if !partial.isEmpty { lastActivity = Date() }
             }
         }
         .onReceive(Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()) { _ in
