@@ -189,7 +189,7 @@ struct DollStudioView: View {
                             if active {
                                 Capsule().fill(Theme.heroGradient)
                             } else {
-                                Capsule().fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                                Capsule().fill(Color.white.opacity(0.72))
                             }
                         }
                     }
@@ -353,7 +353,7 @@ extension DollStudioView {
             }
             .foregroundStyle(disabled ? Color.secondary.opacity(0.5) : Color.primary)
             .frame(width: 62, height: 46)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground),
+            .background(Color.white.opacity(0.72),
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
@@ -523,7 +523,7 @@ extension DollStudioView {
                     TextField("例如：夏天海边度假，清爽一点的蓝色系", text: $aiPrompt, axis: .vertical)
                         .lineLimit(1...3)
                         .padding(10)
-                        .background(Color(uiColor: .tertiarySystemGroupedBackground),
+                        .background(Color.white.opacity(0.72),
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -534,7 +534,7 @@ extension DollStudioView {
                             } label: {
                                 Text(s).font(.caption).foregroundStyle(.primary)
                                     .padding(.horizontal, 10).padding(.vertical, 7)
-                                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: Capsule())
+                                    .background(Color.white.opacity(0.72), in: Capsule())
                             }
                             .buttonStyle(PressableButtonStyle())
                         }

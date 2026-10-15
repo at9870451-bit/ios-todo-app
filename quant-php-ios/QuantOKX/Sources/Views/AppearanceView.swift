@@ -59,29 +59,27 @@ struct AppBackground: View {
             }
         } else {
             ZStack {
-                (scheme == .dark
-                    ? Color(red: 0.066, green: 0.066, blue: 0.082)
-                    : Color.white)
+                Color.white
                     .ignoresSafeArea()
                 LinearGradient(
-                    colors: [.clear, scheme == .dark ? Color.white.opacity(0.045) : Theme.bgLight],
+                    colors: [.clear, Theme.bgLight],
                     startPoint: .top, endPoint: .bottom
                 )
                 .ignoresSafeArea()
                 GeometryReader { geo in
                     ZStack {
                         Circle()
-                            .fill(Theme.heroBlue.opacity(scheme == .dark ? 0.12 : 0.07))
+                            .fill(Theme.heroBlue.opacity(0.16))
                             .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.95)
                             .blur(radius: 64)
                             .offset(x: -geo.size.width * 0.38, y: -geo.size.height * 0.28)
                         Circle()
-                            .fill(Theme.accent.opacity(scheme == .dark ? 0.09 : 0.06))
+                            .fill(Theme.accent.opacity(0.14))
                             .frame(width: geo.size.width * 0.85, height: geo.size.width * 0.85)
                             .blur(radius: 72)
                             .offset(x: geo.size.width * 0.42, y: geo.size.height * 0.38)
                         Circle()
-                            .fill(Theme.heroSky.opacity(scheme == .dark ? 0.07 : 0.05))
+                            .fill(Theme.heroSky.opacity(0.10))
                             .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
                             .blur(radius: 60)
                             .offset(x: 0, y: -geo.size.height * 0.45)

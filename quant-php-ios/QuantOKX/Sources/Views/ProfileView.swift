@@ -67,7 +67,7 @@ struct ProfileView: View {
                             .padding(.vertical, 3)
                             .background(
                                 isPaid ? AnyShapeStyle(Theme.accent.opacity(0.14))
-                                       : AnyShapeStyle(Color(uiColor: .tertiarySystemGroupedBackground)),
+                                       : AnyShapeStyle(Color.white.opacity(0.72)),
                                 in: Capsule()
                             )
                         Circle().fill(Theme.ok).frame(width: 6, height: 6)
@@ -212,7 +212,7 @@ struct ProfileView: View {
                     .foregroundStyle(Theme.accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
                 Button {
@@ -323,7 +323,7 @@ struct FieldRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -343,6 +343,6 @@ struct SecureFieldRow: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 14)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

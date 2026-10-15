@@ -128,12 +128,12 @@ struct PrimaryButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 13)
             .background {
-                RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous)
+                Capsule()
                     .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.heroGradient))
                     .overlay {
                         if !disabled {
                             Theme.glossGradient
-                                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous))
+                                .clipShape(Capsule())
                         }
                     }
                     .shadow(color: disabled ? .clear : Theme.shadowGlow, radius: 9, x: 0, y: 4)

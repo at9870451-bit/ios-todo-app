@@ -8,20 +8,24 @@ import UIKit
 enum Theme {
     // MARK: 品牌色板（唯一色系：苹果白 / 中性灰 / 活力橙 / 蓝橙渐变）
 
-    /// 活力橙 #FF9500 —— 全 App 强调色
+    /// 活力橙 #FF9500 —— 唯一强调色
     static let accent = Color(red: 1.0, green: 0.584, blue: 0.0)
-    /// 深橙（渐变深端 / 警示强调）
+    /// 深橙（破坏性操作，仍在橙色系内）
     static let accentDeep = Color(red: 1.0, green: 0.463, blue: 0.0)
-    /// 渐变蓝 #3478F6
-    static let heroBlue = Color(red: 0.204, green: 0.471, blue: 0.965)
-    /// 渐变天空蓝 #67C7FF
-    static let heroSky = Color(red: 0.404, green: 0.780, blue: 1.0)
-    /// 品牌蓝（旧引用兼容）
+    /// 辅助蓝 #007AFF
+    static let heroBlue = Color(red: 0.0, green: 0.478, blue: 1.0)
+    /// 旧引用兼容（统一为辅助蓝）
+    static let heroSky = heroBlue
     static let brandBlue = heroBlue
-    /// 苹果白 #FFFFFF
+    /// 卡片白 #FFFFFF
     static let white = Color.white
-    /// 浅灰 #F5F5F7
-    static let bgLight = Color(red: 0.961, green: 0.961, blue: 0.969)
+    /// 苹果白背景 #F2F2F7
+    static let bgLight = Color(red: 0.949, green: 0.949, blue: 0.969)
+    /// 主文字 #1C1C1E / 次文字 #8E8E93
+    static let textPrimary = Color(red: 0.110, green: 0.110, blue: 0.118)
+    static let textSecondary = Color(red: 0.557, green: 0.557, blue: 0.576)
+    /// 玻璃底色 rgba(255,255,255,0.65)
+    static let glassFill = Color.white.opacity(0.65)
 
     // MARK: 语义色（全部落在 蓝-橙 系内，不引入第四种色系）
 
@@ -36,35 +40,34 @@ enum Theme {
 
     // MARK: 蓝橙主渐变（主按钮 / 核心功能卡 / 视觉焦点）
 
+    /// 主渐变 #007AFF → #FF9500（135°），仅主按钮 / 选中态 / 焦点
     static let heroGradient = LinearGradient(
-        colors: [heroBlue, heroSky, accent],
+        colors: [heroBlue, accent],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    static let brandGradient = LinearGradient(
-        colors: [accent, accentDeep],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
+    /// 与主渐变一致（旧引用兼容）
+    static let brandGradient = heroGradient
     /// 渐变高光（叠在渐变卡上的顶部玻璃光泽）
     static let glossGradient = LinearGradient(
         colors: [Color.white.opacity(0.26), Color.clear],
         startPoint: .top, endPoint: .center
     )
 
-    // MARK: 自适应底色（浅色纯白系 / 深色系统暗色组）
+    // MARK: 自适应底色（固定苹果白系，不受深色模式影响）
 
-    static var bg: Color { Color(uiColor: .systemGroupedBackground) }
-    static var card: Color { Color(uiColor: .secondarySystemGroupedBackground) }
-    static var inset: Color { Color(uiColor: .tertiarySystemGroupedBackground) }
-    static var hairline: Color { Color(uiColor: .separator) }
-    static var fillGray: Color { Color(uiColor: .systemGray5) }
+    static var bg: Color { bgLight }
+    static var card: Color { Color.white }
+    static var inset: Color { Color.white.opacity(0.72) }
+    static var hairline: Color { textSecondary.opacity(0.16) }
+    static var fillGray: Color { textSecondary.opacity(0.16) }
 
-    // MARK: 统一圆角体系
+    // MARK: 统一圆角体系（卡片 24 连续圆角）
 
-    static let radiusXS: CGFloat = 10   // 小件（胶囊 / 输入块 / 图标）
-    static let radiusS: CGFloat = 12    // 卡片内块
-    static let radiusM: CGFloat = 16    // 信息卡
-    static let radiusL: CGFloat = 20    // 面板 / 底栏
-    static let radiusXL: CGFloat = 26   // 大视口 / Hero 卡
+    static let radiusXS: CGFloat = 12
+    static let radiusS: CGFloat = 14
+    static let radiusM: CGFloat = 16
+    static let radiusL: CGFloat = 20
+    static let radiusXL: CGFloat = 24   // 卡片统一 24pt
     /// 旧引用兼容
     static let radiusXXXL: CGFloat = 34
 
@@ -100,7 +103,7 @@ enum Theme {
     /// 悬浮件（Tab 栏 / 输入栏 / 玻璃按钮）
     static let shadowFloat: (Color, CGFloat, CGFloat) = (Color.black.opacity(0.07), 12, 5)
     /// 品牌光晕（渐变按钮）
-    static let shadowGlow: Color = accent.opacity(0.30)
+    static let shadowGlow: Color = heroBlue.opacity(0.30)
     /// 渐变高光条（液态玻璃顶部细线）
     static var glossLine: Color { Color.white.opacity(0.55) }
 }
@@ -108,37 +111,32 @@ enum Theme {
 // MARK: - Liquid Glass 液态玻璃
 
 extension View {
-    /// 液态玻璃面板：iOS 26 用原生 glassEffect，旧系统磨砂材质 + 高光描边 + 柔影
+    /// 液态玻璃面板：毛玻璃 rgba(255,255,255,0.65) + 模糊 + 1pt 白色内描边 + 轻微阴影
     @ViewBuilder
-    func glassPanel(_ radius: CGFloat = Theme.radiusL) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(.regular, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-        } else {
-            glassLegacy(radius)
-        }
-    }
-
-    /// iOS 26 之前的玻璃质感（材质 + 顶部高光 + 柔影），与原生 glassEffect 视觉一致
-    func glassLegacy(_ radius: CGFloat = Theme.radiusL) -> some View {
+    func glassPanel(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .background(Theme.glassFill, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Theme.glossLine.opacity(0.6), lineWidth: 0.8)
+                    .strokeBorder(Color.white.opacity(0.9), lineWidth: 1)
             )
-            .shadow(color: Theme.shadowFloat.0, radius: Theme.shadowFloat.1, x: 0, y: Theme.shadowFloat.2)
+            .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 5)
     }
 
-    /// 白玉卡片：自适应纯白/暗色卡片 + 双柔影
-    func solidCard(_ radius: CGFloat = Theme.radiusM) -> some View {
+    /// 白卡：#FFFFFF + 1pt 玻璃内描边 + 柔影
+    func solidCard(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
-            .background(Theme.card, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .shadow(color: Theme.shadowCard.0, radius: Theme.shadowCard.1, x: 0, y: Theme.shadowCard.2)
-            .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.9), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 4)
     }
 
-    /// 核心功能卡：蓝橙渐变 + 顶部玻璃光泽 + 品牌光晕
-    func heroCard(_ radius: CGFloat = Theme.radiusL) -> some View {
+    /// 主渐变按钮底（蓝橙 135°）+ 胶囊高光
+    func heroCard(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
             .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay(
@@ -146,31 +144,21 @@ extension View {
                     .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
                     .allowsHitTesting(false)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
-            )
-            .shadow(color: Theme.shadowGlow, radius: 12, x: 0, y: 6)
+            .shadow(color: Theme.heroBlue.opacity(0.30), radius: 12, x: 0, y: 6)
     }
 
-    /// 底栏 / 输入栏统一玻璃（材质 + 顶部高光线）
+    /// 底栏 / 输入栏：全宽毛玻璃 + 顶部 1pt 白高光
     @ViewBuilder
     func glassBar() -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
-        } else {
-            self
-                .background(.regularMaterial)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Theme.glossLine)
-                        .frame(height: 0.8)
-                        .blur(radius: 0.5)
-                        .allowsHitTesting(false)
-                }
-                .shadow(color: Theme.shadowFloat.0, radius: Theme.shadowFloat.1, x: 0, y: Theme.shadowFloat.2)
-        }
+        self
+            .background(.ultraThinMaterial)
+            .background(Theme.glassFill)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.9))
+                    .frame(height: 1)
+                    .allowsHitTesting(false)
+            }
     }
 }
 
@@ -265,11 +253,11 @@ struct DButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 13)
             .background {
-                RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous)
+                Capsule()
                     .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.heroGradient))
                     .overlay(
                         Theme.glossGradient
-                            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXS, style: .continuous))
+                            .clipShape(Capsule())
                             .opacity(disabled ? 0 : 1)
                     )
                     .shadow(color: disabled ? .clear : Theme.shadowGlow, radius: 9, x: 0, y: 4)

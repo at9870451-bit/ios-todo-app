@@ -32,7 +32,7 @@ struct MultiSymbolEditor: View {
                 }
                 .padding(.vertical, 5)
                 .padding(.horizontal, 10)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
             }
 
             HStack(spacing: 8) {
@@ -50,7 +50,7 @@ struct MultiSymbolEditor: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {

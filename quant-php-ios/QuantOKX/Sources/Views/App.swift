@@ -1,9 +1,31 @@
 import SwiftUI
+import UIKit
 
 @main
 struct QuantOKXApp: App {
     @StateObject private var store = BackendStore.shared
     @StateObject private var router = Router()
+
+    init() {
+        // 全局固定浅色（HIG 明亮高级氛围），并配置原生玻璃导航/Tab 栏
+        let nav = UINavigationBarAppearance()
+        nav.configureWithDefaultBackground()
+        nav.backgroundColor = UIColor.white.withAlphaComponent(0.65)
+        nav.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+
+        let tab = UITabBarAppearance()
+        tab.configureWithDefaultBackground()
+        tab.backgroundColor = UIColor.white.withAlphaComponent(0.65)
+        UITabBar.appearance().standardAppearance = tab
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tab
+        }
+        UITabBar.appearance().unselectedItemTintColor = UIColor(Color(red: 0.557, green: 0.557, blue: 0.576))
+        UITabBar.appearance().tintColor = UIColor(Color(red: 1.0, green: 0.584, blue: 0.0))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +37,7 @@ struct QuantOKXApp: App {
                 .environmentObject(BackgroundStore.shared)
                 .environmentObject(AvatarStore.shared)
                 .tint(Theme.accent)
+                .preferredColorScheme(.light)
                 .task { await store.bootstrap() }
         }
     }
@@ -109,10 +132,6 @@ struct MainTabView: View {
                 .tag(4)
         }
         .tint(Theme.accent)
-        // 保留系统 TabView 的原生交互，同时统一为通透玻璃底栏。
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.light, for: .tabBar)
     }
 }
 

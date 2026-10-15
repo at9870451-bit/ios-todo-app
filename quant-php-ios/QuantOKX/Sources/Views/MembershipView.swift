@@ -108,7 +108,7 @@ struct MembershipView: View {
             periodButton(months: 12, title: "12 个月", sub: "8 折")
         }
         .padding(4)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func periodButton(months m: Int, title: String, sub: String) -> some View {
