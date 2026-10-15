@@ -26,6 +26,8 @@ struct ChatScreen: View {
     @AppStorage("tts.providerId") private var ttsProviderId = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
     @AppStorage("persona.prompt") private var personaPrompt = ""
+    /// 聊天 Tab 的专属会话 ID：本页恢复/历史列表都要排除，两 Tab 记录完全分开
+    @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
     @FocusState private var inputFocus: Bool
 
     var body: some View {
@@ -418,7 +420,10 @@ struct ChatScreen: View {
         guard messages.isEmpty, sessionId == 0 else { return }
         do {
             let list = try await store.fetchConversations()
-            guard let last = list.first(where: { $0.updatedAt != nil }) ?? list.first else { return }
+            // 排除聊天 Tab 的专属会话：自动恢复只回到本 Tab（会话页）自己的记录
+            let roomID = Int64(roomSessionIdStr) ?? 0
+            let candidates = list.filter { $0.id != roomID }
+            guard let last = candidates.first(where: { $0.updatedAt != nil }) ?? candidates.first else { return }
             await MainActor.run {
                 openSession(last.id)
             }

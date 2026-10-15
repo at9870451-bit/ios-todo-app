@@ -10,6 +10,8 @@ struct ConversationListView: View {
     @State private var loading = true
     @State private var renaming: Conversation?
     @State private var renameText = ""
+    /// 聊天 Tab 的专属会话 ID：历史列表中隐藏，两 Tab 记录分开
+    @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
 
     struct Conversation: Identifiable, Decodable {
         let id: Int64
@@ -146,7 +148,9 @@ struct ConversationListView: View {
 
     private func loadSessions() async {
         do {
-            conversations = try await store.fetchConversations()
+            // 隐藏聊天 Tab 的专属会话：历史会话列表只显示本 Tab（会话页）的记录
+            let roomID = Int64(roomSessionIdStr) ?? 0
+            conversations = try await store.fetchConversations().filter { $0.id != roomID }
         } catch {
             store.toast = "加载会话失败"
         }
