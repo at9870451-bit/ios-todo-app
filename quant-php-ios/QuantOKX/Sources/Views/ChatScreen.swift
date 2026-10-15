@@ -643,7 +643,7 @@ struct MessageBubble: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                isUser ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Theme.card),
+                isUser ? AnyShapeStyle(Theme.heroBlue) : AnyShapeStyle(Theme.card),
                 in: isUser
                     ? UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 6, style: .continuous)
                     : UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)

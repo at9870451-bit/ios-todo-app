@@ -61,8 +61,8 @@ struct MembershipView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .fill(currentBadge?.level == "free" || currentBadge == nil
-                              ? LinearGradient(colors: [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                              : Theme.heroGradient)
+                              ? AnyShapeStyle(Color(uiColor: .systemGray3))
+                              : AnyShapeStyle(Theme.accent))
                         .frame(width: 54, height: 54)
                     Image(systemName: "crown.fill")
                         .font(.system(size: 24))

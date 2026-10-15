@@ -129,13 +129,7 @@ struct PrimaryButton: View {
             .padding(.vertical, 13)
             .background {
                 Capsule()
-                    .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.heroGradient))
-                    .overlay {
-                        if !disabled {
-                            Theme.glossGradient
-                                .clipShape(Capsule())
-                        }
-                    }
+                    .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.accent))
                     .shadow(color: disabled ? .clear : Theme.shadowGlow, radius: 9, x: 0, y: 4)
             }
             .foregroundStyle(disabled ? Color.secondary : Color.white)
@@ -222,16 +216,10 @@ struct HeroBanner: View {
             }
         }
         .padding(17)
-        .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
-        .overlay(
-            // 顶部高光
-            LinearGradient(colors: [.white.opacity(0.22), .clear], startPoint: .top, endPoint: .center)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
-                .allowsHitTesting(false)
-        )
+        .background(Theme.accent, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous)
             .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8))
-        .shadow(color: Theme.accent.opacity(0.26), radius: 12, x: 0, y: 6)
+        .shadow(color: Theme.shadowGlow, radius: 12, x: 0, y: 6)
     }
 }
 

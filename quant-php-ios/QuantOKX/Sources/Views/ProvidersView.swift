@@ -227,7 +227,7 @@ struct ProviderTypePicker: View {
                 } label: {
                     HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(o.color.gradient)
+                            .fill(o.color)
                             .frame(width: 38, height: 38)
                             .overlay(Image(systemName: o.icon).font(.system(size: 15)).foregroundStyle(.white))
                         VStack(alignment: .leading, spacing: 2) {

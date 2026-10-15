@@ -61,11 +61,6 @@ struct AppBackground: View {
             ZStack {
                 Color.white
                     .ignoresSafeArea()
-                LinearGradient(
-                    colors: [.clear, Theme.bgLight],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .ignoresSafeArea()
                 GeometryReader { geo in
                     ZStack {
                         Circle()

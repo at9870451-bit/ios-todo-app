@@ -40,18 +40,12 @@ enum Theme {
 
     // MARK: 蓝橙主渐变（主按钮 / 核心功能卡 / 视觉焦点）
 
-    /// 主渐变 #007AFF → #FF9500（135°），仅主按钮 / 选中态 / 焦点
-    static let heroGradient = LinearGradient(
-        colors: [heroBlue, accent],
-        startPoint: .topLeading, endPoint: .bottomTrailing
-    )
-    /// 与主渐变一致（旧引用兼容）
-    static let brandGradient = heroGradient
-    /// 渐变高光（叠在渐变卡上的顶部玻璃光泽）
-    static let glossGradient = LinearGradient(
-        colors: [Color.white.opacity(0.26), Color.clear],
-        startPoint: .top, endPoint: .center
-    )
+    /// 主焦点色：纯色活力橙（全部渐变已移除）
+    static let heroGradient = accent
+    /// 旧引用兼容（纯色橙）
+    static let brandGradient = accent
+    /// 红包红 #E64340（🧧）
+    static let packetRed = Color(red: 0.902, green: 0.263, blue: 0.251)
 
     // MARK: 自适应底色（固定苹果白系，不受深色模式影响）
 
@@ -102,8 +96,8 @@ enum Theme {
     static let shadowCard: (Color, CGFloat, CGFloat) = (Color.black.opacity(0.05), 9, 3)
     /// 悬浮件（Tab 栏 / 输入栏 / 玻璃按钮）
     static let shadowFloat: (Color, CGFloat, CGFloat) = (Color.black.opacity(0.07), 12, 5)
-    /// 品牌光晕（渐变按钮）
-    static let shadowGlow: Color = heroBlue.opacity(0.30)
+    /// 品牌光晕（主按钮）
+    static let shadowGlow: Color = accent.opacity(0.28)
     /// 渐变高光条（液态玻璃顶部细线）
     static var glossLine: Color { Color.white.opacity(0.55) }
 }
@@ -112,17 +106,12 @@ enum Theme {
 
 extension View {
     /// 液态玻璃面板（对齐 Operit LiquidGlass 配比）：
-    /// 磨砂模糊 + 白色 surface tint + 1pt 白内描边 + 顶部 gloss 高光 + 柔影
+    /// 磨砂模糊 + 白色 surface tint + 1pt 白内描边 + 柔影
     @ViewBuilder
     func glassPanel(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .background(Theme.glassFill, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(
-                Theme.glossGradient
-                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-                    .allowsHitTesting(false)
-            )
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.6), lineWidth: 1)
@@ -141,16 +130,11 @@ extension View {
             .shadow(color: Color.black.opacity(0.05), radius: 12, x: 0, y: 4)
     }
 
-    /// 主渐变按钮底（蓝橙 135°）+ 胶囊高光
+    /// 焦点卡：纯色橙 + 柔影
     func heroCard(_ radius: CGFloat = Theme.radiusXL) -> some View {
         self
-            .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(
-                Theme.glossGradient
-                    .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-                    .allowsHitTesting(false)
-            )
-            .shadow(color: Theme.heroBlue.opacity(0.30), radius: 12, x: 0, y: 6)
+            .background(Theme.accent, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .shadow(color: Theme.shadowGlow, radius: 12, x: 0, y: 6)
     }
 
     /// 底栏 / 输入栏：全宽毛玻璃 + 顶部 1pt 白高光
@@ -260,12 +244,7 @@ struct DButton: View {
             .padding(.vertical, 13)
             .background {
                 Capsule()
-                    .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.heroGradient))
-                    .overlay(
-                        Theme.glossGradient
-                            .clipShape(Capsule())
-                            .opacity(disabled ? 0 : 1)
-                    )
+                    .fill(disabled ? AnyShapeStyle(Theme.fillGray) : AnyShapeStyle(Theme.accent))
                     .shadow(color: disabled ? .clear : Theme.shadowGlow, radius: 9, x: 0, y: 4)
             }
             .foregroundStyle(disabled ? Color.secondary : Color.white)

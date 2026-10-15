@@ -63,7 +63,7 @@ struct ChatAvatar: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                        .fill(isAI ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Theme.ok.gradient))
+                        .fill(isAI ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Theme.ok))
                     Text(String(name.prefix(1)).uppercased())
                         .font(.system(size: size * 0.42, weight: .semibold))
                         .foregroundStyle(.white)
@@ -176,14 +176,13 @@ struct RedPacketCard: View {
             }
             .frame(width: compact ? 120 : 148, height: compact ? 160 : 196)
             .background(
-                Theme.brandGradient,
+                Theme.packetRed,
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
             .overlay(alignment: .bottom) {
                 // 底部微光翻盖
                 UnevenRoundedRectangle(topLeadingRadius: 64, topTrailingRadius: 64, style: .continuous)
-                    .fill(LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.02)],
-                                         startPoint: .top, endPoint: .bottom))
+                    .fill(Color.white.opacity(0.10))
                     .frame(height: 30)
                     .allowsHitTesting(false)
             }
@@ -191,7 +190,7 @@ struct RedPacketCard: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.8)
             )
-            .shadow(color: Theme.accentDeep.opacity(0.32), radius: 7, y: 4)
+            .shadow(color: Theme.packetRed.opacity(0.35), radius: 7, y: 4)
         }
         .buttonStyle(PressableButtonStyle())
     }
@@ -219,13 +218,13 @@ struct RedPacketOpenedView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Theme.brandGradient)
+                    .fill(Theme.packetRed)
                     .frame(width: 108, height: 108)
                 Image(systemName: "gift.fill")
                     .font(.system(size: 42))
                     .foregroundStyle(.white)
             }
-            .shadow(color: Theme.accentDeep.opacity(0.35), radius: 12, y: 6)
+            .shadow(color: Theme.packetRed.opacity(0.35), radius: 12, y: 6)
 
             Text("AI 红包").font(.headline)
             Text(msg.blessing.isEmpty ? "恭喜发财，大吉大利" : msg.blessing)
@@ -524,7 +523,7 @@ struct BubbleRow: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(
-                    isUser ? AnyShapeStyle(Theme.heroGradient)
+                    isUser ? AnyShapeStyle(Theme.heroBlue)
                            : AnyShapeStyle(Theme.card),
                     in: UnevenRoundedRectangle(
                         topLeadingRadius: isUser ? 20 : 6,

@@ -70,7 +70,7 @@ struct ConversationListView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(isCurrent ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(LinearGradient(colors: [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                        .fill(isCurrent ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color(uiColor: .systemGray3)))
                         .frame(width: 42, height: 42)
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 15))
