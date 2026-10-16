@@ -323,7 +323,6 @@ final class VoicePlayer: NSObject, ObservableObject {
     /// 按全局设置配置播放器（音量倍数 + 语速）
     @MainActor
     private func tune(_ pl: AVAudioPlayer) {
-        pl.enableRateAdjustment = true
         pl.volume = Self.volumeMultiplier
         let r = Self.playbackRate
         if abs(r - 1.0) > 0.01 { pl.rate = r }
@@ -436,7 +435,7 @@ final class VoicePlayer: NSObject, ObservableObject {
             let pl = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
             pl.delegate = self
             player = pl
-            tune(pl)
+            DispatchQueue.main.async { self.tune(pl) }
             pl.play()
             playingId = id
             Haptics.light()
