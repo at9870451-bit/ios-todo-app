@@ -905,7 +905,7 @@ struct ChatRoomView: View {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
                 }
-                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 2, role: "assistant", content: reply.reply))
+                await appendAssistant(reply.reply)
             } catch { /* 静默 */ }
             sending = false
             proactiveBusy = false
@@ -933,30 +933,35 @@ struct ChatRoomView: View {
             }
             // 定时触发的隐藏问候，不渲染
             if m.role == "user", m.content == "[自动问候]" { continue }
-            for (i, seg) in RedPacketParser.parse(m.content).enumerated() {
-                switch seg {
-                case .text(let t):
-                    let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        out.append(ChatBubbleItem(id: "\(m.id)-t\(i)", msg: m, segment: .text(trimmed)))
+            // 连发消息：AI 用 ||| 分隔的多条，拆成独立气泡（历史记录同样生效）
+            let parts = m.content.components(separatedBy: "|||")
+            for (pi, part) in parts.enumerated() {
+                let pbase = parts.count > 1 ? "\(m.id)-p\(pi)" : "\(m.id)"
+                for (i, seg) in RedPacketParser.parse(part).enumerated() {
+                    switch seg {
+                    case .text(let t):
+                        let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            out.append(ChatBubbleItem(id: "\(pbase)-t\(i)", msg: m, segment: .text(trimmed)))
+                        }
+                    case .redPacket:
+                        let key = "\(pbase)-r\(i)"
+                        out.append(ChatBubbleItem(id: key, msg: m, segment: seg))
+                        // 领取提示（红色小字，持久化）
+                        let who = m.role == "user" ? "\(aiName)" : "你"
+                        if claimedKeys.contains(key) {
+                            out.append(ChatBubbleItem(id: key + "-c", msg: m, segment: .claim(text: "\(who)已领取红包")))
+                        }
+                    case .voice:
+                        // 语音单独一个聊天气泡
+                        out.append(ChatBubbleItem(id: "\(pbase)-v\(i)", msg: m, segment: seg))
+                    case .claim:
+                        // 标记出现在谁的消息里，就是谁领的：AI 的消息 → "Amore已领取红包"
+                        let who = m.role == "user" ? "你" : aiName
+                        out.append(ChatBubbleItem(id: "\(pbase)-cl\(i)", msg: m, segment: .claim(text: "\(who)已领取红包")))
+                    case .voiceFile:
+                        break // 上面已处理
                     }
-                case .redPacket:
-                    let key = "\(m.id)-r\(i)"
-                    out.append(ChatBubbleItem(id: key, msg: m, segment: seg))
-                    // 领取提示（红色小字，持久化）
-                    let who = m.role == "user" ? "\(aiName)" : "你"
-                    if claimedKeys.contains(key) {
-                        out.append(ChatBubbleItem(id: key + "-c", msg: m, segment: .claim(text: "\(who)已领取红包")))
-                    }
-                case .voice:
-                    // 语音单独一个聊天气泡
-                    out.append(ChatBubbleItem(id: "\(m.id)-v\(i)", msg: m, segment: seg))
-                case .claim:
-                    // 标记出现在谁的消息里，就是谁领的：AI 的消息 → "Amore已领取红包"
-                    let who = m.role == "user" ? "你" : aiName
-                    out.append(ChatBubbleItem(id: "\(m.id)-cl\(i)", msg: m, segment: .claim(text: "\(who)已领取红包")))
-                case .voiceFile:
-                    break // 上面已处理
                 }
             }
         }
@@ -1151,6 +1156,9 @@ struct ChatRoomView: View {
         - 工整排比、对仗、诗歌感 → 全砍。
         - 每条都标注情绪（"急死了""慌""脑子全是空的"）→ 十条里最多一条写情绪，其余靠行为表达。
         【长度铁律】十条里至少六条不超过 12 个字。超过 40 字的长消息，一场对话最多出现一条。
+        【连发消息·最重要】真人不会把三段话挤进一条消息——真人会短句连发。你想发多条时，用 ||| 分隔（例如：咋了|||说话呀|||再不理我我睡了），系统会把 ||| 拆成独立的聊天气泡、逐条弹出，就像真人打字连发。默认就该连发：2~4 条，每条 3~12 个字。一场最多连发一次，别刷屏。
+        【禁止三段式】一条消息里禁止"反应+解释/猜测+收尾"的拼盘结构。有多个意思 → 拆成 ||| 连发，每条只说一件事，说不完下一条再说。
+        【禁止猜测菜单】禁止"是不是A…还是B…"式列举猜测。一次最多猜一个，或者干脆不猜——直接干点别的（装睡、岔开话题、催他吃饭）。
         【好/坏对照·学结构不学词】
         用户说"我生气了"——
         AI味：你刚刚说过了啦…到底气什么嘛，你不说我怎么哄你呀，急死了😖
@@ -1190,11 +1198,27 @@ struct ChatRoomView: View {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
                 }
-                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))
+                await appendAssistant(reply.reply)
             } catch {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }
             sending = false
+        }
+    }
+
+    /// AI 回复按 ||| 拆成多条连发气泡（模仿真人连发短消息，逐条弹出、节奏随机）
+    @MainActor
+    private func appendAssistant(_ text: String) async {
+        let parts = text.components(separatedBy: "|||")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !parts.isEmpty else { return }
+        for (i, part) in parts.enumerated() {
+            if i > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(Double.random(in: 0.35...0.9) * 1_000_000_000))
+            }
+            messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + Int64(i), role: "assistant", content: part))
+            lastActivity = Date()
         }
     }
 
