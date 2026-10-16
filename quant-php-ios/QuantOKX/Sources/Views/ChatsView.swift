@@ -314,7 +314,45 @@ final class VoicePlayer: NSObject, ObservableObject {
         stop()
         currentId = id
         let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "server"
-        if engine == "model" {
+        if engine == "cloud_sf" {
+            // 硅基流动云端音色（Operit 同款）
+            playingId = id
+            Task { @MainActor in
+                do {
+                    let voice = UserDefaults.standard.string(forKey: "tts.siliconflow.voice") ?? SiliconFlowTTS.defaultVoiceID
+                    let data = try await SiliconFlowTTS.synthesize(text: text, voiceID: voice)
+                    guard self.currentId == id else { return }
+                    let pl = try AVAudioPlayer(data: data)
+                    pl.delegate = self
+                    self.player = pl
+                    pl.play()
+                    Haptics.light()
+                } catch {
+                    guard self.currentId == id else { return }
+                    self.playingId = nil
+                    self.speakLocal(id: id, text: text)
+                }
+            }
+        } else if engine == "cloud_doubao" {
+            // 豆包云端音色（Operit 同款）
+            playingId = id
+            Task { @MainActor in
+                do {
+                    let voice = UserDefaults.standard.string(forKey: "tts.doubao.voice") ?? DoubaoTTS.defaultVoiceID
+                    let data = try await DoubaoTTS.synthesize(text: text, voiceID: voice)
+                    guard self.currentId == id else { return }
+                    let pl = try AVAudioPlayer(data: data)
+                    pl.delegate = self
+                    self.player = pl
+                    pl.play()
+                    Haptics.light()
+                } catch {
+                    guard self.currentId == id else { return }
+                    self.playingId = nil
+                    self.speakLocal(id: id, text: text)
+                }
+            }
+        } else if engine == "model" {
             Task { @MainActor in
                 guard let p = VoicePlayer.ttsProvider() else {
                     self.speakLocal(id: id, text: text)
@@ -418,6 +456,20 @@ final class VoicePlayer: NSObject, ObservableObject {
             throw URLError(.badServerResponse)
         }
         return data
+    }
+
+    // MARK: - 云端音色（借鉴 Operit 语音供应商体系）
+
+    /// 硅基流动（SiliconFlow）· 8 款中文音色，需 API Key
+    @MainActor
+    static func siliconFlowSynth(text: String, voiceID: String) async throws -> Data {
+        try await SiliconFlowTTS.synthesize(text: text, voiceID: voiceID)
+    }
+
+    /// 豆包（火山引擎）· 多款精品音色，需 AppID + Token
+    @MainActor
+    static func doubaoSynth(text: String, voiceID: String) async throws -> Data {
+        try await DoubaoTTS.synthesize(text: text, voiceID: voiceID)
     }
 
     private func speakLocal(id: String, text: String) {

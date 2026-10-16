@@ -10,6 +10,12 @@ struct SettingsScreen: View {
     @AppStorage("tts.engine") private var ttsEngine = "local"
     @AppStorage("tts.providerId") private var ttsProviderId = ""
     @AppStorage("tts.serverVoice") private var serverVoice = "huayan_fast"
+    @AppStorage("tts.siliconflow.voice") private var sfVoice = SiliconFlowTTS.defaultVoiceID
+    @AppStorage("tts.doubao.voice") private var dbVoice = DoubaoTTS.defaultVoiceID
+    // 云端供应商密钥（存 UserDefaults，设置页可编辑）
+    @State private var sfKey = UserDefaults.standard.string(forKey: "tts.siliconflow.key") ?? ""
+    @State private var dbAppID = UserDefaults.standard.string(forKey: "tts.doubao.appid") ?? ""
+    @State private var dbToken = UserDefaults.standard.string(forKey: "tts.doubao.token") ?? ""
 
     var body: some View {
         NavigationStack {
@@ -69,7 +75,11 @@ struct SettingsScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("朗读引擎")
                         .font(.subheadline.weight(.semibold))
-                    Text(ttsEngine == "local" ? "使用设备内置语音" : (ttsEngine == "server" ? "自建开源神经音色" : "使用已配置的语音模型"))
+                    Text(ttsEngine == "local" ? "使用设备内置语音"
+                         : ttsEngine == "server" ? "自建开源神经音色"
+                         : ttsEngine == "cloud_sf" ? "硅基流动云端音色"
+                         : ttsEngine == "cloud_doubao" ? "豆包云端音色"
+                         : "使用已配置的语音模型")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -77,6 +87,8 @@ struct SettingsScreen: View {
                 Picker("朗读引擎", selection: $ttsEngine) {
                     Text("本地语音").tag("local")
                     Text("开源语音库").tag("server")
+                    Text("硅基流动").tag("cloud_sf")
+                    Text("豆包").tag("cloud_doubao")
                     Text("语音模型").tag("model")
                 }
                 .pickerStyle(.menu)
@@ -85,7 +97,114 @@ struct SettingsScreen: View {
             .padding(.horizontal, Theme.cardPadding)
             .padding(.vertical, 12)
 
-            if ttsEngine == "server" {
+            if ttsEngine == "cloud_sf" {
+                rowDivider.padding(.leading, 62)
+                HStack(spacing: 12) {
+                    SquircleIcon(system: "sparkles", size: 38, tinted: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("音色")
+                            .font(.subheadline.weight(.semibold))
+                        Text(sfVoiceName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Picker("音色", selection: $sfVoice) {
+                        ForEach(SiliconFlowTTS.voices) { v in
+                            Text(v.name).tag(v.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
+                }
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.vertical, 10)
+                HStack(spacing: 10) {
+                    TextField("硅基流动 API Key（sk-…）", text: $sfKey)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Button {
+                        UserDefaults.standard.set(sfKey, forKey: "tts.siliconflow.key")
+                        Haptics.success()
+                        store.toast = "已保存"
+                    } label: {
+                        Text("保存")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Theme.inset, in: RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous))
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.bottom, Theme.cardPadding)
+            } else if ttsEngine == "cloud_doubao" {
+                rowDivider.padding(.leading, 62)
+                HStack(spacing: 12) {
+                    SquircleIcon(system: "waveform.circle", size: 38, tinted: true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("音色")
+                            .font(.subheadline.weight(.semibold))
+                        Text(dbVoiceName)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Picker("音色", selection: $dbVoice) {
+                        ForEach(DoubaoTTS.voices) { v in
+                            Text(v.name).tag(v.id)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .tint(Theme.accent)
+                }
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.vertical, 10)
+                VStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        TextField("AppID", text: $dbAppID)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        Button {
+                            UserDefaults.standard.set(dbAppID, forKey: "tts.doubao.appid")
+                            Haptics.success()
+                            store.toast = "已保存"
+                        } label: {
+                            Text("保存")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                    Divider()
+                    HStack(spacing: 10) {
+                        SecureField("Access Token", text: $dbToken)
+                            .textFieldStyle(.plain)
+                            .font(.caption)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        Button {
+                            UserDefaults.standard.set(dbToken, forKey: "tts.doubao.token")
+                            Haptics.success()
+                            store.toast = "已保存"
+                        } label: {
+                            Text("保存")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Theme.inset, in: RoundedRectangle(cornerRadius: Theme.radiusS, style: .continuous))
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.bottom, Theme.cardPadding)
+            } else if ttsEngine == "server" {
                 rowDivider.padding(.leading, 62)
                 HStack(spacing: 12) {
                     SquircleIcon(system: "waveform.badge.magnifyingglass", size: 38, tinted: true)
@@ -216,9 +335,19 @@ struct SettingsScreen: View {
         }
     }
 
+    private var sfVoiceName: String {
+        SiliconFlowTTS.voices.first { $0.id == sfVoice }?.name ?? "Anna · 沉稳女声"
+    }
+
+    private var dbVoiceName: String {
+        DoubaoTTS.voices.first { $0.id == dbVoice }?.name ?? "灿灿 · 通用女声"
+    }
+
     private var engineHint: String {
         switch ttsEngine {
         case "server": return "自建开源语音库（Piper · MIT）：服务器热态合成、免密钥；首次用新音色约需数秒预热"
+        case "cloud_sf": return "硅基流动（SiliconFlow）云端音色：需注册获取 API Key（有免费额度），8 款中文音色"
+        case "cloud_doubao": return "豆包（火山引擎）精品音色：需在火山引擎控制台开通语音合成并获取 AppID/Token"
         case "model": return "朗读将调用所选语音模型合成（需支持 /v1/audio/speech）"
         default: return "使用设备内置语音离线朗读，无需网络"
         }
