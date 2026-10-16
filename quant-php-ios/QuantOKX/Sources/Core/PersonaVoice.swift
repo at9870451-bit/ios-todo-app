@@ -97,9 +97,31 @@ enum PersonaVoice {
         }
     }
 
+    /// 判断语音内容是否为中文占主导（强制中文语音用）
+    /// 假名 / 韩文 / 拉丁字母占比过高 → 判定为非中文
+    static func isMostlyChinese(_ text: String) -> Bool {
+        var chinese = 0
+        var foreign = 0
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0x4E00...0x9FFF, 0x3400...0x4DBF, 0xF900...0xFAFF:
+                chinese += 1                                   // 中日韩统一表意文字（汉字）
+            case 0x3040...0x30FF, 0x31F0...0x31FF:             // 日文假名
+                foreign += 1
+            case 0xAC00...0xD7AF, 0x1100...0x11FF:             // 韩文
+                foreign += 1
+            case 0x41...0x5A, 0x61...0x7A, 0x00C0...0x024F:    // 拉丁字母
+                foreign += 1
+            default:
+                break
+            }
+        }
+        if chinese == 0 && foreign == 0 { return true }        // 纯数字/符号 → 放行
+        return Double(chinese) >= Double(foreign) * 2.0        // 汉字占字母总数 2/3 以上才算中文
+    }
+
     /// 本地系统语音：按性别挑中文音色（尽力而为，找不到用默认）
-    static func localVoice() -> AVSpeechSynthesisVoice? {
-        guard enabled else { return AVSpeechSynthesisVoice(language: "zh-CN") }
+    static func localVoice() -> AVSpeechSynthesisVoice? {        guard enabled else { return AVSpeechSynthesisVoice(language: "zh-CN") }
         let voices = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix("zh") }
         guard !voices.isEmpty else { return AVSpeechSynthesisVoice(language: "zh-CN") }
         switch gender {

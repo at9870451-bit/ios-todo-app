@@ -1038,9 +1038,13 @@ struct ChatRoomView: View {
                         if claimedKeys.contains(key) {
                             out.append(ChatBubbleItem(id: key + "-c", msg: m, segment: .claim(text: "\(who)已领取红包")))
                         }
-                    case .voice:
-                        // 语音单独一个聊天气泡
-                        out.append(ChatBubbleItem(id: "\(pbase)-v\(i)", msg: m, segment: seg))
+                    case .voice(let t):
+                        // 语音单独一个聊天气泡；强制中文：内容不是中文就降级为文字（不然中文音色会读成怪音）
+                        if PersonaVoice.isMostlyChinese(t) {
+                            out.append(ChatBubbleItem(id: "\(pbase)-v\(i)", msg: m, segment: seg))
+                        } else {
+                            out.append(ChatBubbleItem(id: "\(pbase)-vt\(i)", msg: m, segment: .text(t)))
+                        }
                     case .claim:
                         // 标记出现在谁的消息里，就是谁领的：AI 的消息 → "Amore已领取红包"
                         let who = m.role == "user" ? "你" : aiName
@@ -1264,7 +1268,7 @@ struct ChatRoomView: View {
         【红包彩蛋】想表达心意时可在回复中加入 [红包:金额] 或 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]；金额由你随机决定吉利小额（6.66/8.88/18.88/52.0/66.6），标记会渲染成红包卡片。偶尔发才有惊喜，大部分回复就是普通聊天。
         【领取红包】当用户发来红包（他的消息是 [红包:…]）时，你的回复开头加上 [已领红包] 标记再道谢——道谢也要像真人，别写"感谢您的慷慨馈赠"，写"谢啦老板"或者"哟，发财了啊"。标记会渲染成领取提示，不会显示原文。
         【语音消息】想用语音说话时，把要说的内容包在 [语音:内容] 里（例如 [语音:晚安，做个好梦～]），它会变成一条可以点击播放的语音气泡，与文字消息独立发送。偶尔使用即可。
-        【语音语言】语音消息一律说中文，除非用户明确要求你用其他语言（例如"用日语说"）。不要主动切语言，也不要用外语发音去读中文。
+        【语音语言·铁律】语音消息里的内容必须写中文汉字——即使用户用日语、英语跟你说话，你的语音也用中文说（除非用户明确要求"用日语说""用英语说"之类）。绝不允许把日语假名、韩文、英文句子放进 [语音:内容] 里；违反即视为严重错误。
         【用户语音】用户发来 [语音:Ns] 转写文字 时，那是他发的语音消息，「转写文字」就是他说的内容，请自然回应内容本身。
         """)
         parts.append("【人设提醒】记住你是谁——上面的人设始终有效、每轮都要严格遵守，每条回复都要让人一眼认得出这个人的性格、口吻与自称。")
@@ -1299,7 +1303,7 @@ struct ChatRoomView: View {
     private func personaSuffix() -> String {
         let attrs = personaAttributeLine
         let core = attrs.isEmpty ? "严格保持人设身份" : attrs
-        return "\n⟪人设⟫（系统提醒：你是\(aiName)，\(core)；始终按人设说话，绝不改变身份与性别，绝不自称与人设不符的角色）"
+        return "\n⟪人设⟫（系统提醒：你是\(aiName)，\(core)；始终按人设说话，绝不改变身份与性别，绝不自称与人设不符的角色；语音消息一律用中文）"
     }
 
     private func send() {
