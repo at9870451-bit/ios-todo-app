@@ -16,6 +16,10 @@ struct SettingsScreen: View {
     @State private var sfKey = UserDefaults.standard.string(forKey: "tts.siliconflow.key") ?? ""
     @State private var dbAppID = UserDefaults.standard.string(forKey: "tts.doubao.appid") ?? ""
     @State private var dbToken = UserDefaults.standard.string(forKey: "tts.doubao.token") ?? ""
+    // 播放调节（音量倍数 / 语速倍数 / 合成增益）
+    @State private var playVolume = UserDefaults.standard.object(forKey: "tts.playback.volume") as? Float ?? 1.0
+    @State private var playSpeed = UserDefaults.standard.object(forKey: "tts.playback.speed") as? Float ?? 1.0
+    @State private var serverGain = UserDefaults.standard.integer(forKey: "tts.server.gain")
 
     var body: some View {
         NavigationStack {
@@ -258,6 +262,80 @@ struct SettingsScreen: View {
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.bottom, Theme.cardPadding)
+
+            // 播放调节：音量倍数 / 语速倍数 / 合成增益
+            rowDivider
+            HStack(spacing: 12) {
+                SquircleIcon(system: "speaker.wave.3", size: 38, tinted: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("音量倍数")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(String(format: "×%.1f", playVolume))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .monospacedDigit()
+                    }
+                    Slider(value: $playVolume, in: 0.2...2.0, step: 0.1) { _ in
+                        UserDefaults.standard.set(Float(playVolume), forKey: "tts.playback.volume")
+                    }
+                    .tint(Theme.accent)
+                }
+            }
+            .padding(.horizontal, Theme.cardPadding)
+            .padding(.vertical, 10)
+            rowDivider
+            HStack(spacing: 12) {
+                SquircleIcon(system: "gauge.with.needle", size: 38, tinted: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("语速倍数")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(String(format: "×%.1f", playSpeed))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                            .monospacedDigit()
+                    }
+                    Slider(value: $playSpeed, in: 0.5...2.0, step: 0.1) { _ in
+                        UserDefaults.standard.set(Float(playSpeed), forKey: "tts.playback.speed")
+                    }
+                    .tint(Theme.accent)
+                }
+            }
+            .padding(.horizontal, Theme.cardPadding)
+            .padding(.vertical, 10)
+            if ttsEngine == "server" {
+                rowDivider
+                HStack(spacing: 12) {
+                    SquircleIcon(system: "waveform.badge.plus", size: 38, tinted: true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("合成增益")
+                                .font(.subheadline.weight(.semibold))
+                            Spacer()
+                            Text("\(serverGain) dB")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                                .monospacedDigit()
+                        }
+                        Slider(value: Binding(
+                            get: { Double(serverGain) },
+                            set: { v in
+                                serverGain = Int(v)
+                                UserDefaults.standard.set(serverGain, forKey: "tts.server.gain")
+                            }
+                        ), in: -10...10, step: 1)
+                        .tint(Theme.accent)
+                        Text("服务器合成时整体响度（Piper 系音色）")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.vertical, 10)
+            }
         }
         .glassPanel(Theme.radiusL)
     }

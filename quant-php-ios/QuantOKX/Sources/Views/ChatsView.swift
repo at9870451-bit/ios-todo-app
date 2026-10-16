@@ -303,9 +303,30 @@ final class VoicePlayer: NSObject, ObservableObject {
     private let synth = AVSpeechSynthesizer()
     private var currentId: String?
 
+    /// 播放音量倍数（0.1~2.0，设置页「音量倍数」）
+    static var volumeMultiplier: Float {
+        let v = UserDefaults.standard.float(forKey: "tts.playback.volume")
+        return v > 0 ? min(2.0, max(0.1, v)) : 1.0
+    }
+
+    /// 播放语速倍数（0.5~2.0，设置页「语速倍数」）
+    static var playbackRate: Float {
+        let v = UserDefaults.standard.float(forKey: "tts.playback.speed")
+        return v > 0 ? min(2.0, max(0.5, v)) : 1.0
+    }
+
     private override init() {
         super.init()
         synth.delegate = self
+    }
+
+    /// 按全局设置配置播放器（音量倍数 + 语速）
+    @MainActor
+    private func tune(_ pl: AVAudioPlayer) {
+        pl.enableRateAdjustment = true
+        pl.volume = Self.volumeMultiplier
+        let r = Self.playbackRate
+        if abs(r - 1.0) > 0.01 { pl.rate = r }
     }
 
     /// 点击语音条：播放中再点即停止；播放新的一条会自动停掉上一条
@@ -325,6 +346,7 @@ final class VoicePlayer: NSObject, ObservableObject {
                     let pl = try AVAudioPlayer(data: data)
                     pl.delegate = self
                     self.player = pl
+                    self.tune(pl)
                     pl.play()
                     Haptics.light()
                 } catch {
@@ -344,6 +366,7 @@ final class VoicePlayer: NSObject, ObservableObject {
                     let pl = try AVAudioPlayer(data: data)
                     pl.delegate = self
                     self.player = pl
+                    self.tune(pl)
                     pl.play()
                     Haptics.light()
                 } catch {
@@ -363,6 +386,7 @@ final class VoicePlayer: NSObject, ObservableObject {
                     let pl = try AVAudioPlayer(data: r.audio)
                     pl.delegate = self
                     self.player = pl
+                    self.tune(pl)
                     pl.play()
                     self.playingId = id
                     Haptics.light()
@@ -382,6 +406,7 @@ final class VoicePlayer: NSObject, ObservableObject {
                     let pl = try AVAudioPlayer(data: data)
                     pl.delegate = self
                     self.player = pl
+                    self.tune(pl)
                     pl.play()
                     Haptics.light()
                 } catch {
@@ -411,6 +436,7 @@ final class VoicePlayer: NSObject, ObservableObject {
             let pl = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
             pl.delegate = self
             player = pl
+            tune(pl)
             pl.play()
             playingId = id
             Haptics.light()
@@ -422,6 +448,9 @@ final class VoicePlayer: NSObject, ObservableObject {
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
         let voice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
+        // 语速与增益（设置页可调，App 端生效：gain 传服务端，speed 走播放器 rate）
+        let gain = UserDefaults.standard.integer(forKey: "tts.server.gain")
+        let serverGain = min(10, max(-10, gain))
         // Sherpa 音色（theresa 多说话人）: 8766
         if voice == "theresa" || voice.hasPrefix("sherpa") {
             let sid = voice == "theresa2" ? "1" : "0"
@@ -436,7 +465,7 @@ final class VoicePlayer: NSObject, ObservableObject {
         }
         // Piper 音色：8765 直连（毫秒级），失败走 Java 后端代理
         if let host = URL(string: baseURL)?.host, !host.isEmpty {
-            let directURL = "http://\(host):8765/tts?text=" + q + "&voice=" + voice
+            let directURL = "http://\(host):8765/tts?text=" + q + "&voice=" + voice + "&gain=" + String(serverGain)
             if let url = URL(string: directURL) {
                 var req = URLRequest(url: url)
                 req.timeoutInterval = 8
@@ -475,7 +504,7 @@ final class VoicePlayer: NSObject, ObservableObject {
     private func speakLocal(id: String, text: String) {
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
-        u.rate = 0.5
+        u.rate = 0.5 * Self.playbackRate
         synth.speak(u)
         playingId = id
         Haptics.light()

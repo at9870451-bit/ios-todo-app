@@ -27,6 +27,16 @@ enum SiliconFlowTTS {
 
     static let defaultVoiceID = "anna"
 
+    /// 语速倍数（0.5~2.0）与增益 dB（-10~10），设置页可调
+    static var speedRatio: Double {
+        let v = UserDefaults.standard.double(forKey: "tts.siliconflow.speed")
+        return v > 0 ? min(2.0, max(0.5, v)) : 1.0
+    }
+    static var gainDb: Int {
+        let v = UserDefaults.standard.integer(forKey: "tts.siliconflow.gain")
+        return min(10, max(-10, v))
+    }
+
     enum Error: LocalizedError {
         case noKey
         case badResponse(String)
@@ -78,8 +88,8 @@ enum SiliconFlowTTS {
                  voice: voiceValue,
                  response_format: "mp3",
                  sample_rate: 32000,
-                 speed: 1.0,
-                 gain: 0)
+                 speed: Self.speedRatio,
+                 gain: Self.gainDb)
         )
 
         let (data, resp) = try await URLSession.shared.data(for: req)

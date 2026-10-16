@@ -45,6 +45,24 @@ enum DoubaoTTS {
 
     static var isConfigured: Bool { !savedAppID.isEmpty && !savedToken.isEmpty }
 
+    /// 语速 / 音调 / 音量倍数与增益（火山接口标准参数），设置页可调
+    static var speedRatio: Double {
+        let v = UserDefaults.standard.double(forKey: "tts.doubao.speed")
+        return v > 0 ? min(2.0, max(0.2, v)) : 1.0
+    }
+    static var pitchRatio: Double {
+        let v = UserDefaults.standard.double(forKey: "tts.doubao.pitch")
+        return v > 0 ? min(2.0, max(0.5, v)) : 1.0
+    }
+    static var volumeRatio: Double {
+        let v = UserDefaults.standard.double(forKey: "tts.doubao.volume")
+        return v > 0 ? min(2.0, max(0.1, v)) : 1.0
+    }
+    static var gainDb: Int {
+        let v = UserDefaults.standard.integer(forKey: "tts.doubao.gain")
+        return min(10, max(-10, v))
+    }
+
     /// 合成 → mp3 Data
     static func synthesize(text: String, voiceID: String) async throws -> Data {
         guard isConfigured else { throw Error.noKey }
@@ -61,8 +79,10 @@ enum DoubaoTTS {
             "audio": [
                 "voice_type": voiceID,
                 "encoding": "mp3",
-                "speed_ratio": 1.0,
-                "pitch_ratio": 1.0,
+                "speed_ratio": DoubaoTTS.speedRatio,
+                "pitch_ratio": DoubaoTTS.pitchRatio,
+                "volume_ratio": DoubaoTTS.volumeRatio,
+                "gain_db": DoubaoTTS.gainDb,
             ],
             "request": [
                 "reqid": UUID().uuidString,
