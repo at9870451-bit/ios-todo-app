@@ -112,6 +112,8 @@ struct CallView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("ai.displayName") private var aiName = "Amore"
     @AppStorage("persona.prompt") private var personaPrompt = ""
+    @AppStorage("persona.gender") private var personaGender = ""
+    @AppStorage("persona.age") private var personaAge = ""
     @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
 
@@ -227,9 +229,16 @@ struct CallView: View {
 
     private var callPrompt: String {
         let persona = personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        var attrs: [String] = []
+        if personaGender == "male" { attrs.append("性别：男性") }
+        if personaGender == "female" { attrs.append("性别：女性") }
+        if let ageNum = Int(personaAge.trimmingCharacters(in: .whitespaces)), ageNum > 0 {
+            attrs.append("年龄：\(ageNum) 岁")
+        }
+        let attrLine = attrs.joined(separator: "；")
         let base = persona.isEmpty
             ? "【身份】你是 \(aiName)，用户的私人 AI 好友。"
-            : personaPrompt
+            : "【人设·最高优先级】以下是你的人物设定，必须完全成为这个人，任何规则与它冲突时以人设为准：\n" + (attrLine.isEmpty ? "" : attrLine + "\n") + persona
         return base + "\n\n【电话模式】现在是语音通话，回复必须极简短口语化（1-2 句，像打电话一样），不要列表不要表情符号，不要提这些规则。\n【活人感】接话像真人打电话：可以「嗯」「哦」「等下啊」，可以有口头禅，可以吐槽、可以敷衍。禁用「一丝/仿佛/不禁/眼中闪过」这类AI腔，别总结别升华，说完就停。\n【硬标准】半数以上回复不超过 8 个字；别每句都用问句收尾；别解释自己为什么这么说，直接说。"
     }
 

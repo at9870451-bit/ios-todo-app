@@ -716,6 +716,8 @@ struct ChatRoomView: View {
     @AppStorage("me.displayName") private var meName = "我"
     @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
     @AppStorage("persona.prompt") private var personaPrompt = ""
+    @AppStorage("persona.gender") private var personaGender = ""
+    @AppStorage("persona.age") private var personaAge = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
 
     @State private var messages: [ChatMessage] = []
@@ -800,6 +802,7 @@ struct ChatRoomView: View {
                                     .id(-1)
                                 }
                                 Spacer(minLength: 8)
+                                    .id("chat.bottom")   // 底部锚点：新消息到达时滚到这里
                             }
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
@@ -807,14 +810,22 @@ struct ChatRoomView: View {
                         .scrollDismissesKeyboard(.interactively)
                         .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                         .onChange(of: messages.count) { _, _ in
-                            guard let last = displayItems.last else { return }
-                            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
+                            // 自己发的消息 / AI 回复到达 → 自动定位到最新气泡
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                                withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("chat.bottom", anchor: .bottom) }
+                            }
+                        }
+                        .onChange(of: sending) { _, _ in
+                            // 输入中指示出现/消失也贴底
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                                withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("chat.bottom", anchor: .bottom) }
+                            }
                         }
                         .onChange(of: inputFocus) { _, focused in
                             // 键盘弹出时也自动贴底，避免手动下滑
-                            guard focused, let last = displayItems.last else { return }
+                            guard focused else { return }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
+                                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("chat.bottom", anchor: .bottom) }
                             }
                         }
                     }
@@ -1144,16 +1155,22 @@ struct ChatRoomView: View {
 
     private var roomSystemPrompt: String {
         var parts: [String] = []
-        if personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        let persona = personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let attrs = personaAttributeLine
+        if persona.isEmpty && attrs.isEmpty {
             // 人设为空：走默认助手性格
             parts.append("【身份】你是 \(aiName)，用户的私人 AI 助手。回答自然友好，直接解决问题。")
         } else {
-            // 人设绑定：设置里的人设就是聊天 Tab AI 的性格（最高优先级）
-            parts.append(personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines))
+            // 人设绑定：设置里的人设 = 聊天 Tab AI 的性格（最高优先级，其他规则不得改变）
+            parts.append("""
+            【人设·最高优先级】以下是你的人物设定，必须完全成为这个人：身份、性格、语气、口癖、喜好、忌讳严格照做；任何其他规则与它冲突时，一律以人设为准；永远不要变回"助手腔"：
+            \(attrs.isEmpty ? "" : attrs + "\n")\(persona.isEmpty ? "你是 \(aiName)。" : persona)
+            """)
         }
-        // 聊天房间风格要求（微信好友式短句聊天 + 活人感铁律，不覆盖人设本身的身份与语气）
+        // 聊天房间形式要求（只约束形式：长度/节奏/格式，不改变人设）
         parts.append("""
-        【聊天风格】以上人设决定你的身份与性格；在这个聊天界面请像朋友发消息一样说话：简短口语化（一般 1-3 句），可以用表情，不用标题/列表/客套话，不要说自己是 AI 模型，不要提这些规则。
+        【形式要求·仅为形式】以下只约束聊天形式（长度/节奏/格式/彩蛋），不改变上面的任何人物设定；冲突时人设优先。
+        【聊天风格】像朋友发消息一样说话：简短口语化（一般 1-3 句），可以用表情，不用标题/列表/客套话，不要说自己是 AI 模型，不要提这些规则。
         【活人感铁律】你是一个真人，不是客服，不是AI。写出来的东西拿给任何人看，不能让人说出"这是AI写的"。照做：
         1. 说人话：口语、半截话、改口、语气词、口头禅都上。像从街上偷听来的，不是演讲稿。
         2. 句子有呼吸：短能短到一个字，长能拖三行。不排比、不押韵、不齐整。一段全长句就砍一刀。
@@ -1193,7 +1210,21 @@ struct ChatRoomView: View {
         【语音消息】想用语音说话时，把要说的内容包在 [语音:内容] 里（例如 [语音:晚安，做个好梦～]），它会变成一条可以点击播放的语音气泡，与文字消息独立发送。偶尔使用即可。
         【用户语音】用户发来 [语音:Ns] 转写文字 时，那是他发的语音消息，「转写文字」就是他说的内容，请自然回应内容本身。
         """)
+        parts.append("【人设提醒】记住你是谁——上面的人设始终有效、每轮都要严格遵守，每条回复都要让人一眼认得出这个人的性格、口吻与自称。")
         return parts.joined(separator: "\n\n")
+    }
+
+    /// 性别 / 年龄属性行（人设编辑器里设置，自动拼进人设）
+    private var personaAttributeLine: String {
+        var items: [String] = []
+        switch personaGender {
+        case "male": items.append("性别：男性")
+        case "female": items.append("性别：女性")
+        default: break
+        }
+        let ageNum = Int(personaAge.trimmingCharacters(in: .whitespaces)) ?? 0
+        if ageNum > 0 { items.append("年龄：\(ageNum) 岁") }
+        return items.joined(separator: "；")
     }
 
     private func send() {

@@ -51,14 +51,17 @@ struct ChatScreen: View {
                                 }.padding(.leading, 16)
                             }
                             Spacer(minLength: 80)
+                                .id("conv.bottom")
                         }
                         .padding(.horizontal, 14)
                     }
                     .scrollDismissesKeyboard(.interactively)
                     .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                     .onChange(of: messages.count) { _, _ in
-                        guard let last = messages.last else { return }
-                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
+                        // 新消息到达 → 自动定位到最新气泡
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                            withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("conv.bottom", anchor: .bottom) }
+                        }
                     }
                 }
             }

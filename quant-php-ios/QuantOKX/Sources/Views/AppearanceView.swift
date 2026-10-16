@@ -197,6 +197,8 @@ struct AppearanceView: View {
 
 struct PersonaView: View {
     @AppStorage("persona.prompt") private var prompt = ""
+    @AppStorage("persona.gender") private var gender = ""    // "" / male / female
+    @AppStorage("persona.age") private var age = ""          // 数字文本
 
     private let presets: [(String, String)] = [
         ("默认助手", ""),
@@ -212,6 +214,42 @@ struct PersonaView: View {
                 Text("人设会作为系统提示词随每次对话发送给 AI，决定它的身份、语气与回答方式。")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
+
+                // 基本属性：性别 / 年龄（自动拼进人设）
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("基本属性")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("性别").font(.subheadline)
+                        Spacer()
+                        Picker("性别", selection: $gender) {
+                            Text("不指定").tag("")
+                            Text("男性").tag("male")
+                            Text("女性").tag("female")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 210)
+                    }
+                    .padding(12)
+                    .solidCard(Theme.radiusS)
+                    HStack {
+                        Text("年龄").font(.subheadline)
+                        Spacer()
+                        TextField("如 24", text: $age)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 90)
+                        Text("岁")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .solidCard(Theme.radiusS)
+                    Text("性别与年龄会自动拼进人设，影响 AI 的口吻、自称与人称")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("系统提示词")
