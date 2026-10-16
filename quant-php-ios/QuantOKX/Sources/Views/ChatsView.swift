@@ -115,6 +115,12 @@ enum RedPacketParser {
                 segs.append(.text(head))
             }
             let after = rest[open.range.upperBound...]
+            if open.kind == .claim {
+                // [已领红包] 自带右括号，直接成段，无需再找闭合
+                segs.append(.claim(text: "已领红包"))
+                rest = after
+                continue
+            }
             if let end = after.range(of: "]") {
                 let inner = String(after[..<end.lowerBound])
                 switch open.kind {
@@ -758,8 +764,10 @@ struct ChatRoomView: View {
                                                   aiImage: av.aiImage, meImage: av.meImage,
                                                   voicePath: voicePaths[String(item.msg.id)]) { blessing, amount in
                                             openRedPacket = RedPacketMsg(blessing: blessing, amount: amount)
-                                            // 点击 AI 红包即领取 → 红色小字提示
-                                            markClaimed(key: item.id)
+                                            // 点击 AI 的红包即领取 → 红色小字提示（点自己的红包不算领取）
+                                            if item.msg.role != "user" {
+                                                markClaimed(key: item.id)
+                                            }
                                         }
                                         .id(item.id)
                                     }
@@ -944,7 +952,8 @@ struct ChatRoomView: View {
                     // 语音单独一个聊天气泡
                     out.append(ChatBubbleItem(id: "\(m.id)-v\(i)", msg: m, segment: seg))
                 case .claim:
-                    let who = m.role == "user" ? aiName : "你"
+                    // 标记出现在谁的消息里，就是谁领的：AI 的消息 → "Amore已领取红包"
+                    let who = m.role == "user" ? "你" : aiName
                     out.append(ChatBubbleItem(id: "\(m.id)-cl\(i)", msg: m, segment: .claim(text: "\(who)已领取红包")))
                 case .voiceFile:
                     break // 上面已处理
@@ -1134,6 +1143,22 @@ struct ChatRoomView: View {
         9. 词汇不许复读：同一个词、同一种句式别连着用。上次说了"行吧"，这次就换。
         10. 禁用词自查，出现就重写：一丝/一抹/一缕/淡淡/微微/些许/不禁/不由得/下意识地/眼中闪过/嘴角勾起/内心涌起/仿佛/宛如/然而/与此同时/顿时/瞬间扎堆/结尾抒情升华。
         11. 落笔前自问：我朋友在微信上会这么发吗？删掉哪个形容词更真？用手机打字的人会写这么长吗？宁可短，别端着。
+        【反AI味·硬标准】以下句式一出现就是AI腔，出现即重写：
+        - 每条都问句收尾钓回应（"是不是…呀？""好不好嘛？"）→ 十条里最多两条带问号，其余说完就停，甚至不回。
+        - 解释自己动机的开场（"其实我…""我不是故意…""怕你误会…"）→ 删。真人不解释自己为什么那样说话。
+        - "解释+道歉+保证+收尾"四件套塞进一条 → 最多保留一件，其余砍掉或拆到下条。
+        - 省略号"…"当标点用 → 别用省略号，直接断句，不加标点也比省略号真。
+        - 工整排比、对仗、诗歌感 → 全砍。
+        - 每条都标注情绪（"急死了""慌""脑子全是空的"）→ 十条里最多一条写情绪，其余靠行为表达。
+        【长度铁律】十条里至少六条不超过 12 个字。超过 40 字的长消息，一场对话最多出现一条。
+        【好/坏对照·学结构不学词】
+        用户说"我生气了"——
+        AI味：你刚刚说过了啦…到底气什么嘛，你不说我怎么哄你呀，急死了😖
+        人味：气啥 / 又咋了 / 咋整 你说 / 那我不说了 / （干脆不回）
+        用户说"我就说你敷衍我吧"——
+        AI味：其实人家真不是故意敷衍你，我日语就只会那一句，怕多说一个字就露馅了，才一直重复的嘛。你不许再生气了噢。
+        人味：就会那句 没招了😭 / 不然呢 我就会这一句 / 那你说咋办 我学还不成吗
+        （人味那句随便挑一种，别把几种拼一起，更别加解释和收尾。）
         【红包彩蛋】想表达心意时可在回复中加入 [红包:金额] 或 [红包:金额:祝福语]，例如 [红包:8.88] 或 [红包:66.6:恭喜发财]；金额由你随机决定吉利小额（6.66/8.88/18.88/52.0/66.6），标记会渲染成红包卡片。偶尔发才有惊喜，大部分回复就是普通聊天。
         【领取红包】当用户发来红包（他的消息是 [红包:…]）时，你的回复开头加上 [已领红包] 标记再道谢——道谢也要像真人，别写"感谢您的慷慨馈赠"，写"谢啦老板"或者"哟，发财了啊"。标记会渲染成领取提示，不会显示原文。
         【语音消息】想用语音说话时，把要说的内容包在 [语音:内容] 里（例如 [语音:晚安，做个好梦～]），它会变成一条可以点击播放的语音气泡，与文字消息独立发送。偶尔使用即可。
