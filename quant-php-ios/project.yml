@@ -25,7 +25,7 @@ targets:
       properties:
         CFBundleDisplayName: Amore
         CFBundleShortVersionString: "3.9"
-        CFBundleVersion: "53"
+        CFBundleVersion: "54"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

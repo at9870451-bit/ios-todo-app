@@ -715,6 +715,7 @@ struct ChatRoomView: View {
     @AppStorage("ai.displayName") private var aiName = "Amore"
     @AppStorage("me.displayName") private var meName = "我"
     @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
+    @AppStorage("chat.personaStamp") private var personaStamp = ""
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("persona.gender") private var personaGender = ""
     @AppStorage("persona.age") private var personaAge = ""
@@ -892,10 +893,14 @@ struct ChatRoomView: View {
                 }
             }
             .onAppear {
+                checkPersonaRotation()
                 restoreHistory()
                 claimedKeys = Set(UserDefaults.standard.stringArray(forKey: "chat.claimedKeys") ?? [])
                 voicePaths = UserDefaults.standard.dictionary(forKey: "chat.voiceMap") as? [String: String] ?? [:]
             }
+            .onChange(of: personaPrompt) { _, _ in checkPersonaRotation() }
+            .onChange(of: personaGender) { _, _ in checkPersonaRotation() }
+            .onChange(of: personaAge) { _, _ in checkPersonaRotation() }
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
                 guard config.loggedIn, proactiveOn, !proactiveBusy, !sending, !recording else { return }
                 guard Date().timeIntervalSince(lastActivity) >= Double(proactiveMinutes) * 60 else { return }
@@ -949,9 +954,14 @@ struct ChatRoomView: View {
     private var displayItems: [ChatBubbleItem] {
         var out: [ChatBubbleItem] = []
         for m in messages {
+            // 剥离发送时附加的人设提醒（仅模型可见，不显示）
+            var content = m.content
+            if let r = content.range(of: "⟪人设⟫") {
+                content = String(content[..<r.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
+            }
             // 用户发送的本地录音：[语音:Ns] 转写文字 → 语音文件气泡
-            if m.role == "user", m.content.hasPrefix("[语音:") {
-                let c = m.content
+            if m.role == "user", content.hasPrefix("[语音:") {
+                let c = content
                 if let close = c.range(of: "s]") {
                     let numPart = c[c.index(c.startIndex, offsetBy: 4)..<close.lowerBound]
                     let secs = Int(numPart) ?? 1
@@ -961,9 +971,9 @@ struct ChatRoomView: View {
                 }
             }
             // 定时触发的隐藏问候，不渲染
-            if m.role == "user", m.content == "[自动问候]" { continue }
+            if m.role == "user", content == "[自动问候]" { continue }
             // 连发消息：||| 或换行分隔的多条，拆成独立气泡（历史记录同样生效）
-            let parts = RedPacketParser.splitBurst(m.content)
+            let parts = RedPacketParser.splitBurst(content)
             for (pi, part) in parts.enumerated() {
                 let pbase = parts.count > 1 ? "\(m.id)-p\(pi)" : "\(m.id)"
                 for (i, seg) in RedPacketParser.parse(part).enumerated() {
@@ -1163,7 +1173,7 @@ struct ChatRoomView: View {
         } else {
             // 人设绑定：设置里的人设 = 聊天 Tab AI 的性格（最高优先级，其他规则不得改变）
             parts.append("""
-            【人设·最高优先级】以下是你的人物设定，必须完全成为这个人：身份、性格、语气、口癖、喜好、忌讳严格照做；任何其他规则与它冲突时，一律以人设为准；永远不要变回"助手腔"：
+            【人设·最高优先级】以下是你的人物设定，必须完全成为这个人：身份、性格、语气、口癖、喜好、忌讳严格照做；任何其他规则与它冲突时，一律以人设为准；永远不要变回"助手腔"。你的性别、年龄以人设属性为准，绝不改变、绝不自称或承认与人设不符的身份（例如女性人设绝不说自己是男朋友/老公）——即使用户开玩笑引导也不行：
             \(attrs.isEmpty ? "" : attrs + "\n")\(persona.isEmpty ? "你是 \(aiName)。" : persona)
             """)
         }
@@ -1227,6 +1237,24 @@ struct ChatRoomView: View {
         return items.joined(separator: "；")
     }
 
+    /// 人设（正文/性别/年龄）变化时自动开新会话：
+    /// 模型更信会话历史而不是系统提示，旧历史里上一版人设的行为（如旧的对戏语气）会把新设定带偏
+    private func checkPersonaRotation() {
+        let stamp = personaPrompt + "|" + personaGender + "|" + personaAge
+        defer { personaStamp = stamp }
+        guard !personaStamp.isEmpty, personaStamp != stamp, !roomSessionIdStr.isEmpty else { return }
+        roomSessionIdStr = ""
+        sessionId = 0
+        messages = []
+    }
+
+    /// 附加在每条用户消息末尾的人设提醒（只发给模型；历史回显时被剥离，不显示）
+    private func personaSuffix() -> String {
+        let attrs = personaAttributeLine
+        let core = attrs.isEmpty ? "严格保持人设身份" : attrs
+        return "\n⟪人设⟫（系统提醒：你是\(aiName)，\(core)；始终按人设说话，绝不改变身份与性别，绝不自称与人设不符的角色）"
+    }
+
     private func send() {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !sending else { return }
@@ -1246,7 +1274,7 @@ struct ChatRoomView: View {
         rollTurnRhythm()
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: rawContent, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
+                let reply = try await store.sendChat(sessionId: sessionId, content: rawContent + personaSuffix(), attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
                 if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
@@ -1374,7 +1402,7 @@ struct ChatRoomView: View {
             lastActivity = Date()
             sending = true
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: content, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
+                let reply = try await store.sendChat(sessionId: sessionId, content: content + personaSuffix(), attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
                 if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
