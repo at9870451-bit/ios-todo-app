@@ -8,6 +8,7 @@ struct VoiceSettingsCard: View {
     @EnvironmentObject var bg: BackgroundStore
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("tts.engine") private var ttsEngine = "local"
+    @AppStorage("tts.personaMatch") private var personaMatchVoice = true
     @AppStorage("tts.providerId") private var ttsProviderId = ""
     @AppStorage("tts.serverVoice") private var serverVoice = "huayan_fast"
     @AppStorage("tts.siliconflow.voice") private var sfVoice = SiliconFlowTTS.defaultVoiceID
@@ -312,6 +313,26 @@ struct VoiceSettingsCard: View {
                 .foregroundStyle(.tertiary)
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.bottom, Theme.cardPadding)
+
+            // 人设音色匹配
+            rowDivider
+            HStack(spacing: 12) {
+                SquircleIcon(system: "person.text.rectangle", size: 38, tinted: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("按人设匹配音色")
+                        .font(.subheadline.weight(.semibold))
+                    Text(personaMatchHint)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 8)
+                Toggle("", isOn: $personaMatchVoice)
+                    .labelsHidden()
+                    .tint(Theme.accent)
+            }
+            .padding(.horizontal, Theme.cardPadding)
+            .padding(.vertical, 10)
         }
         .glassPanel(Theme.radiusL)
     }
@@ -395,6 +416,18 @@ struct VoiceSettingsCard: View {
 
     private var dbVoiceName: String {
         DoubaoTTS.voices.first { $0.id == dbVoice }?.name ?? "灿灿 · 通用女声"
+    }
+
+    private var personaMatchHint: String {
+        let gender = PersonaVoice.gender
+        let genderText = gender == "female" ? "女性" : (gender == "male" ? "男性" : "未指定性别")
+        let ageText = PersonaVoice.age > 0 ? "、\(PersonaVoice.age) 岁" : ""
+        switch gender {
+        case "female", "male":
+            return "已按人设（\(genderText)\(ageText)）自动挑音色与语速：女性→女声，男性→男声，温柔更慢、活泼更快"
+        default:
+            return "开启后按人设的性别/年龄/性格自动挑音色与语速；先到「人设」里设置性别年龄"
+        }
     }
 
     private var engineHint: String {

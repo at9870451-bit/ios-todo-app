@@ -481,8 +481,8 @@ struct ChatScreen: View {
 
     private func speakLocal(_ text: String) {
         let u = AVSpeechUtterance(string: text)
-        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
-        u.rate = 0.5
+        u.voice = PersonaVoice.localVoice() ?? AVSpeechSynthesisVoice(language: "zh-CN")
+        u.rate = min(1.0, max(0.25, 0.5 * PersonaVoice.speedFactor))
         synthesizer.speak(u)
     }
 

@@ -338,7 +338,7 @@ final class VoicePlayer: NSObject, ObservableObject {
     @MainActor
     private func tune(_ pl: AVAudioPlayer) {
         pl.volume = Self.volumeMultiplier
-        let r = Self.playbackRate
+        let r = min(2.0, max(0.5, Self.playbackRate * PersonaVoice.speedFactor))
         if abs(r - 1.0) > 0.01 { pl.rate = r }
     }
 
@@ -353,7 +353,8 @@ final class VoicePlayer: NSObject, ObservableObject {
             playingId = id
             Task { @MainActor in
                 do {
-                    let voice = UserDefaults.standard.string(forKey: "tts.siliconflow.voice") ?? SiliconFlowTTS.defaultVoiceID
+                    let stored = UserDefaults.standard.string(forKey: "tts.siliconflow.voice") ?? SiliconFlowTTS.defaultVoiceID
+                    let voice = PersonaVoice.siliconFlowVoice(fallback: stored)
                     let data = try await SiliconFlowTTS.synthesize(text: text, voiceID: voice)
                     guard self.currentId == id else { return }
                     let pl = try AVAudioPlayer(data: data)
@@ -373,7 +374,8 @@ final class VoicePlayer: NSObject, ObservableObject {
             playingId = id
             Task { @MainActor in
                 do {
-                    let voice = UserDefaults.standard.string(forKey: "tts.doubao.voice") ?? DoubaoTTS.defaultVoiceID
+                    let stored = UserDefaults.standard.string(forKey: "tts.doubao.voice") ?? DoubaoTTS.defaultVoiceID
+                    let voice = PersonaVoice.doubaoVoice(fallback: stored)
                     let data = try await DoubaoTTS.synthesize(text: text, voiceID: voice)
                     guard self.currentId == id else { return }
                     let pl = try AVAudioPlayer(data: data)
@@ -460,7 +462,8 @@ final class VoicePlayer: NSObject, ObservableObject {
     @MainActor
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
-        let voice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
+        let storedVoice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
+        let voice = PersonaVoice.serverVoice(fallback: storedVoice)
         // 语速与增益（设置页可调，App 端生效：gain 传服务端，speed 走播放器 rate）
         let gain = UserDefaults.standard.integer(forKey: "tts.server.gain")
         let serverGain = min(10, max(-10, gain))
@@ -516,8 +519,8 @@ final class VoicePlayer: NSObject, ObservableObject {
 
     private func speakLocal(id: String, text: String) {
         let u = AVSpeechUtterance(string: text)
-        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
-        u.rate = 0.5 * Self.playbackRate
+        u.voice = PersonaVoice.localVoice() ?? AVSpeechSynthesisVoice(language: "zh-CN")
+        u.rate = min(1.0, max(0.25, 0.5 * Self.playbackRate * PersonaVoice.speedFactor))
         synth.speak(u)
         playingId = id
         Haptics.light()
