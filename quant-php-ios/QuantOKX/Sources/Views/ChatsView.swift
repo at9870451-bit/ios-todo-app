@@ -731,6 +731,8 @@ struct ChatRoomView: View {
     @AppStorage("ai.proactiveMinutes") private var proactiveMinutes = 30
     @State private var lastActivity = Date()
     @State private var proactiveBusy = false
+    /// 本轮节奏骰子结果：true=最多两条 / false=只发一条（每轮掷一次，提示词与合并逻辑共用）
+    @State private var turnAllowsTwo = false
 
     // 红包领取记录（持久化，本地）
     @State private var claimedKeys: Set<String> = []
@@ -906,6 +908,7 @@ struct ChatRoomView: View {
         proactiveBusy = true
         lastActivity = Date()
         sending = true
+        rollTurnRhythm()
         Task {
             do {
                 let reply = try await store.sendChat(
@@ -1174,8 +1177,7 @@ struct ChatRoomView: View {
         【连发消息·节奏】系统会把你的回复按行拆成独立的聊天气泡逐条弹出（换行即分条，也可用 |||）。节奏铁律：
         - 十有八九只发一条。一条话说利索就停，别为凑条数硬拆。
         - 偶尔发两条（少数情况）：想补一句时，换行再写一行短短的。
-        - 只有用户特别生气、情绪很激动时，才可以连发 3~4 条短消息，话赶话的感觉。
-        - 任何时候都别刷屏；连发时每条 3~12 个字，越短越像真人。
+        - 最多两条。任何时候都不要连发三条以上，别刷屏；每条 3~12 个字，越短越像真人。
         【禁止三段式】一条消息里禁止"反应+解释/猜测+收尾"的拼盘结构——那样写不如只留最狠的那一句。真要说明白，换成多条发（换行即分条），每条只说一件事。
         【禁止猜测菜单】禁止"是不是A…还是B…"式列举猜测。一次最多猜一个，或者干脆不猜——直接干点别的（装睡、岔开话题、催他吃饭）。
         【好/坏对照·学结构不学词】
@@ -1210,6 +1212,7 @@ struct ChatRoomView: View {
         let msg = ChatMessage(id: Int64(Date().timeIntervalSince1970), role: "user", content: rawContent)
         messages.append(msg)
         sending = true
+        rollTurnRhythm()
         Task {
             do {
                 let reply = try await store.sendChat(sessionId: sessionId, content: rawContent, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
@@ -1225,21 +1228,36 @@ struct ChatRoomView: View {
         }
     }
 
-    /// 每轮节奏骰子：80% 单条 / 20% 可两条；用户特别生气时由 AI 自行破例连发
+    /// 每轮掷一次节奏骰子：80% 单条 / 20% 最多两条
+    private func rollTurnRhythm() {
+        turnAllowsTwo = Double.random(in: 0..<1) < 0.2
+    }
+
+    /// 把骰子结果注入提示词
     private func burstDiceHint() -> String {
-        let canTwo = Double.random(in: 0..<1) < 0.2
-        if canTwo {
-            return "\n\n【本轮节奏】这一轮：默认仍是一条；如果你想补一句，可以再发一条短消息（换行分开），最多两条。"
+        if turnAllowsTwo {
+            return "\n\n【本轮节奏】这一轮：最多发两条短消息（想补一句才换行再写一行，其余情况一条就够）。"
         } else {
-            return "\n\n【本轮节奏】这一轮：只发一条消息，一口气说完，不要换行分条——除非你判断用户特别生气、必须话赶话连发，那才允许破例。"
+            return "\n\n【本轮节奏】这一轮：只发一条消息，一口气说完，不要换行分条。"
         }
     }
 
     /// AI 回复按 ||| 或换行拆成多条连发气泡（模仿真人连发短消息，逐条弹出、节奏随机）
+    /// 节奏硬控制：80% 只发一条 / 20% 最多两条——多余的行合并进气泡，杜绝"连发三条"
     @MainActor
     private func appendAssistant(_ text: String) async {
-        let parts = RedPacketParser.splitBurst(text)
+        var parts = RedPacketParser.splitBurst(text)
         guard !parts.isEmpty else { return }
+        let allowed = turnAllowsTwo ? 2 : 1
+        if parts.count > allowed {
+            if allowed == 1 {
+                parts = [parts.joined(separator: " ")]
+            } else {
+                let head = parts[0]
+                let tail = parts.dropFirst().joined(separator: " ")
+                parts = [head, tail]
+            }
+        }
         for (i, part) in parts.enumerated() {
             if i > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(Double.random(in: 0.35...0.9) * 1_000_000_000))
@@ -1310,6 +1328,7 @@ struct ChatRoomView: View {
         // 本地立即占位（转写完成后补内容）
         messages.append(ChatMessage(id: msgId, role: "user", content: "[语音:\(secs)s]"))
         sending = true
+        rollTurnRhythm()
         Task {
             var transcript = ""
             if let data = try? await SpeechKit.transcribeFile(url: URL(fileURLWithPath: path)) {
