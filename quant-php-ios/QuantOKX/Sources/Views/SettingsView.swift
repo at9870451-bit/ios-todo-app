@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// 设置页：以原生导航栏为骨架，内容使用白色分组卡片与 Liquid Glass。
-struct SettingsScreen: View {
+struct VoiceSettingsCard: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var ps: ProviderStore
@@ -21,36 +21,12 @@ struct SettingsScreen: View {
     @State private var playSpeed = UserDefaults.standard.object(forKey: "tts.playback.speed") as? Float ?? 1.0
     @State private var serverGain = UserDefaults.standard.integer(forKey: "tts.server.gain")
 
+    /// 可嵌入「我的」页的朗读设置卡（含引擎/音色/密钥/调节器/版本行）
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppBackground()
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Theme.spaceXL) {
-                        settingsHeader
-                        personalizationCard
-                        speechCard
-                        versionCard
-                    }
-                    .padding(.horizontal, Theme.pagePadding)
-                    .padding(.top, 8)
-                    .padding(.bottom, 28)
-                }
-                .scrollIndicators(.hidden)
-            }
-            .navigationTitle("设置")
-            .navigationBarTitleDisplayMode(.large)
-        }
-    }
-
-    private var settingsHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("偏好设置")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Text("定制你的 Amore 体验")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(.primary)
+        VStack(alignment: .leading, spacing: Theme.spaceL) {
+            personalizationCard
+            speechCard
+            versionCard
         }
     }
 
@@ -257,13 +233,7 @@ struct SettingsScreen: View {
                 }
             }
 
-            Text(engineHint)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding(.horizontal, Theme.cardPadding)
-                .padding(.bottom, Theme.cardPadding)
-
-            // 播放调节：音量倍数 / 语速倍数 / 合成增益
+            // 播放调节：音量倍数 / 语速倍数 / 合成增益（收进音色卡片内）
             rowDivider
             HStack(spacing: 12) {
                 SquircleIcon(system: "speaker.wave.3", size: 38, tinted: true)
@@ -336,6 +306,12 @@ struct SettingsScreen: View {
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
             }
+
+            Text(engineHint)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.horizontal, Theme.cardPadding)
+                .padding(.bottom, Theme.cardPadding)
         }
         .glassPanel(Theme.radiusL)
     }

@@ -216,13 +216,13 @@ struct ChatScreen: View {
 
             HeroBanner(
                 title: messages.isEmpty ? "开始全新对话" : "继续当前对话",
-                subtitle: store.chatConfigured ? "模型 · \(store.chatModelName)" : "AI 未配置 · 点击前往设置",
+                subtitle: store.chatConfigured ? "模型 · \(store.chatModelName)" : "AI 未配置 · 点击前往「我的」页设置",
                 icon: store.chatConfigured ? "plus" : "chevron.right"
             ) {
                 if store.chatConfigured {
                     newChat()
                 } else {
-                    router.tab = 3
+                    router.tab = 2
                 }
             }
 
@@ -260,7 +260,7 @@ struct ChatScreen: View {
 
     private var modelRow: some View {
         Button {
-            if !store.chatConfigured { router.tab = 3 }
+            if !store.chatConfigured { router.tab = 2 }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")

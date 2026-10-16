@@ -23,6 +23,8 @@ struct ProfileView: View {
                     VStack(spacing: 18) {
                         if config.loggedIn {
                             loggedInSection
+                            // 原设置页全部功能并入「我的」
+                            VoiceSettingsCard()
                         } else {
                             authSection
                         }
