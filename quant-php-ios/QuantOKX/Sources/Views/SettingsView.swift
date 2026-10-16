@@ -98,6 +98,8 @@ struct VoiceSettingsCard: View {
                     }
                     .pickerStyle(.menu)
                     .tint(Theme.accent)
+                    .disabled(personaMatchVoice)
+                    .opacity(personaMatchVoice ? 0.45 : 1)
                 }
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
@@ -142,6 +144,8 @@ struct VoiceSettingsCard: View {
                     }
                     .pickerStyle(.menu)
                     .tint(Theme.accent)
+                    .disabled(personaMatchVoice)
+                    .opacity(personaMatchVoice ? 0.45 : 1)
                 }
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
@@ -208,6 +212,8 @@ struct VoiceSettingsCard: View {
                     }
                     .pickerStyle(.menu)
                     .tint(Theme.accent)
+                    .disabled(personaMatchVoice)
+                    .opacity(personaMatchVoice ? 0.45 : 1)
                 }
                 .padding(.horizontal, Theme.cardPadding)
                 .padding(.vertical, 10)
@@ -422,12 +428,15 @@ struct VoiceSettingsCard: View {
         let gender = PersonaVoice.gender
         let genderText = gender == "female" ? "女性" : (gender == "male" ? "男性" : "未指定性别")
         let ageText = PersonaVoice.age > 0 ? "、\(PersonaVoice.age) 岁" : ""
-        switch gender {
-        case "female", "male":
-            return "已按人设（\(genderText)\(ageText)）自动挑音色与语速：女性→女声，男性→男声，温柔更慢、活泼更快"
-        default:
-            return "开启后按人设的性别/年龄/性格自动挑音色与语速；先到「人设」里设置性别年龄"
+        if personaMatchVoice {
+            switch gender {
+            case "female", "male":
+                return "已按人设（\(genderText)\(ageText)）自动匹配音色与语速（女性→女声、男性→男声）；下方手动音色已停用"
+            default:
+                return "已开启人设匹配：请先到「人设」设置性别年龄；下方手动音色已停用"
+            }
         }
+        return "未开启：使用下方手动选择的音色（开启后按人设性别/年龄/性格自动匹配）"
     }
 
     private var engineHint: String {
