@@ -635,11 +635,11 @@ struct VoiceFileBubble: View {
     }
 }
 
-/// 用户发红包的填写弹窗
+/// 用户发红包的填写弹窗（微信风格：金额 + 红包封面文字）
 struct RedPacketComposeView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var amountText = ""
-    @State private var blessing = "恭喜发财"
+    @State private var blessing = "恭喜发财，大吉大利"
     let onSend: (String, String) -> Void
 
     private var amountValid: Bool {
@@ -648,7 +648,24 @@ struct RedPacketComposeView: View {
     }
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 16) {
+            // 顶部：红包封面预览
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Theme.packetRed)
+                    .frame(height: 120)
+                VStack(spacing: 6) {
+                    Image(systemName: "gift.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(Color(red: 0.98, green: 0.85, blue: 0.55))
+                    Text(blessing.isEmpty ? "恭喜发财，大吉大利" : blessing)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.98, green: 0.85, blue: 0.55))
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                }
+            }
+
             HStack {
                 Text("给 \(aiTitle) 发红包")
                     .font(.headline)
@@ -659,6 +676,8 @@ struct RedPacketComposeView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            // 金额
             HStack(spacing: 6) {
                 Text("¥")
                     .font(.title2.weight(.bold))
@@ -672,9 +691,34 @@ struct RedPacketComposeView: View {
             .frame(maxWidth: .infinity)
             .background(Theme.packetRed.opacity(0.08), in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
 
-            TextField("祝福语", text: $blessing)
-                .padding(14)
-                .background(Theme.inset, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+            // 红包封面文字
+            VStack(alignment: .leading, spacing: 6) {
+                Text("红包封面文字")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                TextField("恭喜发财，大吉大利", text: $blessing)
+                    .padding(14)
+                    .background(Theme.inset, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+            }
+            // 常用封面文字速选
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(["恭喜发财，大吉大利", "谢谢老板", "请你喝奶茶", "生日快乐", "新年快乐"], id: \.self) { s in
+                        Button {
+                            Haptics.tap()
+                            blessing = s
+                        } label: {
+                            Text(s)
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(blessing == s ? Theme.packetRed.opacity(0.12) : Theme.fillGray, in: Capsule())
+                                .foregroundStyle(blessing == s ? Theme.packetRed : Color.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             Text("AI 模拟红包 · 仅娱乐，无真实金额")
                 .font(.caption2)
@@ -683,7 +727,7 @@ struct RedPacketComposeView: View {
             Button {
                 Haptics.medium()
                 let blessingText = blessing.trimmingCharacters(in: .whitespaces)
-                onSend(amountText, blessingText.isEmpty ? "恭喜发财" : blessingText)
+                onSend(amountText, blessingText.isEmpty ? "恭喜发财，大吉大利" : blessingText)
                 dismiss()
             } label: {
                 Text("塞钱进红包")
@@ -1026,14 +1070,13 @@ struct ChatRoomView: View {
 
     private var normalInputBar: some View {
         HStack(spacing: 10) {
-            // 发红包
+            // 发红包（🧧 emoji，任何系统版本都可见）
             Button {
                 Haptics.light()
                 showCompose = true
             } label: {
-                Image(systemName: "giftcircle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(Theme.packetRed)
+                Text("🧧")
+                    .font(.system(size: 22))
             }
             .accessibilityLabel("发红包")
 
