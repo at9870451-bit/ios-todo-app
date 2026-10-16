@@ -913,7 +913,7 @@ struct ChatRoomView: View {
                     content: "[自动问候]",
                     attachments: [],
                     reasoning: reasoning,
-                    systemPrompt: roomSystemPrompt
+                    systemPrompt: roomSystemPrompt + burstDiceHint()
                         + "\n\n【主动消息】用户长时间没有说话，系统触发了你主动发消息。请直接发一条简短自然的关心或问候（1-2 句），不要提这是系统或定时任务，不要重复之前说过的内容。"
                 )
                 if sessionId != reply.sessionId {
@@ -1171,8 +1171,12 @@ struct ChatRoomView: View {
         - 工整排比、对仗、诗歌感 → 全砍。
         - 每条都标注情绪（"急死了""慌""脑子全是空的"）→ 十条里最多一条写情绪，其余靠行为表达。
         【长度铁律】十条里至少六条不超过 12 个字。超过 40 字的长消息，一场对话最多出现一条。
-        【连发消息·最重要】真人不会把三段话挤进一条消息——真人会短句连发。想说多条时，直接换行分开写（也可以用 ||| 分隔），系统会把每一行拆成独立的聊天气泡、逐条弹出，就像真人打字连发。默认就该连发：2~4 条，每条 3~12 个字。一场最多连发一次，别刷屏。
-        【禁止三段式】一条消息里禁止"反应+解释/猜测+收尾"的拼盘结构。有多个意思 → 拆成 ||| 连发，每条只说一件事，说不完下一条再说。
+        【连发消息·节奏】系统会把你的回复按行拆成独立的聊天气泡逐条弹出（换行即分条，也可用 |||）。节奏铁律：
+        - 十有八九只发一条。一条话说利索就停，别为凑条数硬拆。
+        - 偶尔发两条（少数情况）：想补一句时，换行再写一行短短的。
+        - 只有用户特别生气、情绪很激动时，才可以连发 3~4 条短消息，话赶话的感觉。
+        - 任何时候都别刷屏；连发时每条 3~12 个字，越短越像真人。
+        【禁止三段式】一条消息里禁止"反应+解释/猜测+收尾"的拼盘结构——那样写不如只留最狠的那一句。真要说明白，换成多条发（换行即分条），每条只说一件事。
         【禁止猜测菜单】禁止"是不是A…还是B…"式列举猜测。一次最多猜一个，或者干脆不猜——直接干点别的（装睡、岔开话题、催他吃饭）。
         【好/坏对照·学结构不学词】
         用户说"我生气了"——
@@ -1208,7 +1212,7 @@ struct ChatRoomView: View {
         sending = true
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: rawContent, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt)
+                let reply = try await store.sendChat(sessionId: sessionId, content: rawContent, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
                 if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
@@ -1218,6 +1222,16 @@ struct ChatRoomView: View {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }
             sending = false
+        }
+    }
+
+    /// 每轮节奏骰子：80% 单条 / 20% 可两条；用户特别生气时由 AI 自行破例连发
+    private func burstDiceHint() -> String {
+        let canTwo = Double.random(in: 0..<1) < 0.2
+        if canTwo {
+            return "\n\n【本轮节奏】这一轮：默认仍是一条；如果你想补一句，可以再发一条短消息（换行分开），最多两条。"
+        } else {
+            return "\n\n【本轮节奏】这一轮：只发一条消息，一口气说完，不要换行分条——除非你判断用户特别生气、必须话赶话连发，那才允许破例。"
         }
     }
 
@@ -1310,7 +1324,7 @@ struct ChatRoomView: View {
             lastActivity = Date()
             sending = true
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: content, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt)
+                let reply = try await store.sendChat(sessionId: sessionId, content: content, attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
                 if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)
