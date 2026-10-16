@@ -54,9 +54,11 @@ struct ChatScreen: View {
                         }
                         .padding(.horizontal, 14)
                     }
-                    .defaultScrollAnchor(.bottom)
+                    .scrollDismissesKeyboard(.interactively)
+                    .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                     .onChange(of: messages.count) { _, _ in
-                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(messages.last?.id ?? 0, anchor: .bottom) }
+                        guard let last = messages.last else { return }
+                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
                     }
                 }
             }
@@ -90,6 +92,11 @@ struct ChatScreen: View {
                     } label: {
                         Image(systemName: "plus.bubble")
                     }
+                }
+                // 键盘上方「完成」按钮，随时可收起键盘
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { inputFocus = false }
                 }
             }
             .navigationDestination(isPresented: $showHistory) {

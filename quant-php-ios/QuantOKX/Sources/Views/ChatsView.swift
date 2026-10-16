@@ -146,6 +146,14 @@ enum RedPacketParser {
         return segs
     }
 
+    /// 连发拆分：`|||` 分隔符 或 换行 都拆成独立消息（真人连发短句）
+    static func splitBurst(_ raw: String) -> [String] {
+        raw.components(separatedBy: "|||")
+            .flatMap { $0.components(separatedBy: "\n") }
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
     /// 找最早出现的标记（红包 / 语音），全角冒号兼容
     private static func earliestMarker(in s: Substring) -> (kind: MarkerKind, range: Range<Substring.Index>)? {
         let markers: [(MarkerKind, String)] = [
@@ -794,15 +802,17 @@ struct ChatRoomView: View {
                             .padding(.horizontal, 12)
                             .padding(.top, 8)
                         }
-                        .defaultScrollAnchor(.bottom)
+                        .scrollDismissesKeyboard(.interactively)
+                        .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                         .onChange(of: messages.count) { _, _ in
-                            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(displayItems.last?.id ?? "", anchor: .bottom) }
+                            guard let last = displayItems.last else { return }
+                            withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                         .onChange(of: inputFocus) { _, focused in
                             // 键盘弹出时也自动贴底，避免手动下滑
-                            guard focused else { return }
+                            guard focused, let last = displayItems.last else { return }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(displayItems.last?.id ?? "", anchor: .bottom) }
+                                withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(last.id, anchor: .bottom) }
                             }
                         }
                     }
@@ -853,6 +863,11 @@ struct ChatRoomView: View {
                             ChatAvatar(image: av.aiImage, name: aiName, isAI: true, size: 30)
                         }
                     }
+                }
+                // 键盘上方「完成」按钮，随时可收起键盘
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { inputFocus = false }
                 }
             }
             .sheet(isPresented: $showProfile) { ChatProfileView() }
@@ -933,8 +948,8 @@ struct ChatRoomView: View {
             }
             // 定时触发的隐藏问候，不渲染
             if m.role == "user", m.content == "[自动问候]" { continue }
-            // 连发消息：AI 用 ||| 分隔的多条，拆成独立气泡（历史记录同样生效）
-            let parts = m.content.components(separatedBy: "|||")
+            // 连发消息：||| 或换行分隔的多条，拆成独立气泡（历史记录同样生效）
+            let parts = RedPacketParser.splitBurst(m.content)
             for (pi, part) in parts.enumerated() {
                 let pbase = parts.count > 1 ? "\(m.id)-p\(pi)" : "\(m.id)"
                 for (i, seg) in RedPacketParser.parse(part).enumerated() {
@@ -1156,7 +1171,7 @@ struct ChatRoomView: View {
         - 工整排比、对仗、诗歌感 → 全砍。
         - 每条都标注情绪（"急死了""慌""脑子全是空的"）→ 十条里最多一条写情绪，其余靠行为表达。
         【长度铁律】十条里至少六条不超过 12 个字。超过 40 字的长消息，一场对话最多出现一条。
-        【连发消息·最重要】真人不会把三段话挤进一条消息——真人会短句连发。你想发多条时，用 ||| 分隔（例如：咋了|||说话呀|||再不理我我睡了），系统会把 ||| 拆成独立的聊天气泡、逐条弹出，就像真人打字连发。默认就该连发：2~4 条，每条 3~12 个字。一场最多连发一次，别刷屏。
+        【连发消息·最重要】真人不会把三段话挤进一条消息——真人会短句连发。想说多条时，直接换行分开写（也可以用 ||| 分隔），系统会把每一行拆成独立的聊天气泡、逐条弹出，就像真人打字连发。默认就该连发：2~4 条，每条 3~12 个字。一场最多连发一次，别刷屏。
         【禁止三段式】一条消息里禁止"反应+解释/猜测+收尾"的拼盘结构。有多个意思 → 拆成 ||| 连发，每条只说一件事，说不完下一条再说。
         【禁止猜测菜单】禁止"是不是A…还是B…"式列举猜测。一次最多猜一个，或者干脆不猜——直接干点别的（装睡、岔开话题、催他吃饭）。
         【好/坏对照·学结构不学词】
@@ -1206,12 +1221,10 @@ struct ChatRoomView: View {
         }
     }
 
-    /// AI 回复按 ||| 拆成多条连发气泡（模仿真人连发短消息，逐条弹出、节奏随机）
+    /// AI 回复按 ||| 或换行拆成多条连发气泡（模仿真人连发短消息，逐条弹出、节奏随机）
     @MainActor
     private func appendAssistant(_ text: String) async {
-        let parts = text.components(separatedBy: "|||")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        let parts = RedPacketParser.splitBurst(text)
         guard !parts.isEmpty else { return }
         for (i, part) in parts.enumerated() {
             if i > 0 {
