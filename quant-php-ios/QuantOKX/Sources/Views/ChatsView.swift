@@ -819,6 +819,12 @@ struct ChatRoomView: View {
         return aiName
     }
 
+    /// 当前好友的头像（每个好友独立，缺省回退全局头像）
+    private var friendAvatar: UIImage? {
+        if let img = fr?.avatarImage() { return img }
+        return av.aiImage
+    }
+
     private var activePersona: String {
         let f = fr?.persona ?? ""
         return (friendId.isEmpty ? personaPrompt : f).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -851,7 +857,7 @@ struct ChatRoomView: View {
                                     } else {
                                         let tight = idx > 0 && rows[idx - 1].msg.role == item.msg.role
                                         BubbleRow(item: item, aiName: displayName, meName: meName,
-                                                  aiImage: av.aiImage, meImage: av.meImage,
+                                                  aiImage: friendAvatar, meImage: av.meImage,
                                                   voicePath: voicePaths[String(item.msg.id)],
                                                   tight: tight) { blessing, amount in
                                             openRedPacket = RedPacketMsg(blessing: blessing, amount: amount)
@@ -865,7 +871,7 @@ struct ChatRoomView: View {
                                 }
                                 if sending {
                                     HStack {
-                                        ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 48)
+                                        ChatAvatar(image: friendAvatar, name: displayName, isAI: true, size: 48)
                                         HStack(spacing: 4) {
                                             ForEach(0..<3, id: \.self) { i in
                                                 Circle().fill(Color.secondary).frame(width: 6, height: 6)
@@ -961,7 +967,7 @@ struct ChatRoomView: View {
                             Haptics.light()
                             showProfile = true
                         } label: {
-                            ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 30)
+                            ChatAvatar(image: friendAvatar, name: displayName, isAI: true, size: 30)
                         }
                     }
                 }
@@ -1264,7 +1270,7 @@ struct ChatRoomView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 84)
+            ChatAvatar(image: friendAvatar, name: displayName, isAI: true, size: 84)
                 .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
             Text(displayName).font(.headline)
             Text("打个招呼，聊起来吧").font(.footnote).foregroundStyle(.tertiary)
