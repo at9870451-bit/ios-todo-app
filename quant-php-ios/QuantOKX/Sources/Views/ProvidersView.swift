@@ -8,8 +8,29 @@ struct ProviderListView: View {
     @State private var showTypePicker = false
     @State private var editTarget: ProviderStore.Provider?
     @State private var showEditSheet = false
+    /// 首帧就绪开关：规避首次 push 布局空转导致的白屏
+    @State private var ready = false
 
     var body: some View {
+        ZStack {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            if ready {
+                content
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("AI 模型配置")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if !ready {
+                // 让首帧先完成布局，再渲染内容（第二次进入不再白屏）
+                try? await Task.sleep(nanoseconds: 30_000_000)
+                ready = true
+            }
+        }
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(ProviderStore.Kind.allCases) { kind in
