@@ -61,7 +61,21 @@ public class ChatCtl {
   @PostMapping("/oneshot")
   public Object oneshot(@RequestBody Map<String, Object> b, HttpServletRequest q) {
     long uid = uid(q);
-    var cfg = Db.one("SELECT * FROM ai_configs WHERE user_id=? AND mode='chat' AND enabled=1 ORDER BY id DESC LIMIT 1", uid);
+    // 优先使用客户端随请求带来的本地配置（模型配置只存在手机上，服务端不落库）
+    Map<String, Object> cfg = null;
+    String inlineUrl = Svc.str(b.get("api_url"));
+    String inlineKey = Svc.str(b.get("api_key"));
+    if (!inlineUrl.isEmpty() && !inlineKey.isEmpty()) {
+      cfg = Resp.map(
+        "api_url", inlineUrl,
+        "api_key", inlineKey,
+        "model", Svc.str(b.get("model")),
+        "api_style", Svc.str(b.getOrDefault("api_style", "chat_completions"))
+      );
+    }
+    if (cfg == null) {
+      cfg = Db.one("SELECT * FROM ai_configs WHERE user_id=? AND mode='chat' AND enabled=1 ORDER BY id DESC LIMIT 1", uid);
+    }
     if (cfg == null) cfg = Db.one("SELECT * FROM ai_configs WHERE user_id=? ORDER BY id DESC LIMIT 1", uid);
     if (cfg == null) return Resp.map("code", "CHAT_NO_CONFIG", "message", "请先在设置中配置 AI 接口", "data", null);
 

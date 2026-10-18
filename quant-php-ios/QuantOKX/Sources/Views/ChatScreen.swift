@@ -144,7 +144,14 @@ struct ChatScreen: View {
                 }
                 .ignoresSafeArea()
             }
-            .task { await store.loadChatModel(); await resumeLastConversation() }
+            .task {
+                await store.loadChatModel()
+                if messages.isEmpty {
+                    let local = LocalHistory.load("single")
+                    if !local.isEmpty { messages = local; return }
+                }
+                await resumeLastConversation()
+            }
             .onChange(of: pickedItems) { _, items in processPicked(items) }
         }
     }
@@ -411,19 +418,33 @@ struct ChatScreen: View {
         sending = true
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning, systemPrompt: personaPrompt)
-                if sessionId != reply.sessionId { sessionId = reply.sessionId }
-                if reply.degraded == true { store.toast = "当前模型不支持图片，已按附件说明回答" }
-                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))
+                // 本地历史 + 本地模型配置（服务端不保存聊天记录与 Key）
+                var payload: [[String: String]] = []
+                for m in messages.dropLast().suffix(19) {
+                    payload.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
+                }
+                var last = text
+                if !atts.isEmpty {
+                    last += "\n（我另外发了 \(atts.count) 个附件：\(atts.map(\.name).joined(separator: "、"))）"
+                }
+                payload.append(["role": "user", "content": last])
+                let replyText = try await store.oneshot(messages: payload, systemPrompt: personaPrompt, reasoning: reasoning)
+                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: replyText))
             } catch {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }
             sending = false
+            saveLocalMessages()
         }
     }
 
     private func newChat() {
         messages = []; sessionId = 0; pendingAtts = []
+        LocalHistory.clear("single")
+    }
+
+    private func saveLocalMessages() {
+        LocalHistory.save("single", messages)
     }
 
     /// 启动时恢复上一次会话（除非上次就是全新会话）：打开 App 接着上次聊

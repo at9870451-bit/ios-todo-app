@@ -363,6 +363,13 @@ extension BackendStore {
         var body: [String: Any] = ["messages": messages]
         if !systemPrompt.isEmpty { body["system_prompt"] = systemPrompt }
         if !reasoning.isEmpty { body["reasoning"] = reasoning }
+        // 模型配置只存在本机：每次请求把当前配置带给后端（服务端不保存 Key）
+        if let p = ProviderStore.shared.active, !p.apiKey.isEmpty {
+            body["api_url"] = p.effectiveBase
+            body["api_key"] = p.apiKey
+            body["model"] = p.model.isEmpty ? p.label : p.model
+            body["api_style"] = p.apiFormat.rawValue
+        }
         struct Reply: Decodable { let reply: String }
         struct Wrap: Decodable { let data: Reply }
         do {
