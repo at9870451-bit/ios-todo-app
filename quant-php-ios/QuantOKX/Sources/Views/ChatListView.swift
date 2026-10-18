@@ -63,7 +63,7 @@ struct ChatListView: View {
         }
     }
 
-    private struct Ident: Identifiable { let friendId: String }
+    private struct Ident: Identifiable { let friendId: String; var id: String { friendId } }
 
     private func friendRow(_ f: ChatFriend) -> some View {
         HStack(spacing: 12) {
