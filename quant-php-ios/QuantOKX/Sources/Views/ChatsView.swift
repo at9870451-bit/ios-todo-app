@@ -835,11 +835,12 @@ struct ChatRoomView: View {
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(spacing: 14) {
+                            LazyVStack(spacing: 4) {
                                 if messages.isEmpty {
                                     emptyState
                                 }
-                                ForEach(displayItems) { item in
+                                let rows = displayItems
+                                ForEach(Array(rows.enumerated()), id: \.element.id) { idx, item in
                                     if case .claim(let note) = item.segment {
                                         Text(note)
                                             .font(.caption2)
@@ -848,9 +849,11 @@ struct ChatRoomView: View {
                                             .padding(.vertical, 2)
                                             .id(item.id)
                                     } else {
-                                        BubbleRow(item: item, aiName: aiName, meName: meName,
+                                        let tight = idx > 0 && rows[idx - 1].msg.role == item.msg.role
+                                        BubbleRow(item: item, aiName: displayName, meName: meName,
                                                   aiImage: av.aiImage, meImage: av.meImage,
-                                                  voicePath: voicePaths[String(item.msg.id)]) { blessing, amount in
+                                                  voicePath: voicePaths[String(item.msg.id)],
+                                                  tight: tight) { blessing, amount in
                                             openRedPacket = RedPacketMsg(blessing: blessing, amount: amount)
                                             // 点击 AI 的红包即领取 → 红色小字提示（点自己的红包不算领取）
                                             if item.msg.role != "user" {
@@ -1143,54 +1146,70 @@ struct ChatRoomView: View {
     }
 
     private var normalInputBar: some View {
-        HStack(spacing: 10) {
-            // 发红包（🧧 emoji，任何系统版本都可见）
+        HStack(alignment: .bottom, spacing: 8) {
+            // 🧧 红包
             Button {
                 Haptics.light()
                 showCompose = true
             } label: {
-                Text("🧧")
-                    .font(.system(size: 22))
+                Text("🧧").font(.system(size: 21))
             }
             .accessibilityLabel("发红包")
 
-            // 发语音
+            // 🎤 语音
             Button {
                 Haptics.light()
                 startRecording()
             } label: {
-                Image(systemName: "mic.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(Theme.accent)
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 30, height: 30)
             }
             .accessibilityLabel("发语音")
 
-            TextField("发消息…", text: $input, axis: .vertical)
-                .lineLimit(1...4)
-                .focused($inputFocus)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(Theme.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .onSubmit { send() }
-
-            Button {
-                send()
-            } label: {
-                Text("发送")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
+            // 胶囊输入框（内含发送箭头）
+            HStack(alignment: .bottom, spacing: 6) {
+                TextField("iMessage", text: $input, axis: .vertical)
+                    .lineLimit(1...5)
+                    .focused($inputFocus)
+                    .font(.system(size: 16))
+                    .padding(.leading, 14)
                     .padding(.vertical, 8)
-                    .background {
-                        if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending {
-                            Capsule().fill(Color(uiColor: .systemGray3))
-                        } else {
-                            Capsule().fill(Theme.accent)
-                        }
+                    .onSubmit { send() }
+
+                if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // 空：显示一个灰色占位箭头（不可点）
+                    EmptyView()
+                } else {
+                    Button {
+                        Haptics.light()
+                        send()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 27))
+                            .foregroundStyle(Theme.accent)
                     }
+                    .padding(.trailing, 6)
+                    .padding(.bottom, 5)
+                    .transition(.scale.combined(with: .opacity))
+                }
             }
-            .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || sending)
+            .padding(.vertical, 1)
+            .background(
+                Color(uiColor: UIColor { t in
+                    t.userInterfaceStyle == .dark ? UIColor(white: 0.17, alpha: 1) : UIColor(white: 0.93, alpha: 1)
+                }),
+                in: RoundedRectangle(cornerRadius: 19, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.6)
+            )
+            .animation(.easeOut(duration: 0.15), value: input.isEmpty)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
     }
 
     private var recordingBar: some View {
@@ -1555,17 +1574,28 @@ struct BubbleRow: View {
     let aiImage: UIImage?
     let meImage: UIImage?
     var voicePath: String? = nil
+    var tight: Bool = false
     let onOpenRedPacket: (String, Double?) -> Void
 
     var isUser: Bool { item.msg.role == "user" }
 
+    /// iMessage 风格气泡配色：己方蓝、对方灰
+    private var aiBubbleColor: Color {
+        Color(uiColor: UIColor { t in
+            t.userInterfaceStyle == .dark ? UIColor(white: 0.19, alpha: 1) : UIColor(white: 0.91, alpha: 1)
+        })
+    }
+
+    private var userBubbleColor: Color { Color(red: 0.04, green: 0.52, blue: 1.0) }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            if isUser { Spacer(minLength: 60) } else { ChatAvatar(image: aiImage, name: aiName, isAI: true, size: 48) }
+        HStack(alignment: .bottom, spacing: 0) {
+            if isUser { Spacer(minLength: 48) }
             bubble
-            if isUser { ChatAvatar(image: meImage, name: meName, size: 48) } else { Spacer(minLength: 60) }
+            if !isUser { Spacer(minLength: 48) }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 16)
+        .padding(.top, tight ? 2 : 6)
     }
 
     @ViewBuilder
@@ -1573,35 +1603,17 @@ struct BubbleRow: View {
         switch item.segment {
         case .text(let t):
             Text(t)
-                .font(.system(size: 16))
+                .font(.system(size: 16.5))
                 .foregroundStyle(isUser ? Color.white : .primary)
                 .textSelection(.enabled)
-                .lineLimit(20)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
+                .lineLimit(30)
+                .padding(.horizontal, 13)
+                .padding(.vertical, 8)
                 .background(
-                    isUser ? AnyShapeStyle(Theme.heroBlue)
-                           : AnyShapeStyle(Theme.card),
-                    in: UnevenRoundedRectangle(
-                        topLeadingRadius: isUser ? 20 : 6,
-                        bottomLeadingRadius: 20,
-                        bottomTrailingRadius: 20,
-                        topTrailingRadius: isUser ? 6 : 20,
-                        style: .continuous)
+                    isUser ? AnyShapeStyle(userBubbleColor) : AnyShapeStyle(aiBubbleColor),
+                    in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                 )
-                .overlay {
-                    if !isUser {
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 6,
-                            bottomLeadingRadius: 20,
-                            bottomTrailingRadius: 20,
-                            topTrailingRadius: 20,
-                            style: .continuous)
-                            .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
-                    }
-                }
-                .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
-                .shadow(color: Color.black.opacity(isUser ? 0.05 : 0.04), radius: 3, y: 1)
+                .frame(maxWidth: 278, alignment: isUser ? .trailing : .leading)
         case .redPacket(let blessing, let amount):
             HStack(spacing: 0) {
                 if isUser { Spacer(minLength: 0) }
@@ -1610,31 +1622,31 @@ struct BubbleRow: View {
                 }
                 if !isUser { Spacer(minLength: 0) }
             }
-            .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
+            .frame(maxWidth: 278, alignment: isUser ? .trailing : .leading)
         case .voice(let t):
-            // 语音条独立气泡
             HStack(spacing: 0) {
                 if isUser { Spacer(minLength: 0) }
                 VoiceBubble(id: item.id, text: t)
                 if !isUser { Spacer(minLength: 0) }
             }
-            .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
+            .frame(maxWidth: 278, alignment: isUser ? .trailing : .leading)
         case .voiceFile(let secs, _):
-            // 用户发的本地录音（蓝色气泡）
             HStack(spacing: 0) {
                 if isUser { Spacer(minLength: 0) }
                 VoiceFileBubble(id: item.id, path: voicePath, secs: secs)
                 if !isUser { Spacer(minLength: 0) }
             }
-            .frame(maxWidth: 268, alignment: isUser ? .trailing : .leading)
+            .frame(maxWidth: 278, alignment: isUser ? .trailing : .leading)
         case .claim(let note):
             Text(note)
                 .font(.caption2)
-                .foregroundStyle(Theme.packetRed)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
                 .padding(.vertical, 2)
         }
     }
 }
+
 
 // MARK: - 聊天资料编辑（AI 头像昵称 + 我的头像昵称）
 

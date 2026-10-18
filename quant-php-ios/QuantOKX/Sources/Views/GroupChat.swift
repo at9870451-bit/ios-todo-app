@@ -84,7 +84,7 @@ struct GroupChatView: View {
             VStack(spacing: 0) {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 12) {
+                        LazyVStack(spacing: 4) {
                             if messages.isEmpty { hintCard }
                             ForEach(messages) { m in
                                 bubble(m).id(m.id)
@@ -140,43 +140,47 @@ struct GroupChatView: View {
 
     @ViewBuilder
     private func bubble(_ m: ChatMessage) -> some View {
+        let aiColor = Color(uiColor: UIColor { t in
+            t.userInterfaceStyle == .dark ? UIColor(white: 0.19, alpha: 1) : UIColor(white: 0.91, alpha: 1)
+        })
         if m.role == "user" {
-            HStack(alignment: .top, spacing: 8) {
-                Spacer(minLength: 60)
+            HStack {
+                Spacer(minLength: 48)
                 Text(m.content)
-                    .font(.subheadline)
+                    .font(.system(size: 16.5))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .background(Theme.heroBlue, in: UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 6, style: .continuous))
-                ChatAvatar(image: nil, name: "我", size: 34)
+                    .padding(.horizontal, 13)
+                    .padding(.vertical, 8)
+                    .background(Color(red: 0.04, green: 0.52, blue: 1.0),
+                                in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .frame(maxWidth: 278, alignment: .trailing)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
         } else {
             let friend = senders[m.id].flatMap { fs.friend($0) }
-            HStack(alignment: .top, spacing: 8) {
-                ChatAvatar(image: friend?.avatarImage(), name: friend?.name ?? "AI", isAI: true, size: 34)
-                VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(friend?.name ?? (group?.name ?? "群成员"))
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
                     Text(m.content)
-                        .font(.subheadline)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(Theme.card, in: UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous))
-                        .overlay(
-                            UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
-                                .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
-                        )
+                        .font(.system(size: 16.5))
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 8)
+                        .background(aiColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
-                Spacer(minLength: 40)
+                .frame(maxWidth: 278, alignment: .leading)
+                Spacer(minLength: 48)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
         }
     }
 
     private var typingRow: some View {
         HStack(spacing: 6) {
-            ChatAvatar(image: nil, name: "AI", isAI: true, size: 34)
             HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { i in
                     Circle().fill(Color.secondary).frame(width: 6, height: 6)
@@ -191,31 +195,39 @@ struct GroupChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            TextField("发消息…", text: $input, axis: .vertical)
-                .lineLimit(1...4)
-                .focused($inputFocus)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .background(Theme.inset, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .onSubmit { send() }
-            Button { send() } label: {
-                Text("发送")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
+        HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .bottom, spacing: 6) {
+                TextField("iMessage", text: $input, axis: .vertical)
+                    .lineLimit(1...5)
+                    .focused($inputFocus)
+                    .font(.system(size: 16))
+                    .padding(.leading, 14)
                     .padding(.vertical, 8)
-                    .background(input.trimmingCharacters(in: .whitespaces).isEmpty || sending
-                                ? AnyShapeStyle(Color(uiColor: .systemGray3))
-                                : AnyShapeStyle(Theme.accent), in: Capsule())
+                    .onSubmit { send() }
+                if !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button { Haptics.light(); send() } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 27))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .padding(.trailing, 6)
+                    .padding(.bottom, 5)
+                }
             }
-            .disabled(input.trimmingCharacters(in: .whitespaces).isEmpty || sending)
+            .padding(.vertical, 1)
+            .background(
+                Color(uiColor: UIColor { t in
+                    t.userInterfaceStyle == .dark ? UIColor(white: 0.17, alpha: 1) : UIColor(white: 0.93, alpha: 1)
+                }),
+                in: RoundedRectangle(cornerRadius: 19, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 19, style: .continuous)
+                    .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.6)
+            )
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .glassPanel(22)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 6)
+        .padding(.vertical, 6)
     }
 
     // MARK: 逻辑
