@@ -69,7 +69,7 @@ struct GroupChatView: View {
     @State private var sessionId: Int64 = 0
     @State private var input = ""
     @State private var sending = false
-    @State private var inputFocus = false
+    @FocusState private var inputFocus: Bool
     @State private var senders: [Int64: String] = [:]   // 消息 id → 发言人好友 id
     @State private var lastSpeaker: String?
 
