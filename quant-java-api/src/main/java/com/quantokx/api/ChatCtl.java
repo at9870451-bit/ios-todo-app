@@ -57,6 +57,36 @@ public class ChatCtl {
    * 发送消息。附件由客户端本地直传 AI（base64 多模态 content parts），服务端不保存附件文件。
    * body: {session_id?, content, attachments?: [{kind:"image"|"video"|"file", name, mime?, dataBase64?}], reasoning?: "low"|"medium"|"high"}
    */
+  /** 无状态对话：不写数据库，聊天历史由客户端携带（聊天记录只保存在本机） */
+  @PostMapping("/oneshot")
+  public Object oneshot(@RequestBody Map<String, Object> b, HttpServletRequest q) {
+    long uid = uid(q);
+    var cfg = Db.one("SELECT * FROM ai_configs WHERE user_id=? AND mode='chat' AND enabled=1 ORDER BY id DESC LIMIT 1", uid);
+    if (cfg == null) cfg = Db.one("SELECT * FROM ai_configs WHERE user_id=? ORDER BY id DESC LIMIT 1", uid);
+    if (cfg == null) return Resp.map("code", "CHAT_NO_CONFIG", "message", "请先在设置中配置 AI 接口", "data", null);
+
+    var msgs = new ArrayList<Map<String, Object>>();
+    String systemPrompt = Svc.str(b.get("system_prompt"));
+    if (!systemPrompt.isEmpty()) msgs.add(Resp.map("role", "system", "content", systemPrompt));
+    if (b.get("messages") instanceof List<?> list) {
+      for (Object o : list) {
+        if (!(o instanceof Map)) continue;
+        @SuppressWarnings("unchecked") Map<String, Object> m = (Map<String, Object>) o;
+        String role = Svc.str(m.get("role"));
+        String c = Svc.str(m.get("content"));
+        if (c.isEmpty()) continue;
+        msgs.add(Resp.map("role", role.equals("assistant") ? "assistant" : "user", "content", c));
+      }
+    }
+    try {
+      String reply = callAI(cfg, msgs, Svc.str(b.get("reasoning")));
+      // 刻意不落库：聊天记录只保存在客户端本地
+      return Resp.map("code", "OK", "data", Resp.map("reply", reply));
+    } catch (Exception e) {
+      return Resp.map("code", "CHAT_ERROR", "message", e.getMessage(), "data", null);
+    }
+  }
+
   @PostMapping("/send")
   public Object send(@RequestBody Map<String, Object> b, HttpServletRequest q) {
     long uid = uid(q);

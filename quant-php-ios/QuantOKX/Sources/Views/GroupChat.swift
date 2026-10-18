@@ -100,6 +100,7 @@ struct GroupChatView: View {
                     .scrollDismissesKeyboard(.interactively)
                     .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                     .onChange(of: messages.count) { _, _ in
+                        saveLocal()
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
                             withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("group.bottom", anchor: .bottom) }
                         }
@@ -277,6 +278,8 @@ struct GroupChatView: View {
         }
         guard sessionId != 0, messages.isEmpty else { return }
         Task {
+            let local = LocalHistory.load("group.\(groupId)")
+            if !local.isEmpty { messages = local; return }
             if let ms = try? await store.fetchMessages(sessionId: sessionId) {
                 var deduped: [ChatMessage] = []
                 for m in ms {
@@ -294,6 +297,10 @@ struct GroupChatView: View {
                 senders = fixed
             }
         }
+    }
+
+    private func saveLocal() {
+        LocalHistory.save("group.\(groupId)", messages)
     }
 
     private func persistSenders() {
@@ -335,20 +342,21 @@ struct GroupChatView: View {
         // 多人并发回复：各自用自己的人设提示词，同一时刻各自生成
         let groupSession = sessionId
         let groupPromptByFriend: [String: String] = Dictionary(uniqueKeysWithValues: responders.map { ($0.id, groupPrompt(for: $0)) })
+        var payload: [[String: String]] = []
+        for m in messages.suffix(19) {
+            payload.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
+        }
 
         Task {
             await withTaskGroup(of: (String, String, Int64?).self) { tg in
                 for r in responders {
-                    tg.addTask { [groupPromptByFriend] in
+                    tg.addTask { [groupPromptByFriend, payload] in
                         do {
-                            let reply = try await store.sendChat(
-                                sessionId: groupSession,
-                                content: text,
-                                attachments: [],
-                                reasoning: "",
+                            let reply = try await store.oneshot(
+                                messages: payload,
                                 systemPrompt: groupPromptByFriend[r.id] ?? ""
                             )
-                            return (r.id, reply.reply, reply.sessionId)
+                            return (r.id, reply, nil)
                         } catch {
                             return (r.id, "", nil)
                         }
@@ -457,24 +465,21 @@ struct GroupChatView: View {
                     ps.activate(p)
                 }
                 do {
-                    let reply = try await store.sendChat(
-                        sessionId: sessionId,
-                        content: "我抽到了塔罗牌：\(card.name)（\(orientation)）。",
-                        attachments: [],
-                        reasoning: "",
+                    var payload: [[String: String]] = []
+                    for m in messages.suffix(19) {
+                        payload.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
+                    }
+                    let replyText = try await store.oneshot(
+                        messages: payload,
                         systemPrompt: tarotPrompt(for: r, card: card, upright: upright)
                     )
-                    if sessionId != reply.sessionId {
-                        sessionId = reply.sessionId
-                        gs.update(groupId) { $0.sessionId = String(reply.sessionId) }
-                    }
-                    let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant", content: reply.reply)
+                    let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant", content: replyText)
                     messages.append(am)
                     senders[am.id] = r.id
                     lastSpeaker = r.id
                     persistSenders()
                     gs.update(groupId) { g in
-                        g.lastMessage = "\(r.name)：(塔罗) \(reply.reply.prefix(20))"
+                        g.lastMessage = "\(r.name)：(塔罗) \(replyText.prefix(20))"
                         g.lastAt = Date().timeIntervalSince1970
                     }
                 } catch {
@@ -552,15 +557,13 @@ struct GroupChatView: View {
                         ps.activate(p)
                     }
                     let prompt = werewolfPrompt(for: m, role: role, game: g)
-                    if let reply = try? await store.sendChat(sessionId: sessionId,
-                                                             content: "（白天讨论）昨晚 \(g.victim) 出局了，来说说你的看法。",
-                                                             attachments: [], reasoning: "",
-                                                             systemPrompt: prompt) {
-                        if sessionId != reply.sessionId {
-                            sessionId = reply.sessionId
-                            gs.update(groupId) { $0.sessionId = String(reply.sessionId) }
-                        }
-                        let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "assistant", content: reply.reply)
+                    var payload: [[String: String]] = []
+                    for m in messages.suffix(19) {
+                        payload.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
+                    }
+                    payload.append(["role": "user", "content": "（白天讨论）昨晚 \(g.victim) 出局了，来说说你的看法。"])
+                    if let replyText = try? await store.oneshot(messages: payload, systemPrompt: prompt) {
+                        let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "assistant", content: replyText)
                         messages.append(am)
                         senders[am.id] = m.id
                         persistSenders()

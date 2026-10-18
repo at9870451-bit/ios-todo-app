@@ -895,6 +895,7 @@ struct ChatRoomView: View {
                         .scrollDismissesKeyboard(.interactively)
                         .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                         .onChange(of: messages.count) { _, _ in
+                            saveLocal()
                             if !friendId.isEmpty, let last = messages.last {
                                 let text = last.content.replacingOccurrences(of: "\n", with: " ")
                                 DispatchQueue.main.async {
@@ -1051,19 +1052,14 @@ struct ChatRoomView: View {
         rollTurnRhythm()
         Task {
             do {
-                let reply = try await store.sendChat(
-                    sessionId: sessionId,
-                    content: "[自动问候]",
-                    attachments: [],
-                    reasoning: reasoning,
+                let payload = historyPayload(prior: messages, lastUser: "（用户很久没说话了，主动发一条关心的话）")
+                let replyText = try await store.oneshot(
+                    messages: payload,
                     systemPrompt: roomSystemPrompt + burstDiceHint()
-                        + "\n\n【主动消息】用户长时间没有说话，系统触发了你主动发消息。请直接发一条简短自然的关心或问候（1-2 句），不要提这是系统或定时任务，不要重复之前说过的内容。"
+                        + "\n\n【主动消息】用户长时间没有说话，系统触发了你主动发消息。请直接发一条简短自然的关心或问候（1-2 句），不要提这是系统或定时任务，不要重复之前说过的内容。",
+                    reasoning: reasoning
                 )
-                if sessionId != reply.sessionId {
-                    sessionId = reply.sessionId
-                    roomSessionIdStr = String(reply.sessionId)
-                }
-                await appendAssistant(reply.reply)
+                await appendAssistant(replyText)
             } catch { /* 静默 */ }
             sending = false
             proactiveBusy = false
@@ -1301,15 +1297,28 @@ struct ChatRoomView: View {
     // MARK: - 逻辑
 
     /// 历史恢复：进入页面时拉取独立会话
+    /// 本地记录键（每个好友一份）
+    private var localKey: String { friendId.isEmpty ? "legacy" : "friend.\(friendId)" }
+
+    private func saveLocal() {
+        LocalHistory.save(localKey, messages)
+    }
+
     private func restoreHistory() {
         sessionId = Int64(roomSessionIdStr) ?? 0
-        if sessionId != 0, messages.isEmpty {
-            Task {
-                if let ms = try? await store.fetchMessages(sessionId: sessionId) {
-                    messages = ms
-                }
-            }
+        guard messages.isEmpty else { return }
+        // 聊天记录只存本机：直接读本地
+        messages = LocalHistory.load(localKey)
+    }
+
+    /// 组装发送给模型的历史（本地消息 → OpenAI 格式），最近 20 条
+    private func historyPayload(prior: [ChatMessage], lastUser: String) -> [[String: String]] {
+        var rows: [[String: String]] = []
+        for m in prior.suffix(19) {
+            rows.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
         }
+        rows.append(["role": "user", "content": lastUser])
+        return rows
     }
 
     /// 保存语音文件映射与领取记录（本地持久化）
@@ -1442,12 +1451,12 @@ struct ChatRoomView: View {
         rollTurnRhythm()
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: rawContent + personaSuffix(), attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
-                if sessionId != reply.sessionId {
-                    sessionId = reply.sessionId
-                    roomSessionIdStr = String(reply.sessionId)
-                }
-                await appendAssistant(reply.reply)
+                let prior = Array(messages.dropLast())   // 当前用户消息已 append
+                let payload = historyPayload(prior: prior, lastUser: rawContent + personaSuffix())
+                let reply = try await store.oneshot(messages: payload,
+                                                    systemPrompt: roomSystemPrompt + burstDiceHint(),
+                                                    reasoning: reasoning)
+                await appendAssistant(reply)
             } catch {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }
@@ -1483,18 +1492,14 @@ struct ChatRoomView: View {
         Haptics.success()
         Task {
             do {
-                let reply = try await store.sendChat(
-                    sessionId: sessionId,
-                    content: "我抽到了一张塔罗牌：\(card.name)（\(orientation)）。",
-                    attachments: [],
-                    reasoning: reasoning,
-                    systemPrompt: tarotGamePrompt(card: card, upright: upright) + burstDiceHint()
+                let prior = Array(messages.dropLast())
+                let payload = historyPayload(prior: prior, lastUser: "我抽到了一张塔罗牌：\(card.name)（\(orientation)）。")
+                let replyText = try await store.oneshot(
+                    messages: payload,
+                    systemPrompt: tarotGamePrompt(card: card, upright: upright) + burstDiceHint(),
+                    reasoning: reasoning
                 )
-                if sessionId != reply.sessionId {
-                    sessionId = reply.sessionId
-                    roomSessionIdStr = String(reply.sessionId)
-                }
-                await appendAssistant(reply.reply)
+                await appendAssistant(replyText)
             } catch {
                 // 静默
             }
@@ -1537,6 +1542,7 @@ struct ChatRoomView: View {
             messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + Int64(i), role: "assistant", content: part))
             lastActivity = Date()
         }
+        saveLocal()
     }
 
     // MARK: - 语音录制（用户发给 AI）
@@ -1615,7 +1621,10 @@ struct ChatRoomView: View {
             lastActivity = Date()
             sending = true
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: content + personaSuffix(), attachments: [], reasoning: reasoning, systemPrompt: roomSystemPrompt + burstDiceHint())
+                let prior = Array(messages.dropLast())
+                let payload = historyPayload(prior: prior, lastUser: content + personaSuffix())
+                let replyText = try await store.oneshot(messages: payload, systemPrompt: roomSystemPrompt + burstDiceHint(), reasoning: reasoning)
+                await appendAssistant(replyText)
                 if sessionId != reply.sessionId {
                     sessionId = reply.sessionId
                     roomSessionIdStr = String(reply.sessionId)

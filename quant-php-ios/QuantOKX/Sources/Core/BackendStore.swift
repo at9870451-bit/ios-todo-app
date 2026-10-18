@@ -358,6 +358,17 @@ extension BackendStore {
         if !systemPrompt.isEmpty { body["system_prompt"] = systemPrompt }
         return try await client.post("/api/chat/send", body: body, as: ChatReply.self)
     }
+    /// 无状态对话：不落库，把本地历史一起发过去（聊天记录只存本机）
+    func oneshot(messages: [[String: String]], systemPrompt: String, reasoning: String = "") async throws -> String {
+        var body: [String: Any] = ["messages": messages]
+        if !systemPrompt.isEmpty { body["system_prompt"] = systemPrompt }
+        if !reasoning.isEmpty { body["reasoning"] = reasoning }
+        struct Reply: Decodable { let reply: String }
+        struct Wrap: Decodable { let data: Reply }
+        let w = try await client.post("/api/chat/oneshot", body: body, as: Wrap.self)
+        return w.data.reply
+    }
+
     func fetchConversations() async throws -> [ConversationListView.Conversation] {
         return try await client.get("/api/chat/sessions", as: [ConversationListView.Conversation].self)
     }
