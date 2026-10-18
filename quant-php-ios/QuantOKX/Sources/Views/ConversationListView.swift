@@ -148,9 +148,8 @@ struct ConversationListView: View {
 
     private func loadSessions() async {
         do {
-            // 隐藏聊天 Tab 的专属会话：历史会话列表只显示本 Tab（会话页）的记录
-            let roomID = Int64(roomSessionIdStr) ?? 0
-            conversations = try await store.fetchConversations().filter { $0.id != roomID }
+            // 与聊天 Tab 打通：显示全部会话（含各好友的聊天记录）
+            conversations = try await store.fetchConversations()
         } catch {
             store.toast = "加载会话失败"
         }

@@ -431,9 +431,8 @@ struct ChatScreen: View {
         guard messages.isEmpty, sessionId == 0 else { return }
         do {
             let list = try await store.fetchConversations()
-            // 排除聊天 Tab 的专属会话：自动恢复只回到本 Tab（会话页）自己的记录
-            let roomID = Int64(roomSessionIdStr) ?? 0
-            let candidates = list.filter { $0.id != roomID }
+            // 与聊天 Tab 打通：恢复最近一次会话（可能来自好友聊天）
+            let candidates = list
             guard let last = candidates.first(where: { $0.updatedAt != nil }) ?? candidates.first else { return }
             await MainActor.run {
                 openSession(last.id)
