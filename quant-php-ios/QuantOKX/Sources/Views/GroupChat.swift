@@ -70,7 +70,8 @@ struct GroupChatView: View {
     @State private var input = ""
     @State private var sending = false
     @FocusState private var inputFocus: Bool
-    @State private var senders: [Int64: String] = [:]   // 消息 id → 发言人好友 id
+    @State private var senders: [Int64: String] = [:]      // 消息 id → 发言人好友 id（本次会话）
+    @State private var senderBySig: [String: String] = [:] // 内容签名 → 发言人（重进后仍能对上）
     @State private var lastSpeaker: String?
     @State private var werewolf: WerewolfGame?
 
@@ -271,6 +272,9 @@ struct GroupChatView: View {
             }
             senders = map
         }
+        if let sigs = UserDefaults.standard.dictionary(forKey: "group.sigs.\(groupId)") as? [String: String] {
+            senderBySig = sigs
+        }
         guard sessionId != 0, messages.isEmpty else { return }
         Task {
             if let ms = try? await store.fetchMessages(sessionId: sessionId) {
@@ -280,6 +284,14 @@ struct GroupChatView: View {
                     deduped.append(m)
                 }
                 messages = deduped
+                // 服务器消息 id 与本地不同：用内容签名回填发言人，保证头像/名字不丢
+                var fixed = senders
+                for m in deduped where m.role == "assistant" {
+                    if fixed[m.id] == nil, let f = senderBySig[Self.sig(m.content)] {
+                        fixed[m.id] = f
+                    }
+                }
+                senders = fixed
             }
         }
     }
@@ -288,6 +300,13 @@ struct GroupChatView: View {
         var d: [String: String] = [:]
         for (k, v) in senders { d[String(k)] = v }
         UserDefaults.standard.set(d, forKey: "group.senders.\(groupId)")
+        if senderBySig.count > 400 { senderBySig.removeAll() }
+        UserDefaults.standard.set(senderBySig, forKey: "group.sigs.\(groupId)")
+    }
+
+    /// 内容签名（用于重进后把服务器消息对应回发言人）
+    static func sig(_ text: String) -> String {
+        String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(48))
     }
 
     /// 选择本轮回复的成员：@名字 指定；否则多位随机（最多 3 位）
@@ -345,6 +364,7 @@ struct GroupChatView: View {
                                          role: "assistant", content: replyText)
                     messages.append(am)
                     senders[am.id] = friendId
+                    senderBySig[Self.sig(replyText)] = friendId
                     lastSpeaker = friendId
                     persistSenders()
                     let name = fs.friend(friendId)?.name ?? "AI"
