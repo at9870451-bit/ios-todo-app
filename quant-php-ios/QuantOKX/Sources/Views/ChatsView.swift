@@ -769,7 +769,7 @@ struct ChatRoomView: View {
     @EnvironmentObject var config: AppConfig
     @AppStorage("ai.displayName") private var aiName = "Amore"
     @AppStorage("me.displayName") private var meName = "我"
-    @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
+    @State private var roomSessionIdStr = ""
     @AppStorage("chat.personaStamp") private var personaStamp = ""
     @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("persona.gender") private var personaGender = ""
@@ -1007,6 +1007,7 @@ struct ChatRoomView: View {
             .onAppear {
                 if !friendId.isEmpty, let f = friendStore.friend(friendId) {
                     roomSessionIdStr = f.sessionId
+                    sessionId = Int64(f.sessionId) ?? 0
                     VoicePlayer.activeEngine = f.voiceEngine
                     VoicePlayer.activeVoiceId = f.voiceId
                     if !f.aiProviderId.isEmpty,
@@ -1405,6 +1406,8 @@ struct ChatRoomView: View {
     /// 人设（正文/性别/年龄）变化时自动开新会话：
     /// 模型更信会话历史而不是系统提示，旧历史里上一版人设的行为（如旧的对戏语气）会把新设定带偏
     private func checkPersonaRotation() {
+        // 多好友模式下每个好友自带会话，不做全局轮换（否则切好友会清空聊天记录）
+        guard friendId.isEmpty else { return }
         let stamp = activePersona + "|" + activeGender + "|" + activeAge
         defer { personaStamp = stamp }
         guard !personaStamp.isEmpty, personaStamp != stamp, !roomSessionIdStr.isEmpty else { return }

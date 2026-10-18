@@ -294,11 +294,11 @@ struct GroupChatView: View {
     private func pickResponders(_ text: String) -> [ChatFriend] {
         guard !members.isEmpty else { return [] }
         let mentioned = members.filter { text.contains("@" + $0.name) }
-        if !mentioned.isEmpty { return Array(mentioned.prefix(3)) }
-        let pool = members.count > 2 ? members.filter { $0.id != lastSpeaker } : members
-        let maxN = members.count <= 2 ? pool.count : min(3, pool.count)
-        let n = max(1, maxN - Int.random(in: 0...1))   // 2~3 位参与，偶尔少一位
-        return Array(pool.shuffled().prefix(n))
+        if !mentioned.isEmpty { return Array(mentioned.prefix(4)) }
+        // 3 人以内：全员同时回复；更多人时随机 3 位
+        if members.count <= 3 { return members }
+        let pool = members.filter { $0.id != lastSpeaker }
+        return Array(pool.shuffled().prefix(3))
     }
 
     private func send() {
