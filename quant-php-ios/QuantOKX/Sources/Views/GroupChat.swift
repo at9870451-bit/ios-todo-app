@@ -160,7 +160,19 @@ struct GroupChatView: View {
             .padding(.top, 6)
         } else {
             let friend = senders[m.id].flatMap { fs.friend($0) }
-            HStack {
+            HStack(alignment: .top, spacing: 8) {
+                // 头像：普通发言用该 AI 头像，系统卡牌用群组图标
+                if let f = friend {
+                    ChatAvatar(image: f.avatarImage(), name: f.name, isAI: true, size: 34)
+                } else {
+                    ZStack {
+                        Circle().fill(Theme.accent.opacity(0.16))
+                        Image(systemName: "person.3.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .frame(width: 34, height: 34)
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(friend?.name ?? (group?.name ?? "群成员"))
                         .font(.caption2)
@@ -171,8 +183,8 @@ struct GroupChatView: View {
                         .padding(.vertical, 8)
                         .background(aiColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 }
-                .frame(maxWidth: 278, alignment: .leading)
-                Spacer(minLength: 48)
+                .frame(maxWidth: 236, alignment: .leading)
+                Spacer(minLength: 40)
             }
             .padding(.horizontal, 16)
             .padding(.top, 6)
