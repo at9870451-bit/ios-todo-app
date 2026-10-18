@@ -341,11 +341,13 @@ final class DollSceneController: NSObject, ObservableObject {
         default:     baseHex = "#8E9CB2"
         }
         let baseMat = material(baseHex, rough: 0.38)
-        // 底盘
-        root.addChild(mesh(.generateCylinder(height: 0.06, radius: 0.52),
+        // 底盘（圆柱，用 lathe 旋转体构建，兼容 iOS 17）
+        root.addChild(mesh(latheMesh(profile: [(y: -0.03, r: 0.52), (y: 0.03, r: 0.52)],
+                                     segments: 48, capTop: true, capBottom: true),
                            baseMat, SIMD3<Float>(0, 0.03, 0)))
         // 盘面高光边
-        root.addChild(mesh(.generateCylinder(height: 0.012, radius: 0.505),
+        root.addChild(mesh(latheMesh(profile: [(y: -0.006, r: 0.505), (y: 0.006, r: 0.505)],
+                                     segments: 48, capTop: true, capBottom: true),
                            material("#FFFFFF", rough: 0.15, metal: 0.3), SIMD3<Float>(0, 0.062, 0)))
         // 底座文字标注
         if state.showBadge {
@@ -425,9 +427,9 @@ final class DollSceneController: NSObject, ObservableObject {
         case "top": buildTop(style, hex: hex, p: p, into: anchor, arms: arms)
         case "bottom": buildBottom(style, hex: hex, p: p, into: anchor)
         case "scarf": buildScarf(style, hex: hex, into: anchor)
-        case "hat": buildHat(style, hex: hex, into: anchor)
+        case "hat": buildHat(style, hex: hex, p: p, into: anchor)
         case "shoes": buildShoes(style, hex: hex, into: anchor)
-        case "accessory": buildAccessory(style, hex: hex, into: anchor)
+        case "accessory": buildAccessory(style, hex: hex, p: p, into: anchor)
         default: break
         }
     }
@@ -650,7 +652,7 @@ final class DollSceneController: NSObject, ObservableObject {
         }
     }
 
-    private func buildHat(_ style: String, hex: String, into e: Entity) {
+    private func buildHat(_ style: String, hex: String, p: P, into e: Entity) {
         let m = material(hex, rough: 0.72)
         switch style {
         case "cap":
@@ -721,7 +723,8 @@ final class DollSceneController: NSObject, ObservableObject {
         }
     }
 
-    private func buildAccessory(_ style: String, hex: String, into e: Entity) {
+    private func buildAccessory(_ style: String, hex: String, p: P, into e: Entity) {
+        let m = material(hex, rough: 0.6)
         switch style {
         case "glasses":
             let dark = material("#2C2C2E", rough: 0.25)
