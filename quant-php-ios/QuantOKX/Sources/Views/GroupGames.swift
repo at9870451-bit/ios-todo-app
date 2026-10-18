@@ -138,3 +138,51 @@ struct GameCardView: View {
         }
     }
 }
+
+// MARK: - 卡牌消息标记（群聊与单聊共用）
+
+struct CardMark {
+    let kind: String      // 塔罗 / 角色 / 结算
+    let title: String
+    let sub: String
+    let symbol: String
+    let tone: String
+
+    static func parse(_ text: String) -> CardMark? {
+        guard text.hasPrefix("[卡牌]") else { return nil }
+        let parts = String(text.dropFirst(4)).components(separatedBy: "|")
+        guard parts.count >= 5 else { return nil }
+        return CardMark(kind: parts[0], title: parts[1], sub: parts[2], symbol: parts[3], tone: parts[4])
+    }
+
+    var color: Color {
+        switch tone {
+        case "red": return Theme.danger
+        case "green": return Theme.ok
+        case "gold": return Color(red: 0.78, green: 0.60, blue: 0.18)
+        case "blue": return Theme.heroBlue
+        default: return Color(red: 0.36, green: 0.27, blue: 0.55)
+        }
+    }
+
+    var cardKind: GameCardView.Kind {
+        switch kind {
+        case "塔罗": return .tarot
+        case "结算": return .reveal
+        default: return .role
+        }
+    }
+
+    static func message(_ kind: String, _ title: String, _ sub: String, _ symbol: String, tone: String) -> String {
+        "[卡牌]\(kind)|\(title)|\(sub)|\(symbol)|\(tone)"
+    }
+}
+
+/// 卡牌气泡（统一渲染）
+struct CardBubble: View {
+    let mark: CardMark
+    var body: some View {
+        GameCardView(kind: mark.cardKind, title: mark.title, subtitle: mark.sub,
+                     symbol: mark.symbol, tint: mark.color)
+    }
+}

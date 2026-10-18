@@ -1147,6 +1147,24 @@ struct ChatRoomView: View {
 
     private var normalInputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            // 🎮 小游戏（塔罗 / 狼人杀）
+            Menu {
+                Button {
+                    sendTarotGame()
+                } label: {
+                    Label("塔罗占卜", systemImage: "sparkles")
+                }
+                Button {
+                    Haptics.light()
+                    store.toast = "狼人杀需要多位 AI，去「群聊」里开局吧"
+                } label: {
+                    Label("狼人杀（需群聊）", systemImage: "pawprint.fill")
+                }
+            } label: {
+                Text("🎮").font(.system(size: 21))
+            }
+            .disabled(sending)
+
             // 🧧 红包
             Button {
                 Haptics.light()
@@ -1442,6 +1460,51 @@ struct ChatRoomView: View {
         }
     }
 
+    // MARK: - 单聊塔罗
+
+    private func sendTarotGame() {
+        guard !sending else { return }
+        let (card, upright) = TarotCard.draw()
+        let orientation = upright ? "正位" : "逆位"
+        let meaning = upright ? card.upright : card.reversed
+        let content = CardMark.message("塔罗", card.name, "\(orientation) · \(meaning)", card.symbol,
+                                       tone: upright ? "gold" : "purple")
+        messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user", content: content))
+        sending = true
+        Haptics.success()
+        Task {
+            do {
+                let reply = try await store.sendChat(
+                    sessionId: sessionId,
+                    content: "我抽到了一张塔罗牌：\(card.name)（\(orientation)）。",
+                    attachments: [],
+                    reasoning: reasoning,
+                    systemPrompt: tarotGamePrompt(card: card, upright: upright) + burstDiceHint()
+                )
+                if sessionId != reply.sessionId {
+                    sessionId = reply.sessionId
+                    roomSessionIdStr = String(reply.sessionId)
+                }
+                await appendAssistant(reply.reply)
+            } catch {
+                // 静默
+            }
+            sending = false
+        }
+    }
+
+    private func tarotGamePrompt(card: TarotCard, upright: Bool) -> String {
+        let orientation = upright ? "正位" : "逆位"
+        let meaning = upright ? card.upright : card.reversed
+        return roomSystemPrompt + """
+
+
+        【塔罗解读】用户抽到了「\(card.name)」（\(orientation)），牌义：\(meaning)。
+        用你自己的口吻解读这张牌，结合你们最近聊过的事，2-4 句，口语化，别说客服腔。
+        先给一句结论，再给一句提醒。可以用一个 emoji。不要提牌阵、不要列条目。
+        """
+    }
+
     /// AI 回复按 ||| 或换行拆成多条连发气泡（模仿真人连发短消息，逐条弹出、节奏随机）
     /// 节奏硬控制：80% 只发一条 / 20% 最多两条——多余的行合并进气泡，杜绝"连发三条"
     @MainActor
@@ -1602,6 +1665,9 @@ struct BubbleRow: View {
     private var bubble: some View {
         switch item.segment {
         case .text(let t):
+            if let mark = CardMark.parse(t) {
+                CardBubble(mark: mark)
+            } else {
             Text(t)
                 .font(.system(size: 16.5))
                 .foregroundStyle(isUser ? Color.white : .primary)
@@ -1614,6 +1680,7 @@ struct BubbleRow: View {
                     in: RoundedRectangle(cornerRadius: 18, style: .continuous)
                 )
                 .frame(maxWidth: 278, alignment: isUser ? .trailing : .leading)
+            }
         case .redPacket(let blessing, let amount):
             HStack(spacing: 0) {
                 if isUser { Spacer(minLength: 0) }
