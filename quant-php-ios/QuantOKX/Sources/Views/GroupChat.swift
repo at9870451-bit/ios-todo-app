@@ -196,12 +196,20 @@ struct GroupChatView: View {
 
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            Button { sendTarot() } label: {
-                Text("🃏").font(.system(size: 20))
-            }
-            .disabled(sending || members.isEmpty)
-            Button { startWerewolf() } label: {
-                Text("🐺").font(.system(size: 20))
+            // 游戏选择器：选一个游戏即开始
+            Menu {
+                Button {
+                    sendTarot()
+                } label: {
+                    Label("塔罗占卜", systemImage: "sparkles")
+                }
+                Button {
+                    startWerewolf()
+                } label: {
+                    Label("狼人杀", systemImage: "pawprint.fill")
+                }
+            } label: {
+                Text("🎮").font(.system(size: 20))
             }
             .disabled(sending || members.isEmpty)
             HStack(alignment: .bottom, spacing: 6) {
