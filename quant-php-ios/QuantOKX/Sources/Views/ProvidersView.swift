@@ -181,14 +181,29 @@ struct ProviderTypePicker: View {
                     }
                     .glassPanel(16)
 
-                    Text("官方模型")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                        .padding(.top, 4)
-                    card(official)
+                    // Operit 开源厂商目录（仅列出与 OpenAI 协议兼容的，可直接用）
+                    ForEach(AIVendorCatalog.groups, id: \.self) { g in
+                        let vs = AIVendorCatalog.vendors(in: g).filter { v in
+                            v.base.isEmpty || v.base.contains("/chat/completions") || v.base.contains("/responses")
+                        }
+                        if !vs.isEmpty {
+                            Text(g + "厂商")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.top, 8)
+                            card(vs.map { v in
+                                Option(id: v.key,
+                                       name: v.name,
+                                       sub: v.model.isEmpty ? (v.base.isEmpty ? "自定义端点" : v.base) : "\(v.model) · \(v.base.replacingOccurrences(of: "https://", with: ""))",
+                                       icon: "cpu",
+                                       color: Theme.accent,
+                                       label: v.name)
+                            })
+                        }
+                    }
 
-                    Text("第三方 / 兼容 API")
+                    Text("自定义 / 其他")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
@@ -483,6 +498,18 @@ struct ProviderEditView: View {
                 .padding(.bottom, 30)
             }
             .background(AppBackground())
+            .onAppear {
+                // Operit 厂商目录：新建时预填默认端点与模型
+                if isNew, let v = AIVendorCatalog.vendor(provider.vendor) {
+                    if provider.model.isEmpty { provider.model = v.model }
+                    if provider.baseURL.isEmpty, !v.base.isEmpty {
+                        provider.baseURL = AIVendorCatalog.rootBase(provider.vendor)
+                    }
+                    if !v.format.isEmpty {
+                        provider.apiFormat = v.format == "responses" ? .responses : .chat
+                    }
+                }
+            }
             .navigationTitle(isNew ? "配置 \(provider.label)" : "编辑 \(provider.label)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -85,6 +85,16 @@ final class ProviderStore: ObservableObject {
     // MARK: - 持久化
 
     private func load() {
+        // 一次性迁移：清空旧的全部 AI 模型配置，改用 Operit 开源厂商目录
+        let migrateKey = "ai.operitCatalog.v1"
+        if !UserDefaults.standard.bool(forKey: migrateKey) {
+            UserDefaults.standard.set(true, forKey: migrateKey)
+            UserDefaults.standard.removeObject(forKey: "provider.active")
+            try? FileManager.default.removeItem(at: fileURL)
+            providers = []
+            activeId = nil
+            return
+        }
         if let data = try? Data(contentsOf: fileURL),
            let list = try? JSONDecoder().decode([Provider].self, from: data) {
             providers = list
@@ -150,6 +160,10 @@ final class ProviderStore: ObservableObject {
     }
 
     nonisolated static func defaultBase(_ vendor: String) -> String {
+        // 优先使用 Operit 厂商目录
+        if let v = AIVendorCatalog.vendor(vendor), !v.base.isEmpty {
+            return AIVendorCatalog.rootBase(vendor)
+        }
         switch vendor {
         case "openai": return "https://api.openai.com"
         case "deepseek": return "https://api.deepseek.com"
