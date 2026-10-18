@@ -2,11 +2,18 @@ import SwiftUI
 import PhotosUI
 
 /// 聊天 Tab：好友列表（微信风格），点好友进入独立聊天
+enum ChatRoute: Hashable {
+    case friend(String)
+    case group(String)
+}
+
 struct ChatListView: View {
     @ObservedObject private var fs = FriendStore.shared
-    @State private var path: [String] = []
+    @ObservedObject private var gs = GroupStore.shared
+    @State private var path: [ChatRoute] = []
     @State private var editingID: String?
     @State private var newFriend: ChatFriend?
+    @State private var creatingGroup = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -14,10 +21,23 @@ struct ChatListView: View {
                 AppBackground()
                 ScrollView {
                     LazyVStack(spacing: 0) {
+                        ForEach(gs.groups) { g in
+                            Button {
+                                Haptics.tap()
+                                path.append(.group(g.id))
+                            } label: {
+                                groupRow(g)
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button(role: .destructive) { gs.remove(g.id) } label: { Label("解散群聊", systemImage: "trash") }
+                            }
+                            Rectangle().fill(Theme.hairline.opacity(0.5)).frame(height: 0.6).padding(.leading, 74)
+                        }
                         ForEach(fs.friends) { f in
                             Button {
                                 Haptics.tap()
-                                path.append(f.id)
+                                path.append(.friend(f.id))
                             } label: {
                                 friendRow(f)
                             }
@@ -41,19 +61,27 @@ struct ChatListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Haptics.light()
-                        var f = ChatFriend()
-                        f.name = "好友 \(fs.friends.count + 1)"
-                        newFriend = f
+                    Menu {
+                        Button {
+                            var f = ChatFriend()
+                            f.name = "好友 \(fs.friends.count + 1)"
+                            newFriend = f
+                        } label: { Label("新建好友", systemImage: "person.badge.plus") }
+                        Button {
+                            creatingGroup = true
+                        } label: { Label("新建群聊", systemImage: "person.3.fill") }
                     } label: {
                         Image(systemName: "plus")
                     }
                 }
             }
-            .navigationDestination(for: String.self) { id in
-                ChatRoomView(friendId: id)
+            .navigationDestination(for: ChatRoute.self) { r in
+                switch r {
+                case .friend(let id): ChatRoomView(friendId: id)
+                case .group(let id):  GroupChatView(groupId: id)
+                }
             }
+            .sheet(isPresented: $creatingGroup) { GroupCreateSheet() }
             .sheet(item: Binding(get: { newFriend }, set: { newFriend = $0 })) { f in
                 FriendEditSheet(friendId: nil, draft: f)
             }
@@ -64,6 +92,41 @@ struct ChatListView: View {
     }
 
     private struct Ident: Identifiable { let friendId: String; var id: String { friendId } }
+
+    private func groupRow(_ g: ChatGroup) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Theme.accent.opacity(0.16))
+                Image(systemName: "person.3.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+            .frame(width: 48, height: 48)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(g.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary).lineLimit(1)
+                    Text("\(g.memberIds.count) 位 AI")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.ok)
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(Theme.ok.opacity(0.14), in: Capsule())
+                }
+                Text(g.lastMessage.isEmpty ? "群聊已创建" : g.lastMessage)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 3) {
+                if g.lastAt > 0 {
+                    Text(ChatListView.timeText(g.lastAt)).font(.caption2).foregroundStyle(.tertiary)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
 
     private func friendRow(_ f: ChatFriend) -> some View {
         HStack(spacing: 12) {
