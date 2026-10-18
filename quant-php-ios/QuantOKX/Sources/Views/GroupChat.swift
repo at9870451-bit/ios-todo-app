@@ -72,6 +72,7 @@ struct GroupChatView: View {
     @FocusState private var inputFocus: Bool
     @State private var senders: [Int64: String] = [:]   // 消息 id → 发言人好友 id
     @State private var lastSpeaker: String?
+    @State private var werewolf: WerewolfGame?
 
     private var group: ChatGroup? { gs.group(groupId) }
     private var members: [ChatFriend] {
@@ -146,7 +147,7 @@ struct GroupChatView: View {
         if m.role == "user" {
             HStack {
                 Spacer(minLength: 48)
-                Text(m.content)
+                bubbleContent(m.content, isUser: true)
                     .font(.system(size: 16.5))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 13)
@@ -165,8 +166,7 @@ struct GroupChatView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
-                    Text(m.content)
-                        .font(.system(size: 16.5))
+                    bubbleContent(m.content, isUser: false)
                         .padding(.horizontal, 13)
                         .padding(.vertical, 8)
                         .background(aiColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -196,6 +196,14 @@ struct GroupChatView: View {
 
     private var inputBar: some View {
         HStack(alignment: .bottom, spacing: 8) {
+            Button { sendTarot() } label: {
+                Text("🃏").font(.system(size: 20))
+            }
+            .disabled(sending || members.isEmpty)
+            Button { startWerewolf() } label: {
+                Text("🐺").font(.system(size: 20))
+            }
+            .disabled(sending || members.isEmpty)
             HStack(alignment: .bottom, spacing: 6) {
                 TextField("iMessage", text: $input, axis: .vertical)
                     .lineLimit(1...5)
@@ -312,6 +320,225 @@ struct GroupChatView: View {
             }
             sending = false
         }
+    }
+
+    // MARK: - 卡牌渲染
+
+    private struct CardInfo {
+        let kind: String      // 塔罗 / 角色 / 结算
+        let title: String
+        let sub: String
+        let symbol: String
+        let tone: String      // purple / red / green / gold
+    }
+
+    private func parseCard(_ text: String) -> CardInfo? {
+        guard text.hasPrefix("[卡牌]") else { return nil }
+        let body = String(text.dropFirst(4))
+        let p = body.components(separatedBy: "|")
+        guard p.count >= 5 else { return nil }
+        return CardInfo(kind: p[0], title: p[1], sub: p[2], symbol: p[3], tone: p[4])
+    }
+
+    @ViewBuilder
+    private func bubbleContent(_ text: String, isUser: Bool) -> some View {
+        if let c = parseCard(text) {
+            VStack(spacing: 6) {
+                GameCardView(kind: c.kind == "塔罗" ? .tarot : (c.kind == "结算" ? .reveal : .role),
+                             title: c.title,
+                             subtitle: c.sub,
+                             symbol: c.symbol,
+                             tint: toneColor(c.tone))
+            }
+        } else {
+            Text(text)
+                .font(.system(size: 16.5))
+                .foregroundStyle(isUser ? .white : .primary)
+        }
+    }
+
+    private func toneColor(_ tone: String) -> Color {
+        switch tone {
+        case "red": return Theme.danger
+        case "green": return Theme.ok
+        case "gold": return Color(red: 0.78, green: 0.60, blue: 0.18)
+        case "blue": return Theme.heroBlue
+        default: return Color(red: 0.36, green: 0.27, blue: 0.55)
+        }
+    }
+
+    private func cardMessage(_ kind: String, _ title: String, _ sub: String, _ symbol: String, tone: String) -> String {
+        "[卡牌]\(kind)|\(title)|\(sub)|\(symbol)|\(tone)"
+    }
+
+    // MARK: - 塔罗
+
+    private func sendTarot() {
+        guard !sending, !members.isEmpty else { return }
+        let (card, upright) = TarotCard.draw()
+        let orientation = upright ? "正位" : "逆位"
+        let meaning = upright ? card.upright : card.reversed
+        let msg = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user",
+                              content: cardMessage("塔罗", card.name, "\(orientation) · \(meaning)", card.symbol,
+                                                   upright ? "gold" : "purple"))
+        messages.append(msg)
+        Haptics.success()
+        sending = true
+
+        let responder = pickResponder("")
+        Task {
+            if let r = responder {
+                if !r.aiProviderId.isEmpty,
+                   let p = ps.providers.first(where: { $0.id.uuidString == r.aiProviderId }) {
+                    ps.activate(p)
+                }
+                do {
+                    let reply = try await store.sendChat(
+                        sessionId: sessionId,
+                        content: "我抽到了塔罗牌：\(card.name)（\(orientation)）。",
+                        attachments: [],
+                        reasoning: "",
+                        systemPrompt: tarotPrompt(for: r, card: card, upright: upright)
+                    )
+                    if sessionId != reply.sessionId {
+                        sessionId = reply.sessionId
+                        gs.update(groupId) { $0.sessionId = String(reply.sessionId) }
+                    }
+                    let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant", content: reply.reply)
+                    messages.append(am)
+                    senders[am.id] = r.id
+                    lastSpeaker = r.id
+                    persistSenders()
+                    gs.update(groupId) { g in
+                        g.lastMessage = "\(r.name)：(塔罗) \(reply.reply.prefix(20))"
+                        g.lastAt = Date().timeIntervalSince1970
+                    }
+                } catch {
+                    // 静默
+                }
+            }
+            sending = false
+        }
+    }
+
+    private func tarotPrompt(for r: ChatFriend, card: TarotCard, upright: Bool) -> String {
+        let orientation = upright ? "正位" : "逆位"
+        let meaning = upright ? card.upright : card.reversed
+        var p: [String] = []
+        let persona = r.persona.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !persona.isEmpty {
+            p.append("【人设·最高优先级】你是 \(r.name)：\n\(persona)")
+        } else {
+            p.append("【身份】你是 \(r.name)，群聊里的一员。")
+        }
+        p.append("""
+        【塔罗解读】用户抽到了「\(card.name)」（\(orientation)），牌义：\(meaning)。
+        用你自己的口吻解读这张牌（结合用户最近聊过的事），2-4 句，口语化，别端着，别用「亲爱的」这类客服腔。
+        先给一句结论，再说一句提醒。可以用一个 emoji。不要提牌阵、不要列条目、不要重复用户原话。
+        语音消息一律用中文。
+        """)
+        return p.joined(separator: "\n\n")
+    }
+
+    // MARK: - 狼人杀（单轮体验）
+
+    private func startWerewolf() {
+        guard !sending, members.count >= 2 else { return }
+        var game = WerewolfGame()
+        let pool = Array(members.prefix(4))
+        game.players = pool.map { ($0.name, $0.id) }
+        // 分配身份：1 个狼人（2 人局）/ 1 狼 + 1 预言家（3-4 人局），其余村民
+        var shuffled = pool.shuffled()
+        game.roles[shuffled.removeFirst().id] = .wolf
+        if pool.count >= 3, let s2 = shuffled.first { game.roles[s2.id] = .seer }
+        for m in pool where game.roles[m.id] == nil { game.roles[m.id] = .villager }
+        werewolf = game
+
+        let playersText = pool.map { $0.name }.joined(separator: "、")
+        messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user",
+                                   content: cardMessage("角色", "狼人杀", "玩家：\(playersText) · 天黑请闭眼", "moon.stars.fill", "purple")))
+        Haptics.success()
+        nightPhase()
+    }
+
+    private func nightPhase() {
+        guard var g = werewolf else { return }
+        let wolves = g.roles.filter { $0.value == .wolf }.map { $0.key }
+        let victims = g.players.filter { !wolves.contains($0.memberId) }
+        let victim = victims.randomElement() ?? g.players.first
+        g.victim = victim?.name ?? "某人"
+        g.phase = 1
+        werewolf = g
+
+        messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant",
+                                   content: cardMessage("结算", "天亮了", "\(g.victim) 昨夜被袭击", "sunrise.fill", "red")))
+        senders[messages.last!.id] = ""
+        speakWerewolf()
+    }
+
+    private func speakWerewolf() {
+        guard let g = werewolf else { return }
+        sending = true
+        let speakers = members.prefix(3)
+        Task {
+            for m in speakers {
+                if let role = g.roles[m.id] {
+                    if !m.aiProviderId.isEmpty,
+                       let p = ps.providers.first(where: { $0.id.uuidString == m.aiProviderId }) {
+                        ps.activate(p)
+                    }
+                    let prompt = werewolfPrompt(for: m, role: role, game: g)
+                    if let reply = try? await store.sendChat(sessionId: sessionId,
+                                                             content: "（白天讨论）昨晚 \(g.victim) 出局了，来说说你的看法。",
+                                                             attachments: [], reasoning: "",
+                                                             systemPrompt: prompt) {
+                        if sessionId != reply.sessionId {
+                            sessionId = reply.sessionId
+                            gs.update(groupId) { $0.sessionId = String(reply.sessionId) }
+                        }
+                        let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "assistant", content: reply.reply)
+                        messages.append(am)
+                        senders[am.id] = m.id
+                        persistSenders()
+                    }
+                }
+                try? await Task.sleep(nanoseconds: 400_000_000)
+            }
+            // 结算
+            var g2 = g
+            let wolves = g2.roles.values.filter { $0 == .wolf }.count
+            let others = g2.players.count - wolves
+            g2.winner = wolves >= others ? "狼人胜利" : "好人阵营胜利"
+            g2.phase = 3
+            werewolf = g2
+            let rolesText = g2.players.map { p in
+                "\(p.name)：\(g2.roles[p.memberId]?.rawValue ?? "村民")"
+            }.joined(separator: " / ")
+            messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 2, role: "assistant",
+                                        content: cardMessage("结算", g2.winner, rolesText, "flag.checkered", "gold")))
+            senders[messages.last!.id] = ""
+            sending = false
+        }
+    }
+
+    private func werewolfPrompt(for m: ChatFriend, role: WerewolfRole, game: WerewolfGame) -> String {
+        var p: [String] = []
+        let persona = m.persona.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !persona.isEmpty {
+            p.append("【人设·最高优先级】你是 \(m.name)：\n\(persona)")
+        } else {
+            p.append("【身份】你是 \(m.name)。")
+        }
+        let others = game.players.filter { $0.memberId != m.id }.map { $0.name }.joined(separator: "、")
+        p.append("""
+        【狼人杀·白天发言】你的隐藏身份是「\(role.rawValue)」——\(role.blurb)。
+        场上玩家：\(others)；昨晚 \(game.victim) 出局。
+        \(role == .wolf ? "你是狼人：要伪装成好人，带节奏把嫌疑推给别人，绝不能承认身份。" : "你是好人：基于现有信息分析，可以怀疑别人，但别报假身份。")
+        要求：只以自己的身份发言，1-2 句，口语化，像群聊插话（不超过 30 字）。
+        不要写「作为预言家」这类格式，不要报自己的真实身份标签（除非你是预言家且决定跳身份）。
+        语音一律中文。
+        """)
+        return p.joined(separator: "\n\n")
     }
 
     private func groupPrompt(for r: ChatFriend) -> String {
