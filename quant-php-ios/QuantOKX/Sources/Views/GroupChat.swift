@@ -274,7 +274,12 @@ struct GroupChatView: View {
         guard sessionId != 0, messages.isEmpty else { return }
         Task {
             if let ms = try? await store.fetchMessages(sessionId: sessionId) {
-                messages = ms
+                var deduped: [ChatMessage] = []
+                for m in ms {
+                    if let last = deduped.last, last.role == "user", m.role == "user", last.content == m.content { continue }
+                    deduped.append(m)
+                }
+                messages = deduped
             }
         }
     }
@@ -285,14 +290,15 @@ struct GroupChatView: View {
         UserDefaults.standard.set(d, forKey: "group.senders.\(groupId)")
     }
 
-    /// 选择本轮回复的成员：@名字 指定；否则随机（避免连续同一人）
-    private func pickResponder(_ text: String) -> ChatFriend? {
-        guard !members.isEmpty else { return nil }
-        for m in members where text.contains("@" + m.name) {
-            return m
-        }
-        let pool = members.count > 1 ? members.filter { $0.id != lastSpeaker } : members
-        return pool.randomElement() ?? members.first
+    /// 选择本轮回复的成员：@名字 指定；否则多位随机（最多 3 位）
+    private func pickResponders(_ text: String) -> [ChatFriend] {
+        guard !members.isEmpty else { return [] }
+        let mentioned = members.filter { text.contains("@" + $0.name) }
+        if !mentioned.isEmpty { return Array(mentioned.prefix(3)) }
+        let pool = members.count > 2 ? members.filter { $0.id != lastSpeaker } : members
+        let maxN = members.count <= 2 ? pool.count : min(3, pool.count)
+        let n = max(1, maxN - Int.random(in: 0...1))   // 2~3 位参与，偶尔少一位
+        return Array(pool.shuffled().prefix(n))
     }
 
     private func send() {
@@ -304,43 +310,61 @@ struct GroupChatView: View {
         let msg = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user", content: text)
         messages.append(msg)
         sending = true
-        let responder = pickResponder(text)
+        let responders = pickResponders(text)
+        guard !responders.isEmpty else { sending = false; return }
+
+        // 多人并发回复：各自用自己的人设提示词，同一时刻各自生成
+        let groupSession = sessionId
+        let groupPromptByFriend: [String: String] = Dictionary(uniqueKeysWithValues: responders.map { ($0.id, groupPrompt(for: $0)) })
 
         Task {
-            if let r = responder {
-                // 切换到这个成员配置的模型
-                if !r.aiProviderId.isEmpty,
-                   let p = ps.providers.first(where: { $0.id.uuidString == r.aiProviderId }) {
-                    ps.activate(p)
-                }
-                do {
-                    let reply = try await store.sendChat(
-                        sessionId: sessionId,
-                        content: text,
-                        attachments: [],
-                        reasoning: "",
-                        systemPrompt: groupPrompt(for: r)
-                    )
-                    if sessionId != reply.sessionId {
-                        sessionId = reply.sessionId
-                        gs.update(groupId) { $0.sessionId = String(reply.sessionId) }
+            await withTaskGroup(of: (String, String, Int64?).self) { tg in
+                for r in responders {
+                    tg.addTask { [groupPromptByFriend] in
+                        do {
+                            let reply = try await store.sendChat(
+                                sessionId: groupSession,
+                                content: text,
+                                attachments: [],
+                                reasoning: "",
+                                systemPrompt: groupPromptByFriend[r.id] ?? ""
+                            )
+                            return (r.id, reply.reply, reply.sessionId)
+                        } catch {
+                            return (r.id, "", nil)
+                        }
                     }
-                    let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant", content: reply.reply)
+                }
+                for await (friendId, replyText, newSession) in tg {
+                    if let sid = newSession, sessionId != sid {
+                        sessionId = sid
+                        gs.update(groupId) { $0.sessionId = String(sid) }
+                    }
+                    guard !replyText.isEmpty else { continue }
+                    let am = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + Int64.random(in: 1...99),
+                                         role: "assistant", content: replyText)
                     messages.append(am)
-                    senders[am.id] = r.id
-                    lastSpeaker = r.id
+                    senders[am.id] = friendId
+                    lastSpeaker = friendId
                     persistSenders()
+                    let name = fs.friend(friendId)?.name ?? "AI"
                     gs.update(groupId) { g in
-                        g.lastMessage = "\(r.name)：\(reply.reply.replacingOccurrences(of: "\n", with: " "))"
+                        g.lastMessage = "\(name)：\(replyText.replacingOccurrences(of: "\n", with: " "))"
                         g.lastAt = Date().timeIntervalSince1970
                     }
-                } catch {
-                    messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 2, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
                 }
             }
+            // 历史里可能有多条相同的用户消息（每位成员各存一次），本地去重
+            var deduped: [ChatMessage] = []
+            for m in messages {
+                if let last = deduped.last, last.role == "user", m.role == "user", last.content == m.content { continue }
+                deduped.append(m)
+            }
+            if deduped.count != messages.count { messages = deduped }
             sending = false
         }
     }
+
 
     // MARK: - 卡牌渲染
 
@@ -405,7 +429,7 @@ struct GroupChatView: View {
         Haptics.success()
         sending = true
 
-        let responder = pickResponder("")
+        let responder = pickResponders("").first
         Task {
             if let r = responder {
                 if !r.aiProviderId.isEmpty,
