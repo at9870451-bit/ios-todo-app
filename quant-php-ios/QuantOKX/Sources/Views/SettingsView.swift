@@ -6,7 +6,6 @@ struct VoiceSettingsCard: View {
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var ps: ProviderStore
     @EnvironmentObject var bg: BackgroundStore
-    @AppStorage("persona.prompt") private var personaPrompt = ""
     @AppStorage("tts.engine") private var ttsEngine = "local"
     @AppStorage("tts.personaMatch") private var personaMatchVoice = true
     @AppStorage("tts.providerId") private var ttsProviderId = ""
@@ -36,10 +35,7 @@ struct VoiceSettingsCard: View {
             settingLink(icon: "cpu", title: "AI 模型配置", subtitle: subtitleForProviders) {
                 ProviderListView()
             }
-            rowDivider
-            settingLink(icon: "face.smiling", title: "人设", subtitle: personaPrompt.isEmpty ? "未设置 · 使用默认助手" : "已设置 · \(personaPrompt.prefix(18))…") {
-                PersonaView()
-            }
+
             rowDivider
             settingLink(icon: "paintbrush", title: "外观", subtitle: bg.image == nil ? "苹果白与蓝橙渐变" : "自定义背景图片") {
                 AppearanceView()
