@@ -830,8 +830,7 @@ struct ChatRoomView: View {
     @State private var showCompose = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 AppBackground()
                 VStack(spacing: 0) {
                     ScrollViewReader { proxy in
@@ -888,9 +887,12 @@ struct ChatRoomView: View {
                         .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                         .onChange(of: messages.count) { _, _ in
                             if !friendId.isEmpty, let last = messages.last {
-                                friendStore.update(friendId) { f in
-                                    f.lastMessage = last.content.replacingOccurrences(of: "\n", with: " ")
-                                    f.lastAt = Date().timeIntervalSince1970
+                                let text = last.content.replacingOccurrences(of: "\n", with: " ")
+                                DispatchQueue.main.async {
+                                    friendStore.update(friendId) { f in
+                                        f.lastMessage = text
+                                        f.lastAt = Date().timeIntervalSince1970
+                                    }
                                 }
                             }
                             // 自己发的消息 / AI 回复到达 → 自动定位到最新气泡
@@ -981,7 +983,8 @@ struct ChatRoomView: View {
                 FriendEditSheet(friendId: friendId, draft: nil)
             }
             .onChange(of: roomSessionIdStr) { _, v in
-                if !friendId.isEmpty {
+                guard !friendId.isEmpty else { return }
+                DispatchQueue.main.async {
                     friendStore.update(friendId) { $0.sessionId = v }
                 }
             }
@@ -999,7 +1002,7 @@ struct ChatRoomView: View {
                     VoicePlayer.activeVoiceId = f.voiceId
                     if !f.aiProviderId.isEmpty,
                        let p = ps.providers.first(where: { $0.id.uuidString == f.aiProviderId }) {
-                        ps.activate(p)
+                        DispatchQueue.main.async { ps.activate(p) }
                     }
                 } else {
                     VoicePlayer.activeEngine = ""
@@ -1018,7 +1021,6 @@ struct ChatRoomView: View {
                 guard Date().timeIntervalSince(lastActivity) >= Double(proactiveMinutes) * 60 else { return }
                 proactivePing()
             }
-        }
     }
 
     static func freqLabel(_ m: Int) -> String {
