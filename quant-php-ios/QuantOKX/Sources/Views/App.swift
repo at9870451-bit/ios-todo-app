@@ -104,7 +104,7 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $router.tab) {
             AuthGate(gotoProfile: { router.tab = 3 }) {
-                ChatRoomView()
+                ChatListView()
             }
             .tabItem { Label("聊天", systemImage: "ellipsis.message.fill") }
             .tag(0)

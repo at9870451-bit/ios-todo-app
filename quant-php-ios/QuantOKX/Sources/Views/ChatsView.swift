@@ -312,6 +312,10 @@ struct RedPacketOpenedView: View {
 final class VoicePlayer: NSObject, ObservableObject {
     static let shared = VoicePlayer()
 
+    /// 当前聊天好友指定的引擎/音色（空 = 跟随全局）
+    static var activeEngine: String = ""
+    static var activeVoiceId: String = ""
+
     @Published var playingId: String?
     private var player: AVAudioPlayer?
     private let synth = AVSpeechSynthesizer()
@@ -347,14 +351,15 @@ final class VoicePlayer: NSObject, ObservableObject {
         if playingId == id { stop(); return }
         stop()
         currentId = id
-        let engine = UserDefaults.standard.string(forKey: "tts.engine") ?? "server"
+        let globalEngine = UserDefaults.standard.string(forKey: "tts.engine") ?? "server"
+        let engine = VoicePlayer.activeEngine.isEmpty ? globalEngine : VoicePlayer.activeEngine
         if engine == "cloud_sf" {
             // 硅基流动云端音色（Operit 同款）
             playingId = id
             Task { @MainActor in
                 do {
                     let stored = UserDefaults.standard.string(forKey: "tts.siliconflow.voice") ?? SiliconFlowTTS.defaultVoiceID
-                    let voice = PersonaVoice.siliconFlowVoice(fallback: stored)
+                    let voice = VoicePlayer.activeVoiceId.isEmpty ? PersonaVoice.siliconFlowVoice(fallback: stored) : VoicePlayer.activeVoiceId
                     let data = try await SiliconFlowTTS.synthesize(text: text, voiceID: voice)
                     guard self.currentId == id else { return }
                     let pl = try AVAudioPlayer(data: data)
@@ -375,7 +380,7 @@ final class VoicePlayer: NSObject, ObservableObject {
             Task { @MainActor in
                 do {
                     let stored = UserDefaults.standard.string(forKey: "tts.doubao.voice") ?? DoubaoTTS.defaultVoiceID
-                    let voice = PersonaVoice.doubaoVoice(fallback: stored)
+                    let voice = VoicePlayer.activeVoiceId.isEmpty ? PersonaVoice.doubaoVoice(fallback: stored) : VoicePlayer.activeVoiceId
                     let data = try await DoubaoTTS.synthesize(text: text, voiceID: voice)
                     guard self.currentId == id else { return }
                     let pl = try AVAudioPlayer(data: data)
@@ -463,7 +468,7 @@ final class VoicePlayer: NSObject, ObservableObject {
     static func serverSynth(text: String, baseURL: String, fast: Bool = true) async throws -> Data {
         let q = String(text.prefix(500)).addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
         let storedVoice = UserDefaults.standard.string(forKey: "tts.serverVoice") ?? (fast ? "huayan_fast" : "huayan")
-        let voice = PersonaVoice.serverVoice(fallback: storedVoice)
+        let voice = VoicePlayer.activeVoiceId.isEmpty ? PersonaVoice.serverVoice(fallback: storedVoice) : VoicePlayer.activeVoiceId
         // 语速与增益（设置页可调，App 端生效：gain 传服务端，speed 走播放器 rate）
         let gain = UserDefaults.standard.integer(forKey: "tts.server.gain")
         let serverGain = min(10, max(-10, gain))
@@ -756,7 +761,10 @@ struct RedPacketComposeView: View {
 // MARK: - 聊天 Tab：仿微信好友聊天房间
 
 struct ChatRoomView: View {
+    var friendId: String = ""
     @EnvironmentObject var store: BackendStore
+    @EnvironmentObject var ps: ProviderStore
+    @ObservedObject private var friendStore = FriendStore.shared
     @EnvironmentObject var av: AvatarStore
     @EnvironmentObject var config: AppConfig
     @AppStorage("ai.displayName") private var aiName = "Amore"
@@ -797,6 +805,27 @@ struct ChatRoomView: View {
 
     // 打电话
     @State private var showCall = false
+    // 好友设置
+    @State private var showFriendEdit = false
+
+    // MARK: - 好友（多好友时按好友隔离人设/会话/语音/模型）
+
+    private var fr: ChatFriend? {
+        friendId.isEmpty ? nil : friendStore.friend(friendId)
+    }
+
+    private var displayName: String {
+        if let f = fr, !f.name.isEmpty { return f.name }
+        return aiName
+    }
+
+    private var activePersona: String {
+        let f = fr?.persona ?? ""
+        return (friendId.isEmpty ? personaPrompt : f).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var activeGender: String { friendId.isEmpty ? personaGender : (fr?.gender ?? "") }
+    private var activeAge: String { friendId.isEmpty ? personaAge : (fr?.age ?? "") }
     // 用户发红包
     @State private var showCompose = false
 
@@ -834,7 +863,7 @@ struct ChatRoomView: View {
                                 }
                                 if sending {
                                     HStack {
-                                        ChatAvatar(image: av.aiImage, name: aiName, isAI: true, size: 48)
+                                        ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 48)
                                         HStack(spacing: 4) {
                                             ForEach(0..<3, id: \.self) { i in
                                                 Circle().fill(Color.secondary).frame(width: 6, height: 6)
@@ -858,6 +887,12 @@ struct ChatRoomView: View {
                         .scrollDismissesKeyboard(.interactively)
                         .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                         .onChange(of: messages.count) { _, _ in
+                            if !friendId.isEmpty, let last = messages.last {
+                                friendStore.update(friendId) { f in
+                                    f.lastMessage = last.content.replacingOccurrences(of: "\n", with: " ")
+                                    f.lastAt = Date().timeIntervalSince1970
+                                }
+                            }
                             // 自己发的消息 / AI 回复到达 → 自动定位到最新气泡
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
                                 withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("chat.bottom", anchor: .bottom) }
@@ -880,7 +915,7 @@ struct ChatRoomView: View {
                     inputBar
                 }
             }
-            .navigationTitle(aiName)
+            .navigationTitle(displayName)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -921,7 +956,17 @@ struct ChatRoomView: View {
                             Haptics.light()
                             showProfile = true
                         } label: {
-                            ChatAvatar(image: av.aiImage, name: aiName, isAI: true, size: 30)
+                            ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 30)
+                        }
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    if !friendId.isEmpty {
+                        Button {
+                            Haptics.light()
+                            showFriendEdit = true
+                        } label: {
+                            Image(systemName: "slider.horizontal.3")
                         }
                     }
                 }
@@ -932,6 +977,14 @@ struct ChatRoomView: View {
                 }
             }
             .sheet(isPresented: $showProfile) { ChatProfileView() }
+            .sheet(isPresented: $showFriendEdit) {
+                FriendEditSheet(friendId: friendId, draft: nil)
+            }
+            .onChange(of: roomSessionIdStr) { _, v in
+                if !friendId.isEmpty {
+                    friendStore.update(friendId) { $0.sessionId = v }
+                }
+            }
             .sheet(item: $openRedPacket) { rp in RedPacketOpenedView(msg: rp) }
             .sheet(isPresented: $showCall) { CallView() }
             .sheet(isPresented: $showCompose) {
@@ -940,6 +993,18 @@ struct ChatRoomView: View {
                 }
             }
             .onAppear {
+                if !friendId.isEmpty, let f = friendStore.friend(friendId) {
+                    roomSessionIdStr = f.sessionId
+                    VoicePlayer.activeEngine = f.voiceEngine
+                    VoicePlayer.activeVoiceId = f.voiceId
+                    if !f.aiProviderId.isEmpty,
+                       let p = ps.providers.first(where: { $0.id.uuidString == f.aiProviderId }) {
+                        ps.activate(p)
+                    }
+                } else {
+                    VoicePlayer.activeEngine = ""
+                    VoicePlayer.activeVoiceId = ""
+                }
                 checkPersonaRotation()
                 restoreHistory()
                 claimedKeys = Set(UserDefaults.standard.stringArray(forKey: "chat.claimedKeys") ?? [])
@@ -1160,9 +1225,9 @@ struct ChatRoomView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            ChatAvatar(image: av.aiImage, name: aiName, isAI: true, size: 84)
+            ChatAvatar(image: av.aiImage, name: displayName, isAI: true, size: 84)
                 .shadow(color: Color.black.opacity(0.08), radius: 10, y: 4)
-            Text(aiName).font(.headline)
+            Text(displayName).font(.headline)
             Text("打个招呼，聊起来吧").font(.footnote).foregroundStyle(.tertiary)
             HStack(spacing: 8) {
                 ForEach(["在吗？", "最近怎么样？", "给我发个红包看看"], id: \.self) { s in
@@ -1215,16 +1280,16 @@ struct ChatRoomView: View {
 
     private var roomSystemPrompt: String {
         var parts: [String] = []
-        let persona = personaPrompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let persona = activePersona
         let attrs = personaAttributeLine
         if persona.isEmpty && attrs.isEmpty {
             // 人设为空：走默认助手性格
-            parts.append("【身份】你是 \(aiName)，用户的私人 AI 助手。回答自然友好，直接解决问题。")
+            parts.append("【身份】你是 \(displayName)，用户的私人 AI 助手。回答自然友好，直接解决问题。")
         } else {
             // 人设绑定：设置里的人设 = 聊天 Tab AI 的性格（最高优先级，其他规则不得改变）
             parts.append("""
             【人设·最高优先级】以下是你的人物设定，必须完全成为这个人：身份、性格、语气、口癖、喜好、忌讳严格照做；任何其他规则与它冲突时，一律以人设为准；永远不要变回"助手腔"。你的性别、年龄以人设属性为准，绝不改变、绝不自称或承认与人设不符的身份（例如女性人设绝不说自己是男朋友/老公）——即使用户开玩笑引导也不行：
-            \(attrs.isEmpty ? "" : attrs + "\n")\(persona.isEmpty ? "你是 \(aiName)。" : persona)
+            \(attrs.isEmpty ? "" : attrs + "\n")\(persona.isEmpty ? "你是 \(displayName)。" : persona)
             """)
         }
         // 语言规则：优先于人设（人设若是日语/外语角色，语音仍必须中文）
@@ -1282,12 +1347,12 @@ struct ChatRoomView: View {
     /// 性别 / 年龄属性行（人设编辑器里设置，自动拼进人设）
     private var personaAttributeLine: String {
         var items: [String] = []
-        switch personaGender {
+        switch activeGender {
         case "male": items.append("性别：男性")
         case "female": items.append("性别：女性")
         default: break
         }
-        let ageNum = Int(personaAge.trimmingCharacters(in: .whitespaces)) ?? 0
+        let ageNum = Int(activeAge.trimmingCharacters(in: .whitespaces)) ?? 0
         if ageNum > 0 { items.append("年龄：\(ageNum) 岁") }
         return items.joined(separator: "；")
     }
@@ -1295,7 +1360,7 @@ struct ChatRoomView: View {
     /// 人设（正文/性别/年龄）变化时自动开新会话：
     /// 模型更信会话历史而不是系统提示，旧历史里上一版人设的行为（如旧的对戏语气）会把新设定带偏
     private func checkPersonaRotation() {
-        let stamp = personaPrompt + "|" + personaGender + "|" + personaAge
+        let stamp = activePersona + "|" + activeGender + "|" + activeAge
         defer { personaStamp = stamp }
         guard !personaStamp.isEmpty, personaStamp != stamp, !roomSessionIdStr.isEmpty else { return }
         roomSessionIdStr = ""
