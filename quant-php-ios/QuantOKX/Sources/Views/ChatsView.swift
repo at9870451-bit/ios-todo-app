@@ -1625,11 +1625,6 @@ struct ChatRoomView: View {
                 let payload = historyPayload(prior: prior, lastUser: content + personaSuffix())
                 let replyText = try await store.oneshot(messages: payload, systemPrompt: roomSystemPrompt + burstDiceHint(), reasoning: reasoning)
                 await appendAssistant(replyText)
-                if sessionId != reply.sessionId {
-                    sessionId = reply.sessionId
-                    roomSessionIdStr = String(reply.sessionId)
-                }
-                messages.append(ChatMessage(id: msgId + 1, role: "assistant", content: reply.reply))
             } catch {
                 messages.append(ChatMessage(id: msgId + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }

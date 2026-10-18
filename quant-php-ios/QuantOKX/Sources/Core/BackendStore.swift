@@ -365,8 +365,17 @@ extension BackendStore {
         if !reasoning.isEmpty { body["reasoning"] = reasoning }
         struct Reply: Decodable { let reply: String }
         struct Wrap: Decodable { let data: Reply }
-        let w = try await client.post("/api/chat/oneshot", body: body, as: Wrap.self)
-        return w.data.reply
+        do {
+            let w = try await client.post("/api/chat/oneshot", body: body, as: Wrap.self)
+            return w.data.reply
+        } catch {
+            // 兼容旧后端（尚未部署 /oneshot）：退回会话接口，保证聊天不中断
+            let lastUser = messages.last(where: { $0["role"] == "user" })?["content"] ?? ""
+            guard !lastUser.isEmpty else { throw error }
+            let legacy = try await sendChat(sessionId: 0, content: lastUser, attachments: [],
+                                            reasoning: reasoning, systemPrompt: systemPrompt)
+            return legacy.reply
+        }
     }
 
     func fetchConversations() async throws -> [ConversationListView.Conversation] {
