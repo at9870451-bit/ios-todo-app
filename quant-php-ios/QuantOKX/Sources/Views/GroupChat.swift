@@ -380,7 +380,7 @@ struct GroupChatView: View {
         let meaning = upright ? card.upright : card.reversed
         let msg = ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user",
                               content: cardMessage("塔罗", card.name, "\(orientation) · \(meaning)", card.symbol,
-                                                   upright ? "gold" : "purple"))
+                                                   tone: upright ? "gold" : "purple"))
         messages.append(msg)
         Haptics.success()
         sending = true
@@ -456,7 +456,7 @@ struct GroupChatView: View {
 
         let playersText = pool.map { $0.name }.joined(separator: "、")
         messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000), role: "user",
-                                   content: cardMessage("角色", "狼人杀", "玩家：\(playersText) · 天黑请闭眼", "moon.stars.fill", "purple")))
+                                   content: cardMessage("角色", "狼人杀", "玩家：\(playersText) · 天黑请闭眼", "moon.stars.fill", tone: "purple")))
         Haptics.success()
         nightPhase()
     }
@@ -471,7 +471,7 @@ struct GroupChatView: View {
         werewolf = g
 
         messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 1, role: "assistant",
-                                   content: cardMessage("结算", "天亮了", "\(g.victim) 昨夜被袭击", "sunrise.fill", "red")))
+                                   content: cardMessage("结算", "天亮了", "\(g.victim) 昨夜被袭击", "sunrise.fill", tone: "red")))
         senders[messages.last!.id] = ""
         speakWerewolf()
     }
@@ -515,7 +515,7 @@ struct GroupChatView: View {
                 "\(p.name)：\(g2.roles[p.memberId]?.rawValue ?? "村民")"
             }.joined(separator: " / ")
             messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970 * 1000) + 2, role: "assistant",
-                                        content: cardMessage("结算", g2.winner, rolesText, "flag.checkered", "gold")))
+                                        content: cardMessage("结算", g2.winner, rolesText, "flag.checkered", tone: "gold")))
             senders[messages.last!.id] = ""
             sending = false
         }
