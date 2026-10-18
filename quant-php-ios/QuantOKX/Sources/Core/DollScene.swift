@@ -158,14 +158,20 @@ final class DollSceneController: NSObject, ObservableObject {
         var legR: Float
         var armR: Float
 
+        // 额外造型参数（Q版盲盒手办感）
+        var headScaleY: Float = 1.06      // 头略高
+        var eyeR: Float = 0.048           // 大眼
+        var cheekAlpha: Float = 0.9
+
         static func of(_ gender: String) -> P {
+            // Q 版 1:4 头身：头径约占总高 1/4，四肢短而圆，身体精致
             switch gender {
             case "male":
-                return P(headR: 0.30, headY: 1.14, shoulderX: 0.205, torsoR: 0.155, hipWide: 0.95, legR: 0.077, armR: 0.052)
+                return P(headR: 0.345, headY: 1.24, shoulderX: 0.205, torsoR: 0.158, hipWide: 0.96, legR: 0.080, armR: 0.054)
             case "female":
-                return P(headR: 0.30, headY: 1.14, shoulderX: 0.168, torsoR: 0.142, hipWide: 1.14, legR: 0.068, armR: 0.046)
+                return P(headR: 0.340, headY: 1.24, shoulderX: 0.168, torsoR: 0.144, hipWide: 1.16, legR: 0.070, armR: 0.047)
             default:
-                return P(headR: 0.30, headY: 1.14, shoulderX: 0.185, torsoR: 0.148, hipWide: 1.0, legR: 0.072, armR: 0.049)
+                return P(headR: 0.342, headY: 1.24, shoulderX: 0.186, torsoR: 0.150, hipWide: 1.02, legR: 0.074, armR: 0.050)
             }
         }
     }
@@ -327,9 +333,40 @@ final class DollSceneController: NSObject, ObservableObject {
         let p = P.of(state.gender)
         let skin = material(state.skin, rough: 0.55)
 
-        // 展台圆盘
-        root.addChild(mesh(.generateSphere(radius: 0.62),
-                           material("#E9E9EF", rough: 0.9), SIMD3<Float>(0, 0.015, 0), scale: SIMD3<Float>(1, 0.048, 1)))
+        // 圆形展示底座（配色区分角色 + BOY/GIRL/NEUTRAL 标注）
+        let baseHex: String
+        switch state.baseColor {
+        case "pink": baseHex = "#E8B6C8"
+        case "grey": baseHex = "#C4C8CF"
+        default:     baseHex = "#8E9CB2"
+        }
+        let baseMat = material(baseHex, rough: 0.38)
+        // 底盘
+        root.addChild(mesh(.generateCylinder(height: 0.06, radius: 0.52),
+                           baseMat, SIMD3<Float>(0, 0.03, 0)))
+        // 盘面高光边
+        root.addChild(mesh(.generateCylinder(height: 0.012, radius: 0.505),
+                           material("#FFFFFF", rough: 0.15, metal: 0.3), SIMD3<Float>(0, 0.062, 0)))
+        // 底座文字标注
+        if state.showBadge {
+            let badge: String
+            switch state.gender {
+            case "male": badge = "BOY"
+            case "female": badge = "GIRL"
+            default: badge = "NEUTRAL"
+            }
+            let textMesh = MeshResource.generateText(badge,
+                                                    extrusionDepth: 0.012,
+                                                    font: .systemFont(ofSize: 0.085, weight: .heavy),
+                                                    containerFrame: .zero,
+                                                    alignment: .center,
+                                                    lineBreakMode: .byTruncatingTail)
+            let textMat = material("#2C2F36", rough: 0.5)
+            let te = ModelEntity(mesh: textMesh, materials: [textMat])
+            te.position = SIMD3<Float>(0, 0.072, 0.40)
+            te.orientation = simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+            root.addChild(te)
+        }
 
         // 腿 + 脚掌（皮肤）
         for sx in [Float(-1), 1] {
@@ -422,6 +459,29 @@ final class DollSceneController: NSObject, ObservableObject {
                 e.addChild(mesh(capsuleMesh(height: 0.20, radius: 0.06), m,
                                 SIMD3<Float>(sx * 0.25, 0.94, 0.0), scale: SIMD3<Float>(0.9, 1, 0.8)))
             }
+        case "longCurl":
+            // 长卷发：头顶 + 两侧长卷（多段球体堆叠出卷曲）
+            hairCap(m, into: e, puffy: 0.335)
+            for sx in [Float(-1), 1] {
+                let xs = sx * 0.24
+                e.addChild(mesh(capsuleMesh(height: 0.30, radius: 0.075), m, SIMD3<Float>(xs, p.headY - 0.20, -0.02)))
+                for k in 0..<3 {
+                    let yy = p.headY - 0.05 - Float(k) * 0.115
+                    e.addChild(mesh(.generateSphere(radius: 0.085 - Float(k) * 0.008), m,
+                                    SIMD3<Float>(xs + sx * 0.012, yy, 0.03),
+                                    scale: SIMD3<Float>(0.95, 0.85, 0.9)))
+                }
+            }
+            // 后发
+            e.addChild(mesh(capsuleMesh(height: 0.34, radius: 0.115), m,
+                            SIMD3<Float>(0, p.headY - 0.16, -0.12), scale: SIMD3<Float>(1.0, 1, 0.72)))
+        case "silverShort":
+            // 银灰短发：蓬松上层 + 侧分刘海
+            hairCap(m, into: e, puffy: 0.345)
+            e.addChild(mesh(.generateSphere(radius: 0.155), m,
+                            SIMD3<Float>(0.02, p.headY + 0.16, 0.05), scale: SIMD3<Float>(1.12, 0.62, 1.0)))
+            e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.20, 0.045, 0.09), cornerRadius: 0.022), m,
+                            SIMD3<Float>(0.05, p.headY + 0.10, 0.235)))
         case "twintails":
             hairCap(m, into: e)
             for sx in [Float(-1), 1] {
@@ -477,6 +537,17 @@ final class DollSceneController: NSObject, ObservableObject {
             }
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.022, 0.22, 0.014), cornerRadius: 0.006),
                             material("#FFFFFF", rough: 0.5), SIMD3<Float>(0, 0.70, 0.148)))
+        case "knit":
+            // 针织衫：主体 + 罗纹领 + 袖口 + 织纹
+            e.addChild(mesh(capsuleMesh(height: 0.26, radius: p.torsoR + 0.014), m,
+                            SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.10, 1.0, 0.94)))
+            for sx in [Float(-1), 1] {
+                e.addChild(mesh(capsuleMesh(height: 0.20, radius: p.armR + 0.020), m, SIMD3<Float>(sx * (p.shoulderX + 0.01), 0.665, 0), scale: SIMD3<Float>(1, 1, 1)))
+                e.addChild(mesh(capsuleMesh(height: 0.03, radius: p.armR + 0.024), material("#EDE6DA", rough: 0.85),
+                                SIMD3<Float>(sx * (p.shoulderX + 0.01), 0.565, 0)))
+            }
+            e.addChild(mesh(capsuleMesh(height: 0.035, radius: 0.088), material("#EDE6DA", rough: 0.85),
+                            SIMD3<Float>(0, 0.815, 0), scale: SIMD3<Float>(1, 1, 0.9)))
         case "vest":
             e.addChild(mesh(capsuleMesh(height: 0.27, radius: p.torsoR + 0.018), m,
                             SIMD3<Float>(0, 0.665, 0), scale: SIMD3<Float>(1.06, 1.0, 0.88)))
@@ -531,6 +602,31 @@ final class DollSceneController: NSObject, ObservableObject {
             for sx in [Float(-1), 1] {
                 e.addChild(mesh(capsuleMesh(height: 0.20, radius: p.legR + 0.042), m, SIMD3<Float>(sx * 0.082, 0.31, 0)))
             }
+        case "cargoPants":
+            // 工装裤：宽松直筒 + 侧口袋 + 裤脚收口
+            e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.31, 0.17, 0.22), cornerRadius: 0.06), m,
+                            SIMD3<Float>(0, 0.50, 0), scale: SIMD3<Float>(p.hipWide, 1, 1)))
+            for sx in [Float(-1), 1] {
+                e.addChild(mesh(capsuleMesh(height: 0.24, radius: p.legR + 0.030), m, SIMD3<Float>(sx * 0.082, 0.30, 0)))
+                // 侧口袋
+                e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.055, 0.075, 0.028), cornerRadius: 0.012),
+                                material(hex, rough: 0.78), SIMD3<Float>(sx * 0.135, 0.40, 0.055)))
+                // 裤脚收口
+                e.addChild(mesh(capsuleMesh(height: 0.02, radius: p.legR + 0.018), m, SIMD3<Float>(sx * 0.082, 0.175, 0)))
+            }
+        case "pleatedSkirt":
+            // 百褶短裙：锥台裙身 + 8 片褶皱 + 腰头
+            e.addChild(mesh(latheMesh(profile: [(y: -0.13, r: 0.245), (y: 0.10, r: 0.06)], capBottom: true), m,
+                            SIMD3<Float>(0, 0.405, 0), scale: SIMD3<Float>(1.02, 1, 0.88)))
+            for k in 0..<8 {
+                let a = Float(k) / 8 * 2 * Float.pi
+                let px = cos(a) * 0.175, pz = sin(a) * 0.155
+                e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.022, 0.235, 0.018), cornerRadius: 0.006),
+                                material(hex, rough: 0.72), SIMD3<Float>(px, 0.395, pz),
+                                scale: SIMD3<Float>(1, 1, 1)))
+            }
+            e.addChild(mesh(.generateSphere(radius: p.torsoR), m,
+                            SIMD3<Float>(0, 0.535, 0), scale: SIMD3<Float>(1.05, 0.40, 0.92)))
         default: // shorts 短裤
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.30, 0.14, 0.21), cornerRadius: 0.055), m,
                             SIMD3<Float>(0, 0.495, 0), scale: SIMD3<Float>(p.hipWide, 1, 1)))
@@ -565,6 +661,14 @@ final class DollSceneController: NSObject, ObservableObject {
         case "bucket":
             e.addChild(mesh(.generateSphere(radius: 0.29), m, SIMD3<Float>(0, 1.265, 0), scale: SIMD3<Float>(1, 0.52, 1)))
             e.addChild(mesh(.generateSphere(radius: 0.33), m, SIMD3<Float>(0, 1.19, 0), scale: SIMD3<Float>(1, 0.075, 1)))
+        case "beanie":
+            // 针织帽：贴合帽体 + 卷边 + 顶球
+            e.addChild(mesh(.generateSphere(radius: p.headR + 0.012), m,
+                            SIMD3<Float>(0, p.headY + 0.10, 0), scale: SIMD3<Float>(1.02, 0.72, 1.02)))
+            e.addChild(mesh(capsuleMesh(height: 0.012, radius: p.headR + 0.020), m,
+                            SIMD3<Float>(0, p.headY + 0.052, 0), scale: SIMD3<Float>(1, 1, 1)))
+            e.addChild(mesh(.generateSphere(radius: 0.045), material(hex, rough: 0.9),
+                            SIMD3<Float>(0, p.headY + 0.30, 0)))
         case "beret":
             e.addChild(mesh(.generateSphere(radius: 0.29), m, SIMD3<Float>(0, 1.305, -0.02),
                             scale: SIMD3<Float>(1.15, 0.5, 1.08), quat: rotZ(0.10)))
@@ -589,6 +693,16 @@ final class DollSceneController: NSObject, ObservableObject {
             for sx in [Float(-1), 1] {
                 e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.14, 0.10, 0.23), cornerRadius: 0.045), m,
                                 SIMD3<Float>(sx * 0.082, 0.075, 0.045)))
+            }
+        case "platform":
+            // 厚底运动鞋：鞋身 + 加厚大底 + 鞋带
+            for sx in [Float(-1), 1] {
+                e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.152, 0.105, 0.235), cornerRadius: 0.045), m,
+                                SIMD3<Float>(sx * 0.082, 0.125, 0.05)))
+                e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.162, 0.075, 0.25), cornerRadius: 0.026),
+                                material("#FFFFFF", rough: 0.75), SIMD3<Float>(sx * 0.082, 0.04, 0.05)))
+                e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.10, 0.016, 0.075), cornerRadius: 0.007),
+                                material("#FFFFFF", rough: 0.6), SIMD3<Float>(sx * 0.082, 0.185, 0.085)))
             }
         case "sandals":
             for sx in [Float(-1), 1] {
@@ -617,6 +731,21 @@ final class DollSceneController: NSObject, ObservableObject {
             }
             e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.09, 0.014, 0.014), cornerRadius: 0.006), dark,
                             SIMD3<Float>(0, 1.185, 0.292)))
+        case "bow":
+            // 蝴蝶结发饰：两瓣 + 中心结
+            for sx in [Float(-1), 1] {
+                e.addChild(mesh(.generateSphere(radius: 0.062), m,
+                                SIMD3<Float>(sx * 0.075 + 0.22, p.headY + 0.20, 0.10),
+                                scale: SIMD3<Float>(1.0, 0.66, 0.45)))
+            }
+            e.addChild(mesh(.generateSphere(radius: 0.028), material(hex, rough: 0.5),
+                            SIMD3<Float>(0.22, p.headY + 0.20, 0.105), scale: SIMD3<Float>(0.9, 0.9, 0.8)))
+        case "crossbody":
+            // 斜挎包：包体 + 肩带
+            e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.17, 0.13, 0.075), cornerRadius: 0.026), m,
+                            SIMD3<Float>(0.10, 0.52, 0.13)))
+            e.addChild(mesh(.generateBox(size: SIMD3<Float>(0.022, 0.30, 0.020), cornerRadius: 0.008), m,
+                            SIMD3<Float>(0.06, 0.72, 0.08), scale: SIMD3<Float>(1, 1, 1)))
         case "necklace":
             let gold = material(hex, rough: 0.25, metal: 0.85)
             e.addChild(mesh(.generateSphere(radius: 0.042), gold, SIMD3<Float>(0, 0.735, 0.15)))

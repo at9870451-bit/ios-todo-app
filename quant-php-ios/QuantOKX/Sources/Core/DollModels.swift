@@ -54,6 +54,10 @@ struct DollOutfitState: Codable, Equatable {
     var gender: String = "neutral"
     var skin: String = "#F6D7BE"
     var items: [String: DollSelection] = [:]
+    /// 展示底座配色 key（blue / pink / grey）
+    var baseColor: String = "blue"
+    /// 是否显示底座标注（BOY / GIRL / NEUTRAL）
+    var showBadge: Bool = true
 
     var json: String {
         guard let data = try? JSONEncoder().encode(self) else { return "{}" }
@@ -75,6 +79,52 @@ struct DollOutfitState: Codable, Equatable {
             "bottom": DollSelection(style: "shorts", color: "#3E5C8A"),
             "shoes": DollSelection(style: "sneakers", color: "#FFFFFF"),
         ]
+        return s
+    }
+
+    // MARK: - 三款潮玩角色预设（日系 Q 版盲盒风格）
+
+    struct Preset {
+        let key: String
+        let title: String
+        let badge: String
+        let base: String
+        let skin: String
+        let items: [String: DollSelection]
+    }
+
+    static let presetList: [Preset] = [
+        Preset(key: "boy", title: "机能少年", badge: "BOY", base: "blue", skin: "#F2CBA8", items: [
+            "hair": DollSelection(style: "spiky", color: "#191919"),
+            "top": DollSelection(style: "jacket", color: "#23262B"),
+            "bottom": DollSelection(style: "cargoPants", color: "#1E2024"),
+            "shoes": DollSelection(style: "sneakers", color: "#2B2E33"),
+            "accessory": DollSelection(style: "necklace", color: "#C8C8D0"),
+        ]),
+        Preset(key: "girl", title: "甜心缪斯", badge: "GIRL", base: "pink", skin: "#F8D6C0", items: [
+            "hair": DollSelection(style: "longCurl", color: "#4A342A"),
+            "top": DollSelection(style: "knit", color: "#F3EDE2"),
+            "bottom": DollSelection(style: "pleatedSkirt", color: "#F0AEC0"),
+            "shoes": DollSelection(style: "platform", color: "#F7E4EA"),
+            "accessory": DollSelection(style: "bow", color: "#F0AEC0"),
+        ]),
+        Preset(key: "neutral", title: "冷淡银灰", badge: "NEUTRAL", base: "grey", skin: "#F5DAC4", items: [
+            "hair": DollSelection(style: "silverShort", color: "#C6CAD2"),
+            "top": DollSelection(style: "hoodie", color: "#D3D6DB"),
+            "bottom": DollSelection(style: "cargoPants", color: "#5A5F66"),
+            "shoes": DollSelection(style: "sneakers", color: "#E4E6E9"),
+            "accessory": DollSelection(style: "crossbody", color: "#23262B"),
+            "hat": DollSelection(style: "beanie", color: "#23262B"),
+        ]),
+    ]
+
+    static func presetOf(_ key: String) -> DollOutfitState {
+        guard let pre = presetList.first(where: { $0.key == key }) else { return preset }
+        var s = DollOutfitState()
+        s.gender = key
+        s.skin = pre.skin
+        s.baseColor = pre.base
+        s.items = pre.items
         return s
     }
 }
@@ -195,9 +245,18 @@ enum DollCatalog {
 
     static func genderName(_ g: String) -> String {
         switch g {
-        case "male": return "男生"
-        case "female": return "女生"
-        default: return "中性"
+        case "male": return "机能少年"
+        case "female": return "甜心缪斯"
+        default: return "冷淡银灰"
+        }
+    }
+
+    /// 角色底盘标注
+    static func genderBadge(_ g: String) -> String {
+        switch g {
+        case "male": return "BOY"
+        case "female": return "GIRL"
+        default: return "NEUTRAL"
         }
     }
 

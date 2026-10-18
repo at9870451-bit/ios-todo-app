@@ -98,7 +98,13 @@ struct DollStudioView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous))
-            .overlay(alignment: .topLeading) { genderControl.padding(12) }
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 8) {
+                    genderControl
+                    baseControl
+                }
+                .padding(12)
+            }
             .overlay(alignment: .topTrailing) {
                 GlassIconButton(icon: "arrow.counterclockwise", size: 38) { scene.resetView() }
                     .padding(12)
@@ -123,7 +129,14 @@ struct DollStudioView: View {
             ForEach(["male", "female", "neutral"], id: \.self) { g in
                 Button {
                     guard outfit.gender != g else { return }
-                    commit { $0.gender = g }
+                    // 切换角色 = 载入该款预设（穿搭 + 底座配色一次到位）
+                    let pre = DollOutfitState.presetOf(g)
+                    commit { st in
+                        st.gender = g
+                        st.skin = pre.skin
+                        st.baseColor = pre.baseColor
+                        st.items = pre.items
+                    }
                     Haptics.tap()
                 } label: {
                     Text(DollCatalog.genderName(g))
@@ -141,6 +154,44 @@ struct DollStudioView: View {
                 }
                 .buttonStyle(PressableButtonStyle())
             }
+        }
+    }
+
+    private var baseControl: some View {
+        HStack(spacing: 7) {
+            Text("底座").font(.caption2).foregroundStyle(.secondary)
+            ForEach([("blue", "#8E9CB2"), ("pink", "#E8B6C8"), ("grey", "#C4C8CF")], id: \.0) { key, hex in
+                Button {
+                    guard outfit.baseColor != key else { return }
+                    commit { $0.baseColor = key }
+                    Haptics.tap()
+                } label: {
+                    Circle()
+                        .fill(Color(uiColor: DollColor.ui(hex)))
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            if outfit.baseColor == key {
+                                Circle().strokeBorder(Color.white, lineWidth: 2)
+                                    .shadow(color: .black.opacity(0.25), radius: 2)
+                            }
+                        }
+                        .overlay(Circle().strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
+            Divider().frame(height: 14)
+            Button {
+                commit { $0.showBadge.toggle() }
+                Haptics.tap()
+            } label: {
+                Text(outfit.showBadge ? "标注开" : "标注关")
+                    .font(.caption2.weight(.medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(outfit.showBadge ? Theme.accent.opacity(0.16) : Color.gray.opacity(0.14), in: Capsule())
+                    .foregroundStyle(outfit.showBadge ? Theme.accent : Color.secondary)
+            }
+            .buttonStyle(PressableButtonStyle())
         }
     }
 
