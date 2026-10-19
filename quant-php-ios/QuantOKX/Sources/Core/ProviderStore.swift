@@ -85,8 +85,8 @@ final class ProviderStore: ObservableObject {
     // MARK: - 持久化
 
     private func load() {
-        // 一次性迁移：清空旧的全部 AI 模型配置，改用 Operit 开源厂商目录
-        let migrateKey = "ai.operitCatalog.v1"
+        // 一次性迁移：清空旧的全部 AI 模型配置，改用 Operit iOS 开源厂商目录
+        let migrateKey = "ai.operitIosCatalog.v1"
         if !UserDefaults.standard.bool(forKey: migrateKey) {
             UserDefaults.standard.set(true, forKey: migrateKey)
             UserDefaults.standard.removeObject(forKey: "provider.active")

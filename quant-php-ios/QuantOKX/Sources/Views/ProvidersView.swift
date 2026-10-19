@@ -452,6 +452,40 @@ struct ProviderEditView: View {
                         .foregroundStyle(.tertiary)
 
                     field(title: provider.kind == .tts ? "语音模型（可选）" : (provider.kind == .image ? "图片模型（可选）" : "默认模型（可选）")) {
+                        // Operit iOS 模型目录：该厂商有预置模型时，直接选择
+                        let catalogModels = AIModelCatalog.models(for: provider.vendor)
+                        if !catalogModels.isEmpty {
+                            Menu {
+                                ForEach(catalogModels, id: \.self) { m in
+                                    Button {
+                                        provider.model = m
+                                    } label: {
+                                        if provider.model == m {
+                                            Label(m, systemImage: "checkmark")
+                                        } else {
+                                            Text(m)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "list.bullet.rectangle")
+                                        .foregroundStyle(Theme.accent)
+                                    Text(provider.model.isEmpty ? "从 \(catalogModels.count) 个预置模型中选择" : provider.model)
+                                        .font(.subheadline)
+                                        .foregroundStyle(provider.model.isEmpty ? Color.secondary : Color.primary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 11)
+                                .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .padding(.bottom, 6)
+                        }
                         TextField(modelPlaceholder, text: $provider.model)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
