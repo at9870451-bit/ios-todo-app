@@ -347,6 +347,37 @@ struct ChatReply: Decodable {
 }
 
 extension BackendStore {
+    /// 直连本机 OpenAI 兼容服务（Locally AI / Ollama / LM Studio）
+    static func directChat(_ p: ProviderStore.Provider, _ messages: [[String: String]], _ systemPrompt: String) async throws -> String {
+        var url = p.effectiveBase.trimmingCharacters(in: .whitespaces)
+        if url.hasSuffix("/") { url = String(url.dropLast()) }
+        if url.contains("/chat/completions") {
+            // 原样使用
+        } else if url.hasSuffix("/v1") {
+            url += "/chat/completions"
+        } else {
+            url += "/v1/chat/completions"
+        }
+        guard let endpoint = URL(string: url) else { throw NSError(domain: "local", code: -1, userInfo: [NSLocalizedDescriptionKey: "本地地址无效"]) }
+        var body: [String: Any] = ["model": p.model.isEmpty ? p.label : p.model, "stream": false]
+        var msgs: [[String: String]] = []
+        if !systemPrompt.isEmpty { msgs.append(["role": "system", "content": systemPrompt]) }
+        msgs.append(contentsOf: messages)
+        body["messages"] = msgs
+        var req = URLRequest(url: endpoint, timeoutInterval: 120)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if !p.apiKey.isEmpty { req.setValue("Bearer \(p.apiKey)", forHTTPHeaderField: "Authorization") }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard (resp as? HTTPURLResponse)?.statusCode == 200 else {
+            throw NSError(domain: "local", code: -2, userInfo: [NSLocalizedDescriptionKey: "本地服务返回错误 HTTP \((resp as? HTTPURLResponse)?.statusCode ?? -1)"])
+        }
+        struct R: Decodable { struct C: Decodable { struct M: Decodable { let content: String }; let message: M }; let choices: [C] }
+        let r = try JSONDecoder().decode(R.self, from: data)
+        return r.choices.first?.message.content ?? ""
+    }
+
     func sendChat(sessionId: Int64, content: String, attachments: [ChatAttachment] = [], reasoning: String = "", systemPrompt: String = "") async throws -> ChatReply {
         var body: [String: Any] = ["session_id": sessionId, "content": content]
         if !attachments.isEmpty {
@@ -363,6 +394,13 @@ extension BackendStore {
         var body: [String: Any] = ["messages": messages]
         if !systemPrompt.isEmpty { body["system_prompt"] = systemPrompt }
         if !reasoning.isEmpty { body["reasoning"] = reasoning }
+        // 本地模型直连（Locally AI / Ollama / LM Studio 等本机服务）：不经过服务器
+        if let p = ProviderStore.shared.active {
+            let b = p.effectiveBase.lowercased()
+            if b.contains("127.0.0.1") || b.contains("localhost") {
+                return try await Self.directChat(p, messages, systemPrompt)
+            }
+        }
         // 模型配置只存在本机：每次请求把当前配置带给后端（服务端不保存 Key）
         if let p = ProviderStore.shared.active, !p.apiKey.isEmpty {
             body["api_url"] = p.effectiveBase

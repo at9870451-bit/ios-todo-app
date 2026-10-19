@@ -40,6 +40,7 @@ enum AIVendorCatalog {
         AIVendor(key: "alipay_bailing", name: "支付宝百灵", group: "国内", base: "https://api.tbox.cn/api/llm/v1", model: "", format: "chat"),
         AIVendor(key: "doubao", name: "字节豆包", group: "国内", base: "https://ark.cn-beijing.volces.com/api/v3", model: "", format: "chat"),
         AIVendor(key: "nvidia", name: "NVIDIA NIM", group: "聚合", base: "https://integrate.api.nvidia.com/v1", model: "", format: "chat"),
+        AIVendor(key: "locally", name: "Locally AI（本机）", group: "本地", base: "http://127.0.0.1:8484/v1", model: "Qwen3.5 2B", format: "chat"),
         AIVendor(key: "lmstudio", name: "LM Studio 本地", group: "本地", base: "http://localhost:1234/v1", model: "", format: "chat"),
         AIVendor(key: "ollama", name: "Ollama 本地", group: "本地", base: "http://localhost:11434/v1", model: "", format: "chat"),
         AIVendor(key: "openai_local", name: "本地 OpenAI", group: "本地", base: "http://localhost:8000/v1", model: "", format: "chat"),
