@@ -452,8 +452,9 @@ struct ChatScreen: View {
         guard messages.isEmpty, sessionId == 0 else { return }
         do {
             let list = try await store.fetchConversations()
-            // 与聊天 Tab 打通：恢复最近一次会话（可能来自好友聊天）
-            let candidates = list
+            // 恢复最近一次好友会话；群聊会话不参与
+            let groupSessions = Set(GroupStore.shared.groups.compactMap { Int64($0.sessionId) })
+            let candidates = list.filter { !groupSessions.contains($0.id) }
             guard let last = candidates.first(where: { $0.updatedAt != nil }) ?? candidates.first else { return }
             await MainActor.run {
                 openSession(last.id)

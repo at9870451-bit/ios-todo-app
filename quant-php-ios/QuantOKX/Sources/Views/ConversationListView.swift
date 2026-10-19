@@ -148,8 +148,9 @@ struct ConversationListView: View {
 
     private func loadSessions() async {
         do {
-            // 与聊天 Tab 打通：显示全部会话（含各好友的聊天记录）
-            conversations = try await store.fetchConversations()
+            // 显示好友会话；群聊记录只在本机，不混进会话列表
+            let groupSessions = Set(GroupStore.shared.groups.compactMap { Int64($0.sessionId) })
+            conversations = try await store.fetchConversations().filter { !groupSessions.contains($0.id) }
         } catch {
             store.toast = "加载会话失败"
         }
