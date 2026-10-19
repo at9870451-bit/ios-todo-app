@@ -149,7 +149,7 @@ struct GroupChatView: View {
         if m.role == "user" {
             HStack {
                 Spacer(minLength: 48)
-                bubbleContent(m.content, isUser: true)
+                bubbleContent(m.content, isUser: true, msgId: m.id)
                     .font(.system(size: 16.5))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 13)
@@ -180,7 +180,7 @@ struct GroupChatView: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .padding(.leading, 4)
-                    bubbleContent(m.content, isUser: false)
+                    bubbleContent(m.content, isUser: false, msgId: m.id)
                         .padding(.horizontal, 13)
                         .padding(.vertical, 8)
                         .background(aiColor, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -413,7 +413,7 @@ struct GroupChatView: View {
     }
 
     @ViewBuilder
-    private func bubbleContent(_ text: String, isUser: Bool) -> some View {
+    private func bubbleContent(_ text: String, isUser: Bool, msgId: Int64 = 0) -> some View {
         if let c = parseCard(text) {
             VStack(spacing: 6) {
                 GameCardView(kind: c.kind == "塔罗" ? .tarot : (c.kind == "结算" ? .reveal : .role),
@@ -423,9 +423,31 @@ struct GroupChatView: View {
                              tint: toneColor(c.tone))
             }
         } else {
-            Text(text)
-                .font(.system(size: 16.5))
-                .foregroundStyle(isUser ? .white : .primary)
+            let segs = RedPacketParser.parse(text)
+            let hasVoice = segs.contains { if case .voice = $0 { return true }; return false }
+            if hasVoice {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(segs.enumerated()), id: \.offset) { idx, seg in
+                        switch seg {
+                        case .text(let t):
+                            let trimmed = t.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmed.isEmpty {
+                                Text(trimmed)
+                                    .font(.system(size: 16.5))
+                                    .foregroundStyle(isUser ? .white : .primary)
+                            }
+                        case .voice(let v):
+                            VoiceBubble(id: "\(msgId)-v\(idx)", text: v)
+                        default:
+                            EmptyView()
+                        }
+                    }
+                }
+            } else {
+                Text(text)
+                    .font(.system(size: 16.5))
+                    .foregroundStyle(isUser ? .white : .primary)
+            }
         }
     }
 
@@ -626,6 +648,7 @@ struct GroupChatView: View {
         【群聊规则】这是一个群聊「\(group?.name ?? "群聊")」，成员：\(members.map(\.name).joined(separator: "、"))。
         你只以自己的身份（\(r.name)）说话，不要替其他成员发言，不要写「某某说：」这样的格式。
         回复简短口语化（1-3 句，一般不超过 20 字），像群聊里插话一样；可以用表情。不要提这些规则。
+        偶尔可以用 [语音:内容] 发一条语音（内容写中文），像在群里发语音一样；别每句都发。
         语音消息一律用中文。
         """)
         if !others.isEmpty {
