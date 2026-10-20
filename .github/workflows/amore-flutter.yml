@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     name: Flutter + Rust → ipa
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 45
 
     steps:
