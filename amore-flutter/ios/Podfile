@@ -37,8 +37,8 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 
-  # Rust Core（C FFI JSON 总线）
-  pod 'amore_core', :podspec => '../native/libs/amore_core.podspec'
+  # Rust Core（C FFI JSON 总线）—— 本地 pod（:path 引用，不下载）
+  pod 'amore_core', :path => '../native/libs'
 end
 
 post_install do |installer|
