@@ -22,9 +22,8 @@ workflows:
       - name: 生成 Flutter 脚手架
         script: |
           set -e
-          REPO="${CM_REPO_DIR:-$HOME/clone}"
-          echo "REPO=$REPO"; ls "$REPO"
-          cd "$REPO/amore-flutter"
+          cd "$CM_REPO_DIR/amore-flutter"
+          flutter config --no-enable-swift-package-manager
           flutter create --org com.quantokx --project-name amore .
           flutter pub get
 
@@ -53,6 +52,12 @@ workflows:
           set -e
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           ruby tools/fix_xcodeproj.rb
+
+      - name: pod install（同步 sandbox）
+        script: |
+          set -e
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter/ios"
+          pod install
 
       - name: 编译 Flutter iOS（未签名）
         script: |
