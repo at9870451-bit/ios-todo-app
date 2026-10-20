@@ -68,8 +68,6 @@ struct LocalConsoleView: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.never)
                     .onSubmit(run)
-                    .onKeyPress(.up) { histUp(); return .handled }
-                    .onKeyPress(.down) { histDown(); return .handled }
                 Button {
                     run()
                 } label: {
