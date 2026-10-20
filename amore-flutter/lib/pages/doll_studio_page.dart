@@ -36,7 +36,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
       ('惊讶', Icons.sentiment_dissatisfied_rounded),
       ('困困', Icons.bedtime_rounded),
       ('星星眼', Icons.star_rounded),
-      ('wink', Icons.winking_face_rounded),
+      ('wink', Icons.sentiment_satisfied_alt_rounded),
     ],
     'doll_outfit': [
       ('JK 制服', Icons.school_rounded),
@@ -49,7 +49,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
       ('未来感', Icons.rocket_launch_rounded),
     ],
     'doll_acc': [
-      ('蝴蝶结', Icons.interesting_events_rounded),
+      ('蝴蝶结', Icons.celebration_rounded),
       ('猫耳', Icons.pets_rounded),
       ('眼镜', Icons.remove_red_eye_rounded),
       ('发卡', Icons.brightness_high_rounded),

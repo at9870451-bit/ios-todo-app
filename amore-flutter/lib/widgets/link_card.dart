@@ -49,7 +49,7 @@ class LinkPreviewCard extends StatelessWidget {
               color: AmoreTheme.accent.withOpacity(0.18),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.safari_rounded, color: AmoreTheme.accent, size: 19),
+            child: const Icon(Icons.public_rounded, color: AmoreTheme.accent, size: 19),
           ),
           const SizedBox(width: 10),
           Expanded(

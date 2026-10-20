@@ -122,7 +122,7 @@ class ChatEngine {
   static Future<ChatTurnResult> send({
     required ChatFriend friend,
     required String userText,
-    String Function(String toolName)? onToolCall,
+    void Function(String toolName)? onToolCall,
     String? extraSystem,
   }) async {
     final provider = providerFor(friend);

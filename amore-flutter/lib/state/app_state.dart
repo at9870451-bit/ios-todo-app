@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/bridge.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 

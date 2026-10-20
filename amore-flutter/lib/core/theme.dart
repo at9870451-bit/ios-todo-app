@@ -73,7 +73,9 @@ class AmoreTheme {
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Color(0xFF121826),
-        modalBorderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: const Color(0xFF161C2C),

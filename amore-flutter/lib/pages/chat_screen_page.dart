@@ -70,7 +70,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
       final result = await ChatEngine.send(
         friend: f,
         userText: trimmed,
-        onToolCall: (tool) => setState(() => _toolHint = tool),
+        onToolCall: (tool) {
+            setState(() => _toolHint = tool);
+          },
       );
       if (result.error != null) {
         if (mounted) {
@@ -188,7 +190,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.redemption_rounded, color: Color(0xFFE8613C)),
+              leading: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFE8613C)),
               title: const Text('发红包'),
               onTap: () {
                 Navigator.pop(context);

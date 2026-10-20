@@ -95,7 +95,7 @@ class _VoiceBubbleState extends State<VoiceBubble> {
       final dir = await getTemporaryDirectory();
       final file = File('${dir.path}/tts_${DateTime.now().millisecondsSinceEpoch}.mp3');
       await file.writeAsBytes(resp.data!);
-      await _player.play(DeviceSource(file.path));
+      await _player.play(DeviceFileSource(file.path));
       setState(() {
         _loading = false;
         _playing = true;
