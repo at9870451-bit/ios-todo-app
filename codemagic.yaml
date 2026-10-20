@@ -38,10 +38,11 @@ workflows:
 
       - name: 编译 Rust Core（aarch64-apple-ios）
         script: |
-          set -e
           source "$HOME/.cargo/env"
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
-          cargo build --release --target aarch64-apple-ios --manifest-path native/amore_core/Cargo.toml
+          (cargo build --release --target aarch64-apple-ios --manifest-path native/amore_core/Cargo.toml 2>&1 || true) | tee rust-build.log
+          (grep -E '^error(\[|:)' rust-build.log | head -40 || echo 'no errors captured') > rust-errors.txt
+          echo '=== rust errors ==='; cat rust-errors.txt
           mkdir -p native/libs/ios
           cp native/amore_core/target/aarch64-apple-ios/release/libamore_core.a native/libs/ios/
           cp native/amore_core/include/amore_core.h native/libs/
@@ -79,3 +80,5 @@ workflows:
           shasum -a 256 Amore.ipa
     artifacts:
       - amore-flutter/Amore.ipa
+      - amore-flutter/*.log
+      - amore-flutter/*.txt
