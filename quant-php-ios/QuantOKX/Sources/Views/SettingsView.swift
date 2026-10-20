@@ -37,6 +37,16 @@ struct VoiceSettingsCard: View {
             }
 
             rowDivider
+            settingLink(icon: "sparkles", title: "智能体", subtitle: "本地模板 · 新建好友可导入") {
+                AgentListView()
+            }
+
+            rowDivider
+            settingLink(icon: "terminal", title: "本地终端", subtitle: "离线管理本机数据与记录") {
+                LocalConsoleView()
+            }
+
+            rowDivider
             settingLink(icon: "paintbrush", title: "外观", subtitle: bg.image == nil ? "苹果白与蓝橙渐变" : "自定义背景图片") {
                 AppearanceView()
             }

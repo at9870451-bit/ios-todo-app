@@ -26,4 +26,8 @@ enum LocalHistory {
     static func clear(_ key: String) {
         UserDefaults.standard.removeObject(forKey: storeKey(key))
     }
+
+    static func count(_ key: String) -> Int {
+        load(key).count
+    }
 }

@@ -47,6 +47,14 @@ struct ChatFriend: Codable, Identifiable, Equatable {
         memory = try c.decodeIfPresent([String].self, forKey: .memory) ?? []
     }
 
+    var genderText: String {
+        switch gender {
+        case "male": return "男"
+        case "female": return "女"
+        default: return "不限"
+        }
+    }
+
     /// 好友头像（Documents 内图片）
     func avatarImage() -> UIImage? {
         guard !avatarFile.isEmpty else { return nil }

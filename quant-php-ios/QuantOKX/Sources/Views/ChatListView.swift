@@ -194,6 +194,7 @@ struct FriendEditSheet: View {
     @State private var persona = ""
     @State private var memory: [String] = []
     @State private var newMemory = ""
+    @State private var showAgentPicker = false
     @State private var gender = ""
     @State private var age = ""
     @State private var voiceEngine = ""
@@ -225,6 +226,13 @@ struct FriendEditSheet: View {
                 }
 
                 Section {
+                    Button {
+                        showAgentPicker = true
+                    } label: {
+                        Label("从智能体导入（本地模板）", systemImage: "sparkles")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                    }
                     TextEditor(text: $persona)
                         .frame(minHeight: 120)
                         .font(.subheadline)
@@ -299,6 +307,31 @@ struct FriendEditSheet: View {
                 }
             }
             .navigationTitle(isNew ? "新建好友" : "好友设置")
+        .sheet(isPresented: $showAgentPicker) {
+            NavigationStack {
+                List {
+                    ForEach(AgentStore.shared.enabled) { t in
+                        Button {
+                            persona = t.persona
+                            gender = t.gender
+                            age = t.age
+                            name = name.isEmpty ? t.name : name
+                            if !t.voiceEngine.isEmpty { voiceEngine = t.voiceEngine }
+                            if !t.voiceId.isEmpty { voiceId = t.voiceId }
+                            showAgentPicker = false
+                        } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(t.name).font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
+                                Text(t.desc.isEmpty ? t.persona : t.desc).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                            }
+                        }
+                    }
+                }
+                .navigationTitle("选择智能体")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+            .presentationDetents([.medium, .large])
+        }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

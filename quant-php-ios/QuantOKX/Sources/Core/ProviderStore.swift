@@ -128,6 +128,14 @@ final class ProviderStore: ObservableObject {
         }
     }
 
+    /// 本地终端 reset models 用
+    func resetAllModels() {
+        providers = []
+        activeId = nil
+        UserDefaults.standard.removeObject(forKey: "provider.active")
+        try? FileManager.default.removeItem(at: fileURL)
+    }
+
     func remove(_ p: Provider) {
         providers.removeAll { $0.id == p.id }
         if activeId == p.id {
