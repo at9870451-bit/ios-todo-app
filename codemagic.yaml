@@ -22,7 +22,7 @@ workflows:
       - name: 生成 Flutter 脚手架
         script: |
           set -e
-          cd "$CM_REPO_DIR/amore-flutter"
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           flutter config --no-enable-swift-package-manager
           flutter create --org com.quantokx --project-name amore .
           flutter pub get
