@@ -6,7 +6,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::Value;
 
-use crate::jsonv::{arr, obj, s, Json};
+use crate::jsonv::{arr, obj, s};
 
 /// 简易 id：时间戳36进制 + 随机尾巴
 pub fn new_id() -> String {
@@ -67,7 +67,7 @@ fn read_json(path: &Path) -> Option<Value> {
 }
 
 /// 原子写：临时文件 + rename
-fn write_json(path: &Path, value: &Json) -> Result<(), String> {
+fn write_json(path: &Path, value: &Value) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
@@ -112,49 +112,49 @@ fn with_mut<R>(f: impl FnOnce(&mut Store) -> R, fallback: R) -> R {
 
 // ---------- 通用列表存取 ----------
 
-fn load_array(root: &Path, name: &str) -> Vec<Json> {
+fn load_array(root: &Path, name: &str) -> Vec<Value> {
     read_json(&root.join(name))
         .and_then(|j| j.as_array().cloned())
         .unwrap_or_default()
 }
 
-fn save_array(root: &Path, name: &str, items: &[Json]) {
-    let _ = write_json(&root.join(name), &Json(arr(items.to_vec())));
+fn save_array(root: &Path, name: &str, items: &[Value]) {
+    let _ = write_json(&root.join(name), &arr(items.to_vec()));
 }
 
 /// 按 id upsert
-fn upsert(items: &mut Vec<Json>, item: Json) {
-    let id = item.0.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+fn upsert(items: &mut Vec<Value>, item: Value) {
+    let id = item.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let id = if id.is_empty() { new_id() } else { id };
     let mut item = item;
-    item.0["id"] = s(&id);
-    if let Some(pos) = items.iter().position(|x| x.0.get("id").and_then(|v| v.as_str()) == Some(id.as_str())) {
+    item["id"] = s(&id);
+    if let Some(pos) = items.iter().position(|x| x.get("id").and_then(|v| v.as_str()) == Some(id.as_str())) {
         items[pos] = item;
     } else {
         items.push(item);
     }
 }
 
-fn remove_by_id(items: &mut Vec<Json>, id: &str) -> bool {
+fn remove_by_id(items: &mut Vec<Value>, id: &str) -> bool {
     let before = items.len();
-    items.retain(|x| x.0.get("id").and_then(|v| v.as_str()) != Some(id));
+    items.retain(|x| x.get("id").and_then(|v| v.as_str()) != Some(id));
     items.len() != before
 }
 
 /// 按 sort 字段排序
-fn by_sort(a: &Json, b: &Json) -> std::cmp::Ordering {
-    let sa = a.0.get("sort").and_then(|v| v.as_i64()).unwrap_or(0);
-    let sb = b.0.get("sort").and_then(|v| v.as_i64()).unwrap_or(0);
+fn by_sort(a: &Value, b: &Value) -> std::cmp::Ordering {
+    let sa = a.get("sort").and_then(|v| v.as_i64()).unwrap_or(0);
+    let sb = b.get("sort").and_then(|v| v.as_i64()).unwrap_or(0);
     sa.cmp(&sb).then(std::cmp::Ordering::Equal)
 }
 
 // ---------- 给其它模块的公开访问器 ----------
 
-pub fn friends_list() -> Vec<Json> {
+pub fn friends_list() -> Vec<Value> {
     with(|s| load_array(&s.dir, "friends.json"), vec![])
 }
 
-pub fn groups_list() -> Vec<Json> {
+pub fn groups_list() -> Vec<Value> {
     with(|s| load_array(&s.dir, "groups.json"), vec![])
 }
 
@@ -198,7 +198,7 @@ pub fn set_config_value(key: &str, value: &str) {
     with_mut(
         |s| {
             s.config.insert(key.to_string(), value.to_string());
-            let cfg: Json = serde_json::to_value(&s.config).unwrap_or(obj([]).0);
+            let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
             let _ = write_json(&s.dir.join("config.json"), &cfg);
         },
         (),
@@ -207,7 +207,7 @@ pub fn set_config_value(key: &str, value: &str) {
 
 // ---------- 分发 ----------
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
+pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
     match method {
         "store.list_friends" => Some(with(
             |s| {
@@ -220,7 +220,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.save_friend" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "friends.json");
-                upsert(&mut items, Json(p.0.get("friend").cloned().unwrap_or(obj([]).0)));
+                upsert(&mut items, p.get("friend").cloned().unwrap_or(Value::Null));
                 save_array(&s.dir, "friends.json", &items);
                 obj([])
             },
@@ -229,7 +229,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.delete_friend" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "friends.json");
-                let id = p.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
                 save_array(&s.dir, "friends.json", &items);
                 obj([])
@@ -248,7 +248,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.save_group" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "groups.json");
-                upsert(&mut items, Json(p.0.get("group").cloned().unwrap_or(obj([]).0)));
+                upsert(&mut items, p.get("group").cloned().unwrap_or(Value::Null));
                 save_array(&s.dir, "groups.json", &items);
                 obj([])
             },
@@ -257,7 +257,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.delete_group" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "groups.json");
-                let id = p.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
                 save_array(&s.dir, "groups.json", &items);
                 obj([])
@@ -280,7 +280,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.save_agent" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "agents.json");
-                upsert(&mut items, Json(p.0.get("agent").cloned().unwrap_or(obj([]).0)));
+                upsert(&mut items, p.get("agent").cloned().unwrap_or(Value::Null));
                 save_array(&s.dir, "agents.json", &items);
                 obj([])
             },
@@ -289,7 +289,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.delete_agent" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "agents.json");
-                let id = p.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
                 save_array(&s.dir, "agents.json", &items);
                 obj([])
@@ -304,7 +304,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.save_provider" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "providers.json");
-                upsert(&mut items, Json(p.0.get("provider").cloned().unwrap_or(obj([]).0)));
+                upsert(&mut items, p.get("provider").cloned().unwrap_or(Value::Null));
                 save_array(&s.dir, "providers.json", &items);
                 obj([])
             },
@@ -313,7 +313,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         "store.delete_provider" => Some(with(
             |s| {
                 let mut items = load_array(&s.dir, "providers.json");
-                let id = p.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
                 save_array(&s.dir, "providers.json", &items);
                 obj([])
@@ -326,10 +326,10 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         )),
         "store.set_active_provider" => Some(with_mut(
             |s| {
-                let id = p.0.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 s.active_provider = id.clone();
                 s.config.insert("active_provider".into(), id);
-                let cfg: Json = serde_json::to_value(&s.config).unwrap_or(obj([]).0);
+                let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
                 let _ = write_json(&s.dir.join("config.json"), &cfg);
                 obj([])
             },
@@ -340,16 +340,16 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
             |s| {
                 let m: serde_json::Map<String, serde_json::Value> =
                     s.config.iter().map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone()))).collect();
-                obj([("values", Json(serde_json::Value::Object(m)))])
+                obj([("values", serde_json::Value::Object(m))])
             },
             obj([("values", obj([]))]),
         )),
         "store.set_config" => Some(with(
             |s| {
-                let k = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let v = p.0.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let k = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let v = p.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 s.config.insert(k, v);
-                let cfg: Json = serde_json::to_value(&s.config).unwrap_or(obj([]).0);
+                let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
                 let _ = write_json(&s.dir.join("config.json"), &cfg);
                 obj([])
             },
@@ -359,7 +359,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         // ---- 历史 ----
         "history.load" => Some(with(
             |s| {
-                let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let msgs = read_json(&history_file(&s.dir, key))
                     .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
@@ -369,18 +369,18 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         )),
         "history.append" => Some(with(
             |s| {
-                let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let role = p.0.get("role").and_then(|v| v.as_str()).unwrap_or("user");
-                let content = p.0.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let role = p.get("role").and_then(|v| v.as_str()).unwrap_or("user");
+                let content = p.get("content").and_then(|v| v.as_str()).unwrap_or("");
                 let mut msgs = read_json(&history_file(&s.dir, &key))
                     .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
                 msgs.push(obj([
-                    ("id", Json(serde_json::Value::Number(serde_json::Number::from(
+                    ("id", serde_json::Value::Number(serde_json::Number::from(
                         SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64)))),
                     ("role", s(role)),
                     ("content", s(content)),
-                    ("ts", Json(serde_json::Value::Number(
+                    ("ts", serde_json::Value::Number(
                         serde_json::Number::from_f64(now_ts()).unwrap_or(serde_json::Number::from(0))))),
                 ]));
                 // 上限 300 条，超出丢最旧
@@ -389,31 +389,31 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
                     msgs.drain(0..extra);
                 }
                 let count = msgs.len();
-                let _ = write_json(&history_file(&s.dir, &key), &Json(arr(msgs)));
-                obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(count))))])
+                let _ = write_json(&history_file(&s.dir, &key), &arr(msgs));
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(count)))])
             },
-            obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(0))))]),
+            obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
         "history.clear" => Some(with(
             |s| {
-                let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let f = history_file(&s.dir, key);
                 let n = read_json(&f).and_then(|j| j.as_array().cloned()).map(|a| a.len()).unwrap_or(0);
                 let _ = fs::remove_file(&f);
-                obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(n))))])
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(n))))])
             },
-            obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(0))))]),
+            obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
         "history.count" => Some(with(
             |s| {
-                let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let n = read_json(&history_file(&s.dir, key))
                     .and_then(|j| j.as_array().cloned())
                     .map(|a| a.len())
                     .unwrap_or(0);
-                obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(n))))])
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(n))))])
             },
-            obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(0))))]),
+            obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
 
         _ => None,
@@ -421,7 +421,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
 }
 
 /// 内置智能体模板（对齐 AgentTemplates.swift）
-fn default_agents() -> Vec<Json> {
+fn default_agents() -> Vec<Value> {
     vec![
         obj([
             ("id", s(&new_id())),
@@ -433,8 +433,8 @@ fn default_agents() -> Vec<Json> {
             ("voice_engine", s("cloud_sf")),
             ("voice_id", s("female-yujie")),
             ("model_id", s("")),
-            ("sort", Json(serde_json::Value::Number(serde_json::Number::from(1)))),
-            ("enabled", Json(serde_json::Value::Bool(true))),
+            ("sort", serde_json::Value::Number(serde_json::Number::from(1))),
+            ("enabled", serde_json::Value::Bool(true)),
         ]),
         obj([
             ("id", s(&new_id())),
@@ -446,8 +446,8 @@ fn default_agents() -> Vec<Json> {
             ("voice_engine", s("cloud_sf")),
             ("voice_id", s("male-qn-qingse")),
             ("model_id", s("")),
-            ("sort", Json(serde_json::Value::Number(serde_json::Number::from(2)))),
-            ("enabled", Json(serde_json::Value::Bool(true))),
+            ("sort", serde_json::Value::Number(serde_json::Number::from(2))),
+            ("enabled", serde_json::Value::Bool(true)),
         ]),
         obj([
             ("id", s(&new_id())),
@@ -459,8 +459,8 @@ fn default_agents() -> Vec<Json> {
             ("voice_engine", s("cloud_sf")),
             ("voice_id", s("female-shaonv")),
             ("model_id", s("")),
-            ("sort", Json(serde_json::Value::Number(serde_json::Number::from(3)))),
-            ("enabled", Json(serde_json::Value::Bool(true))),
+            ("sort", serde_json::Value::Number(serde_json::Number::from(3))),
+            ("enabled", serde_json::Value::Bool(true)),
         ]),
         obj([
             ("id", s(&new_id())),
@@ -472,8 +472,8 @@ fn default_agents() -> Vec<Json> {
             ("voice_engine", s("cloud_sf")),
             ("voice_id", s("female-chengshu")),
             ("model_id", s("")),
-            ("sort", Json(serde_json::Value::Number(serde_json::Number::from(4)))),
-            ("enabled", Json(serde_json::Value::Bool(true))),
+            ("sort", serde_json::Value::Number(serde_json::Number::from(4))),
+            ("enabled", serde_json::Value::Bool(true)),
         ]),
     ]
 }

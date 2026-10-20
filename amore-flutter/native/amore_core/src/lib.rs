@@ -23,7 +23,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use serde_json::Value;
 
-use jsonv::{obj, s, Json};
+use jsonv::{obj, s};
 
 fn ok(data: Value) -> String {
     serde_json::json!({ "ok": true, "data": data }).to_string()
@@ -38,10 +38,10 @@ fn dispatch(method: &str, payload: &str) -> String {
         Ok(v) => v,
         Err(e) => return err("bad_payload", &format!("payload 不是合法 JSON: {e}")),
     };
-    let p = Json(parsed);
+    let p = parsed;
 
     let out = match method {
-        "core.ping" => Some(obj([("pong", Value::Bool(true)), ("echo", p.0.clone())])),
+        "core.ping" => Some(obj([("pong", Value::Bool(true)), ("echo", p.clone())])),
         "core.version" => Some(obj([
             ("name", s("AmoreCore")),
             ("version", s(env!("CARGO_PKG_VERSION"))),
@@ -59,7 +59,7 @@ fn dispatch(method: &str, payload: &str) -> String {
             ("milestone", s("M1-storage")),
         ])),
         "core.init" => {
-            let dir = p.0.get("data_dir").and_then(|v| v.as_str()).unwrap_or("");
+            let dir = p.get("data_dir").and_then(|v| v.as_str()).unwrap_or("");
             if dir.is_empty() {
                 return err("bad_args", "data_dir 为空");
             }

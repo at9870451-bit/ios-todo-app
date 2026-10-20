@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 use serde_json::Value;
 
-use crate::jsonv::{arr, obj, s, Json};
+use crate::jsonv::{arr, obj, s};
 
 fn memory_re() -> &'static Regex {
     static R: OnceLock<Regex> = OnceLock::new();
@@ -25,7 +25,7 @@ fn gender_text(g: &str) -> &'static str {
     }
 }
 
-pub fn build_system_prompt(friend: &Json) -> String {
+pub fn build_system_prompt(friend: &Value) -> String {
     let name = friend.0.get("name").and_then(|v| v.as_str()).unwrap_or("Amore");
     let persona = friend.0.get("persona").and_then(|v| v.as_str()).unwrap_or("");
     let gender = friend.0.get("gender").and_then(|v| v.as_str()).unwrap_or("");
@@ -70,15 +70,15 @@ pub fn build_system_prompt(friend: &Json) -> String {
     parts.join("\n\n")
 }
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
+pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
     match method {
         "chat.build_system_prompt" => {
-            let friend = p.0.get("friend").cloned().unwrap_or_default();
-            Some(obj([("prompt", s(&build_system_prompt(&Json(friend))))]))
+            let friend = p.get("friend").cloned().unwrap_or_default();
+            Some(obj([("prompt", s(&build_system_prompt(&friend)))]))
         }
 
         "chat.extract_memory" => {
-            let text = p.0.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            let text = p.get("text").and_then(|v| v.as_str()).unwrap_or("");
             let memories: Vec<Value> = memory_re()
                 .captures_iter(text)
                 .map(|c| s(c.get(1).map(|m| m.as_str().trim()).unwrap_or("")))
@@ -88,7 +88,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         }
 
         "chat.strip_memory" => {
-            let text = p.0.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            let text = p.get("text").and_then(|v| v.as_str()).unwrap_or("");
             let stripped = memory_re().replace_all(text, "").to_string();
             Some(obj([("text", s(stripped.trim()))]))
         }

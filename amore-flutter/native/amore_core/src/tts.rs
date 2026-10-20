@@ -2,16 +2,16 @@
 /// 纯组装不发请求；HTTP 由 Dart 侧执行。
 use serde_json::Value;
 
-use crate::jsonv::{get_str, obj, s, Json};
+use crate::jsonv::{get_str, obj, s};
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
+pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
     if method != "tts.request" {
         return None;
     }
-    let engine = get_str(&p.0, "engine");
-    let voice_id = get_str(&p.0, "voice_id");
-    let api_key = get_str(&p.0, "api_key");
-    let text = get_str(&p.0, "text");
+    let engine = get_str(p, "engine");
+    let voice_id = get_str(p, "voice_id");
+    let api_key = get_str(p, "api_key");
+    let text = get_str(p, "text");
 
     match engine {
         // 硅基流动（SiliconFlow）TTS

@@ -6,7 +6,7 @@ use regex::Regex;
 
 use serde_json::Value;
 
-use crate::jsonv::{arr, obj, s, Json};
+use crate::jsonv::{arr, obj, s};
 use crate::store;
 
 pub fn guide_text() -> &'static str {
@@ -94,17 +94,17 @@ fn result_xml(name: &str, status: &str, content: &str) -> String {
     format!("<{tag} name=\"{name}\" status=\"{status}\">\n{content}\n</{tag}>")
 }
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
+pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
     match method {
         "chat.tools_guide" => Some(obj([("guide", s(guide_text()))])),
 
         "chat.parse_assistant" => {
-            let text = p.0.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            let text = p.get("text").and_then(|v| v.as_str()).unwrap_or("");
             let calls = parse_calls(text);
             if calls.is_empty() {
                 return Some(obj([
                     ("clean", s(text.trim())),
-                    ("feedback", Json(serde_json::Value::Null)),
+                    ("feedback", serde_json::Value::Null),
                     ("called", arr(vec![])),
                 ]));
             }
@@ -126,7 +126,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
                     .collect();
                 called.push(obj([
                     ("name", s(&c.name)),
-                    ("params", Json(serde_json::Value::Object(params))),
+                    ("params", serde_json::Value::Object(params)),
                 ]));
                 let (status, content) = exec(c.name, &c.params.iter().cloned().collect());
                 if !feedback.is_empty() {
@@ -142,9 +142,9 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
         }
 
         "chat.exec_tool" => {
-            let name = p.0.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("");
             let mut params: Vec<(String, String)> = Vec::new();
-            if let Some(m) = p.0.get("params").and_then(|v| v.as_object()) {
+            if let Some(m) = p.get("params").and_then(|v| v.as_object()) {
                 for (k, v) in m {
                     params.push((k.clone(), v.as_str().unwrap_or("").to_string()));
                 }
