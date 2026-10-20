@@ -13,7 +13,7 @@ Pod::Spec.new do |s|
   s.source_files       = 'amore_core.h'
   s.public_header_files = 'amore_core.h'
 
-  s.platform         = :ios, '13.0'
+  s.platform         = :ios, '15.0'
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
 
   # 关键：-force_load 把静态库全部符号拉进 Runner 二进制。

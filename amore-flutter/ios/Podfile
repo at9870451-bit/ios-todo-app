@@ -3,7 +3,7 @@
 # 本文件预置在仓库中 —— CI 里 `flutter create .` 不会覆盖已存在的文件。
 
 # Uncomment this line to define a global platform for your project
-platform :ios, '13.0'
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
