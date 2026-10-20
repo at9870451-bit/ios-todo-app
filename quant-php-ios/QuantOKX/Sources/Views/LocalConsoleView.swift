@@ -290,7 +290,7 @@ struct LocalConsoleView: View {
         let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow?.rootViewController }
             .first?.present(av, animated: true)
-        return "已生成导出文件（\(ByteCountFormatter.string(fromByteCount: data.count, countStyle: .file))），请在分享面板保存。"
+        return "已生成导出文件（\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))），请在分享面板保存。"
     }
 }
 
