@@ -44,8 +44,9 @@ fn dispatch(method: &str, payload: &str) -> String {
         })),
 
         "core.sysinfo" => ok(json!({
-            "serde_json": serde_json::VERSION,
-            "targets": ["aarch64-apple-ios", "aarch64-apple-darwin"],
+            "api_version": 1,
+            "build_mode": "release",
+            "runtime_targets": ["aarch64-apple-ios", "aarch64-apple-darwin"],
             "milestone": "M0-skeleton",
         })),
 

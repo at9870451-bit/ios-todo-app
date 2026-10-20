@@ -137,7 +137,7 @@ class _BootstrapPageState extends State<BootstrapPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _kv('宿主', hostPlatformLabel()),
-                          _kv('serde_json', 'v${_sysinfo!['serde_json']}'),
+                          _kv('构建模式', '${_sysinfo!['build_mode']}'),
                           _kv('里程碑', '${_sysinfo!['milestone']}'),
                         ],
                       ),
