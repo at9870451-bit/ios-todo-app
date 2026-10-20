@@ -1446,6 +1446,7 @@ struct ChatRoomView: View {
         parts.append("""
         【说话分寸】先给结论再给细节；少提问（一轮最多一个问题）；不要重复确认已经说清的事；不要说"作为AI""根据记忆"这类技术词；能一句话说清就不要三句。
         """)
+        parts.append(ChatTools.guide)
         parts.append("【人设提醒】记住你是谁——上面的人设始终有效、每轮都要严格遵守，每条回复都要让人一眼认得出这个人的性格、口吻与自称。另：语音内容永远用中文说（除非用户明确要求外语），此条优先于人设。")
         return parts.joined(separator: "\n\n")
     }
@@ -1679,9 +1680,20 @@ struct ChatRoomView: View {
             sending = true
             do {
                 let prior = Array(messages.dropLast())
-                let payload = historyPayload(prior: prior, lastUser: content + personaSuffix())
-                let replyText = try await store.oneshot(messages: payload, systemPrompt: roomSystemPrompt + burstDiceHint(), reasoning: reasoning)
-                await appendAssistant(replyText)
+                var payload = historyPayload(prior: prior, lastUser: content + personaSuffix())
+                let sys = roomSystemPrompt + burstDiceHint()
+                var replyText = try await store.oneshot(messages: payload, systemPrompt: sys, reasoning: reasoning)
+                // Operit 式工具循环：模型可 <tool> 调用本机工具，结果回注（最多 3 轮）
+                var loops = 0
+                while loops < 3 {
+                    let rt = ChatTools.roundtrip(replyText)
+                    guard let feedback = rt.feedback else { break }
+                    if !rt.clean.isEmpty { await appendAssistant("🔧 调用工具：\(rt.called.joined(separator: "、"))") }
+                    payload.append(["role": "user", "content": feedback])
+                    replyText = try await store.oneshot(messages: payload, systemPrompt: sys, reasoning: reasoning)
+                    loops += 1
+                }
+                await appendAssistant(ChatTools.stripMarkup(replyText))
             } catch {
                 messages.append(ChatMessage(id: msgId + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }

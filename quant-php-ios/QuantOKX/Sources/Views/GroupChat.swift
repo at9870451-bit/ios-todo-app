@@ -317,14 +317,11 @@ struct GroupChatView: View {
     }
 
     /// 选择本轮回复的成员：@名字 指定；否则多位随机（最多 3 位）
-    private func pickResponders(_ text: String) -> [ChatFriend] {
-        guard !members.isEmpty else { return [] }
-        let mentioned = members.filter { text.contains("@" + $0.name) }
-        if !mentioned.isEmpty { return Array(mentioned.prefix(4)) }
-        // 3 人以内：全员同时回复；更多人时随机 3 位
-        if members.count <= 3 { return members }
+        private func pickResponders(_ text: String) -> [ChatFriend] {
+        // 单响应者：随机一位（避开上一位）
+        if members.count <= 1 { return members }
         let pool = members.filter { $0.id != lastSpeaker }
-        return Array(pool.shuffled().prefix(3))
+        return [(pool.isEmpty ? members : pool).randomElement()!]
     }
 
     private func send() {
@@ -352,11 +349,24 @@ struct GroupChatView: View {
                 for r in responders {
                     tg.addTask { [groupPromptByFriend, payload] in
                         do {
-                            let reply = try await store.oneshot(
+                            var reply = try await store.oneshot(
                                 messages: payload,
                                 systemPrompt: groupPromptByFriend[r.id] ?? ""
                             )
-                            return (r.id, reply, nil)
+                            // Operit 式工具循环（本地执行，最多 3 轮）
+                            var loops = 0
+                            while loops < 3 {
+                                let rt = ChatTools.roundtrip(reply)
+                                guard let feedback = rt.feedback else { break }
+                                var next = payload
+                                next.append(["role": "user", "content": feedback])
+                                reply = try await store.oneshot(
+                                    messages: next,
+                                    systemPrompt: groupPromptByFriend[r.id] ?? ""
+                                )
+                                loops += 1
+                            }
+                            return (r.id, ChatTools.stripMarkup(reply), nil)
                         } catch {
                             return (r.id, "", nil)
                         }
@@ -530,6 +540,7 @@ struct GroupChatView: View {
         先给一句结论，再说一句提醒。可以用一个 emoji。不要提牌阵、不要列条目、不要重复用户原话。
         语音消息一律用中文。
         """)
+        p.append(ChatTools.guide)
         return p.joined(separator: "\n\n")
     }
 

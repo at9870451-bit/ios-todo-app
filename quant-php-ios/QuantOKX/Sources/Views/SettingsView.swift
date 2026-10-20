@@ -42,11 +42,6 @@ struct VoiceSettingsCard: View {
             }
 
             rowDivider
-            settingLink(icon: "workflow", title: "工作流", subtitle: "Codex 式拆解执行 · 本机编排") {
-                WorkflowView()
-            }
-
-            rowDivider
             settingLink(icon: "terminal", title: "本地终端", subtitle: "离线管理本机数据与记录") {
                 LocalConsoleView()
             }

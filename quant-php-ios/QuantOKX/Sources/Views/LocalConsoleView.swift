@@ -293,19 +293,3 @@ struct LocalConsoleView: View {
         return "已生成导出文件（\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))），请在分享面板保存。"
     }
 }
-
-private extension FileManager {
-    func allocatedSizeOfDirectory(at url: URL) throws -> UInt64 {
-        var size: UInt64 = 0
-        let en = try contentsOfDirectory(at: url, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey])
-        for f in en {
-            let vals = try f.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
-            if vals.isDirectory == true {
-                size += (try? allocatedSizeOfDirectory(at: f)) ?? 0
-            } else {
-                size += UInt64(vals.fileSize ?? 0)
-            }
-        }
-        return size
-    }
-}
