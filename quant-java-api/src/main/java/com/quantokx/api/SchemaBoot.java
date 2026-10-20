@@ -161,6 +161,22 @@ public final class SchemaBoot {
             "remark VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+        "CREATE TABLE IF NOT EXISTS agents(" +
+            "id BIGINT PRIMARY KEY AUTO_INCREMENT," +
+            "name VARCHAR(64) NOT NULL," +
+            "description VARCHAR(255) DEFAULT ''," +
+            "persona TEXT," +
+            "gender VARCHAR(10) DEFAULT ''," +
+            "age VARCHAR(6) DEFAULT ''," +
+            "voice_engine VARCHAR(32) DEFAULT ''," +
+            "voice_id VARCHAR(64) DEFAULT ''," +
+            "model_hint VARCHAR(128) DEFAULT ''," +
+            "sort INT DEFAULT 0," +
+            "status INT DEFAULT 1," +
+            "created_at DATETIME DEFAULT CURRENT_TIMESTAMP," +
+            "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+
         "CREATE TABLE IF NOT EXISTS sys_admin(" +
             "id BIGINT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(64) NOT NULL UNIQUE, password_hash VARCHAR(128) NOT NULL," +
             "nickname VARCHAR(64), role_id BIGINT NOT NULL DEFAULT 2, status TINYINT NOT NULL DEFAULT 1," +
