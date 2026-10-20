@@ -787,6 +787,13 @@ struct ChatRoomView: View {
     // AI 定时主动消息
     @AppStorage("ai.proactiveOn") private var proactiveOn = false
     @AppStorage("ai.proactiveMinutes") private var proactiveMinutes = 30
+    // 打扰分寸（Orbit butler-core 移植）：夜间静默 + 每日预算
+    @AppStorage("ai.proactiveQuiet") private var proactiveQuiet = true
+    @AppStorage("ai.proactiveQuietStart") private var quietStart = 23
+    @AppStorage("ai.proactiveQuietEnd") private var quietEnd = 8
+    @AppStorage("ai.proactiveDailyLimit") private var dailyLimit = 20
+    @AppStorage("ai.proactiveSentDate") private var sentDate = ""
+    @AppStorage("ai.proactiveSentCount") private var sentCount = 0
     @State private var lastActivity = Date()
     @State private var proactiveBusy = false
     /// 本轮节奏骰子结果：true=最多两条 / false=只发一条（每轮掷一次，提示词与合并逻辑共用）
@@ -960,6 +967,28 @@ struct ChatRoomView: View {
                                         }
                                     }
                                 }
+                                Divider()
+                                Button {
+                                    proactiveQuiet.toggle()
+                                } label: {
+                                    Label(proactiveQuiet ? "夜间免打扰 23:00–08:00：开" : "夜间免打扰：关",
+                                          systemImage: proactiveQuiet ? "moon.zzz.fill" : "moon.zzz")
+                                }
+                                Menu {
+                                    ForEach([10, 20, 50, 0], id: \.self) { n in
+                                        Button {
+                                            dailyLimit = n
+                                        } label: {
+                                            if dailyLimit == n {
+                                                Label(n == 0 ? "不限" : "每天最多 \(n) 条", systemImage: "checkmark")
+                                            } else {
+                                                Text(n == 0 ? "不限" : "每天最多 \(n) 条")
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Label("每日上限：\(dailyLimit == 0 ? "不限" : "\(dailyLimit) 条")", systemImage: "gauge.with.needle")
+                                }
                             }
                         } label: {
                             Image(systemName: proactiveOn ? "bell.badge.fill" : "bell")
@@ -1030,6 +1059,15 @@ struct ChatRoomView: View {
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { _ in
                 guard config.loggedIn, proactiveOn, !proactiveBusy, !sending, !recording else { return }
                 guard Date().timeIntervalSince(lastActivity) >= Double(proactiveMinutes) * 60 else { return }
+                // 夜间静默（Orbit：心跳默认静默）
+                if proactiveQuiet {
+                    let h = Calendar.current.component(.hour, from: Date())
+                    if quietStart > quietEnd ? (h >= quietStart || h < quietEnd) : (h >= quietStart && h < quietEnd) { return }
+                }
+                // 每日预算
+                let today = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
+                if sentDate != today { sentDate = today; sentCount = 0 }
+                if dailyLimit > 0, sentCount >= dailyLimit { return }
                 proactivePing()
             }
     }
@@ -1047,6 +1085,7 @@ struct ChatRoomView: View {
     /// AI 主动发一条消息（右上角可配置频率）
     private func proactivePing() {
         proactiveBusy = true
+        sentCount += 1
         lastActivity = Date()
         sending = true
         rollTurnRhythm()
@@ -1395,6 +1434,18 @@ struct ChatRoomView: View {
         【语音语言·铁律】语音消息里的内容必须写中文汉字——即使用户用日语、英语跟你说话，你的语音也用中文说（除非用户明确要求"用日语说""用英语说"之类）。绝不允许把日语假名、韩文、英文句子放进 [语音:内容] 里；违反即视为严重错误。
         【用户语音】用户发来 [语音:Ns] 转写文字 时，那是他发的语音消息，「转写文字」就是他说的内容，请自然回应内容本身。
         """)
+        // 长期记忆（Orbit memory-policy 移植）
+        if let f = fr, !f.memory.isEmpty {
+            let lines = f.memory.suffix(30).enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+            parts.append("""
+            【长期记忆·关于用户】以下是你在过往相处中记住的关于用户的事实与偏好，聊天时自然运用（不要逐条复述、不要说"根据我的记忆"）：
+            \(lines)
+            【记忆规则】当用户明确让你记住、或出现长期有用的新信息（称呼/职业/城市/生日/纪念日/喜好/约定/讨厌的东西）时，可以在回复末尾单独加一条 [记忆:一句话陈述]。禁止记录：密码、验证码、身份证件号、银行卡号、API Key 等机密（用户要求记也礼貌拒绝）。健康/财务只在用户明确要求时记。一次最多一条；不确定的偏好先别记。
+            """)
+        }
+        parts.append("""
+        【说话分寸】先给结论再给细节；少提问（一轮最多一个问题）；不要重复确认已经说清的事；不要说"作为AI""根据记忆"这类技术词；能一句话说清就不要三句。
+        """)
         parts.append("【人设提醒】记住你是谁——上面的人设始终有效、每轮都要严格遵守，每条回复都要让人一眼认得出这个人的性格、口吻与自称。另：语音内容永远用中文说（除非用户明确要求外语），此条优先于人设。")
         return parts.joined(separator: "\n\n")
     }
@@ -1523,7 +1574,13 @@ struct ChatRoomView: View {
     /// 节奏硬控制：80% 只发一条 / 20% 最多两条——多余的行合并进气泡，杜绝"连发三条"
     @MainActor
     private func appendAssistant(_ text: String) async {
-        var parts = RedPacketParser.splitBurst(text)
+        // 长期记忆：抽取 [记忆:...] 存入好友档案，不显示为气泡
+        if !friendId.isEmpty, let r = text.firstMatch(of: /\[记忆[:：]\s*([^\]]{2,60})\]/) {
+            let fact = String(r.1).trimmingCharacters(in: .whitespaces)
+            friendStore.update(friendId) { $0.memory = ($0.memory + [fact]).suffix(50) }
+        }
+        let cleaned = text.replacingOccurrences(of: "\\s*\\[记忆[:：]\\s*[^\\]]*\\]", with: "", options: [.regularExpression])
+        var parts = RedPacketParser.splitBurst(cleaned)
         guard !parts.isEmpty else { return }
         let allowed = turnAllowsTwo ? 2 : 1
         if parts.count > allowed {
@@ -1680,6 +1737,8 @@ struct BubbleRow: View {
         case .text(let t):
             if let mark = CardMark.parse(t) {
                 CardBubble(mark: mark)
+            } else if LinkDetect.isMostlyLink(t), let u = LinkDetect.firstURL(in: t) {
+                LinkPreviewCard(url: u)
             } else {
             Text(t)
                 .font(.system(size: 16.5))

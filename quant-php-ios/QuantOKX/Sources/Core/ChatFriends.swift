@@ -18,6 +18,34 @@ struct ChatFriend: Codable, Identifiable, Equatable {
     var voiceId: String = ""          // 该引擎下的音色
     var ttsKey: String = ""           // 专属 API Key（硅基流动 / 豆包）
     var aiProviderId: String = ""     // 该好友使用的 AI 模型（ProviderStore id，空=跟随全局）
+    // 长期记忆（Orbit memory-policy 移植）：AI 记住的关于用户的事实/偏好/日期
+    var memory: [String] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, avatarFile, persona, gender, age, sessionId, sort
+        case lastMessage, lastAt, voiceEngine, voiceId, ttsKey, aiProviderId, memory
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? "Amore"
+        avatarFile = try c.decodeIfPresent(String.self, forKey: .avatarFile) ?? ""
+        persona = try c.decodeIfPresent(String.self, forKey: .persona) ?? ""
+        gender = try c.decodeIfPresent(String.self, forKey: .gender) ?? ""
+        age = try c.decodeIfPresent(String.self, forKey: .age) ?? ""
+        sessionId = try c.decodeIfPresent(String.self, forKey: .sessionId) ?? ""
+        sort = try c.decodeIfPresent(Int.self, forKey: .sort) ?? 0
+        lastMessage = try c.decodeIfPresent(String.self, forKey: .lastMessage) ?? ""
+        lastAt = try c.decodeIfPresent(Double.self, forKey: .lastAt) ?? 0
+        voiceEngine = try c.decodeIfPresent(String.self, forKey: .voiceEngine) ?? ""
+        voiceId = try c.decodeIfPresent(String.self, forKey: .voiceId) ?? ""
+        ttsKey = try c.decodeIfPresent(String.self, forKey: .ttsKey) ?? ""
+        aiProviderId = try c.decodeIfPresent(String.self, forKey: .aiProviderId) ?? ""
+        memory = try c.decodeIfPresent([String].self, forKey: .memory) ?? []
+    }
 
     /// 好友头像（Documents 内图片）
     func avatarImage() -> UIImage? {

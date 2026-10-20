@@ -422,6 +422,8 @@ struct GroupChatView: View {
                              symbol: c.symbol,
                              tint: toneColor(c.tone))
             }
+        } else if LinkDetect.isMostlyLink(text), let u = LinkDetect.firstURL(in: text) {
+            LinkPreviewCard(url: u)
         } else {
             let segs = RedPacketParser.parse(text)
             let hasVoice = segs.contains { if case .voice = $0 { return true }; return false }

@@ -192,6 +192,8 @@ struct FriendEditSheet: View {
 
     @State private var name = ""
     @State private var persona = ""
+    @State private var memory: [String] = []
+    @State private var newMemory = ""
     @State private var gender = ""
     @State private var age = ""
     @State private var voiceEngine = ""
@@ -230,6 +232,39 @@ struct FriendEditSheet: View {
                     Text("人设提示词")
                 } footer: {
                     Text("这个好友的身份、性格、说话方式。仅对当前好友生效。")
+                }
+
+                Section {
+                    ForEach(Array(memory.enumerated()), id: \.offset) { idx, item in
+                        HStack {
+                            Text(item).font(.subheadline)
+                            Spacer()
+                            Button {
+                                memory.remove(at: idx)
+                            } label: {
+                                Image(systemName: "trash")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.danger)
+                            }
+                        }
+                    }
+                    HStack {
+                        TextField("如：不吃香菜；生日 8 月 15 日", text: $newMemory)
+                            .font(.subheadline)
+                        Button {
+                            let t = newMemory.trimmingCharacters(in: .whitespaces)
+                            guard !t.isEmpty else { return }
+                            memory.append(t)
+                            newMemory = ""
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundStyle(Theme.accent)
+                        }
+                    }
+                } header: {
+                    Text("TA 记住的关于我的事")
+                } footer: {
+                    Text("聊天时会自动带给你这个好友；TA 也会在聊天中自己记下重要的事（生日、喜好、约定）。密码、证件号、银行卡号不会被记录。")
                 }
 
                 Section {
@@ -294,7 +329,7 @@ struct FriendEditSheet: View {
         guard !loaded else { return }
         loaded = true
         if let id = friendId, let f = fs.friend(id) {
-            name = f.name; persona = f.persona; gender = f.gender; age = f.age
+            name = f.name; persona = f.persona; gender = f.gender; age = f.age; memory = f.memory
             voiceEngine = f.voiceEngine; voiceId = f.voiceId; ttsKey = f.ttsKey; aiProviderId = f.aiProviderId
         } else if let d = draft {
             name = d.name
@@ -313,7 +348,7 @@ struct FriendEditSheet: View {
     private func save() {
         if let id = friendId {
             fs.update(id) { f in
-                f.name = name; f.persona = persona; f.gender = gender; f.age = age
+                f.name = name; f.persona = persona; f.gender = gender; f.age = age; f.memory = memory
                 f.voiceEngine = voiceEngine; f.voiceId = voiceId; f.ttsKey = ttsKey; f.aiProviderId = aiProviderId
                 if FileManager.default.fileExists(atPath: avatarPath(id)) { f.avatarFile = "friend-\(id).jpg" }
             }
