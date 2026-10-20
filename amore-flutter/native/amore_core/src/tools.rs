@@ -174,10 +174,10 @@ pub fn exec(name: &str, params: &Params) -> (String, String) {
             let lines: Vec<String> = friends
                 .iter()
                 .map(|fr| {
-                    let gender = fr.0.get("gender").and_then(|v| v.as_str()).unwrap_or("");
+                    let gender = fr.get("gender").and_then(|v| v.as_str()).unwrap_or("");
                     let g = match gender { "male" => "男", "female" => "女", _ => "保密" };
-                    let age = fr.0.get("age").and_then(|v| v.as_str()).unwrap_or("");
-                    let name = fr.0.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                    let age = fr.get("age").and_then(|v| v.as_str()).unwrap_or("");
+                    let name = fr.get("name").and_then(|v| v.as_str()).unwrap_or("");
                     if age.is_empty() { format!("{name}｜{g}") } else { format!("{name}｜{g} {age}岁") }
                 })
                 .collect();
@@ -186,16 +186,16 @@ pub fn exec(name: &str, params: &Params) -> (String, String) {
         "list_chats" => {
             let mut out: Vec<String> = Vec::new();
             for fr in store::friends_list() {
-                let id = fr.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                let name = fr.0.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let id = fr.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let name = fr.get("name").and_then(|v| v.as_str()).unwrap_or("");
                 let n = store::count_history(&format!("friend.{id}"));
                 if n > 0 {
                     out.push(format!("好友·{name}：{n} 条"));
                 }
             }
             for g in store::groups_list() {
-                let id = g.0.get("id").and_then(|v| v.as_str()).unwrap_or("");
-                let name = g.0.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                let id = g.get("id").and_then(|v| v.as_str()).unwrap_or("");
+                let name = g.get("name").and_then(|v| v.as_str()).unwrap_or("");
                 let n = store::count_history(&format!("group.{id}"));
                 if n > 0 {
                     out.push(format!("群·{name}：{n} 条"));

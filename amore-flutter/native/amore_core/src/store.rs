@@ -96,7 +96,7 @@ pub fn init(data_dir: &str) {
 fn with<R>(f: impl FnOnce(&Store) -> R, fallback: R) -> R {
     let guard = STORE.lock().unwrap();
     match guard.as_ref() {
-        Some(s) => f(s),
+        Some(s2) => f(s2),
         None => fallback,
     }
 }
@@ -105,7 +105,7 @@ fn with<R>(f: impl FnOnce(&Store) -> R, fallback: R) -> R {
 fn with_mut<R>(f: impl FnOnce(&mut Store) -> R, fallback: R) -> R {
     let mut guard = STORE.lock().unwrap();
     match guard.as_mut() {
-        Some(s) => f(s),
+        Some(s2) => f(s2),
         None => fallback,
     }
 }
@@ -151,15 +151,15 @@ fn by_sort(a: &Value, b: &Value) -> std::cmp::Ordering {
 // ---------- 给其它模块的公开访问器 ----------
 
 pub fn friends_list() -> Vec<Value> {
-    with(|s| load_array(&s.dir, "friends.json"), vec![])
+    with(|st| load_array(&st.dir, "friends.json"), vec![])
 }
 
 pub fn groups_list() -> Vec<Value> {
-    with(|s| load_array(&s.dir, "groups.json"), vec![])
+    with(|st| load_array(&st.dir, "groups.json"), vec![])
 }
 
 pub fn data_size() -> u64 {
-    with(|s| dir_size(&s.dir), 0)
+    with(|st| dir_size(&st.dir), 0)
 }
 
 fn dir_size(path: &Path) -> u64 {
@@ -180,8 +180,8 @@ fn dir_size(path: &Path) -> u64 {
 
 pub fn count_history(key: &str) -> usize {
     with(
-        |s| {
-            read_json(&history_file(&s.dir, key))
+        |st| {
+            read_json(&history_file(&st.dir, key))
                 .and_then(|j| j.as_array().cloned())
                 .map(|a| a.len())
                 .unwrap_or(0)
@@ -191,15 +191,15 @@ pub fn count_history(key: &str) -> usize {
 }
 
 pub fn config_value(key: &str) -> String {
-    with(|s| s.config.get(key).cloned().unwrap_or_default(), String::new())
+    with(|st| st.config.get(key).cloned().unwrap_or_default(), String::new())
 }
 
 pub fn set_config_value(key: &str, value: &str) {
     with_mut(
-        |s| {
-            s.config.insert(key.to_string(), value.to_string());
-            let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
-            let _ = write_json(&s.dir.join("config.json"), &cfg);
+        |st| {
+            st.config.insert(key.to_string(), value.to_string());
+            let cfg: Value = serde_json::to_value(&st.config).unwrap_or_default();
+            let _ = write_json(&st.dir.join("config.json"), &cfg);
         },
         (),
     );
@@ -210,67 +210,67 @@ pub fn set_config_value(key: &str, value: &str) {
 pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
     match method {
         "store.list_friends" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "friends.json");
+            |st| {
+                let mut items = load_array(&st.dir, "friends.json");
                 items.sort_by(by_sort);
                 obj([("friends", arr(items))])
             },
             obj([("friends", arr(vec![]))]),
         )),
         "store.save_friend" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "friends.json");
+            |st| {
+                let mut items = load_array(&st.dir, "friends.json");
                 upsert(&mut items, p.get("friend").cloned().unwrap_or(Value::Null));
-                save_array(&s.dir, "friends.json", &items);
+                save_array(&st.dir, "friends.json", &items);
                 obj([])
             },
             obj([]),
         )),
         "store.delete_friend" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "friends.json");
+            |st| {
+                let mut items = load_array(&st.dir, "friends.json");
                 let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
-                save_array(&s.dir, "friends.json", &items);
+                save_array(&st.dir, "friends.json", &items);
                 obj([])
             },
             obj([]),
         )),
 
         "store.list_groups" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "groups.json");
+            |st| {
+                let mut items = load_array(&st.dir, "groups.json");
                 items.sort_by(by_sort);
                 obj([("groups", arr(items))])
             },
             obj([("groups", arr(vec![]))]),
         )),
         "store.save_group" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "groups.json");
+            |st| {
+                let mut items = load_array(&st.dir, "groups.json");
                 upsert(&mut items, p.get("group").cloned().unwrap_or(Value::Null));
-                save_array(&s.dir, "groups.json", &items);
+                save_array(&st.dir, "groups.json", &items);
                 obj([])
             },
             obj([]),
         )),
         "store.delete_group" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "groups.json");
+            |st| {
+                let mut items = load_array(&st.dir, "groups.json");
                 let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
-                save_array(&s.dir, "groups.json", &items);
+                save_array(&st.dir, "groups.json", &items);
                 obj([])
             },
             obj([]),
         )),
 
         "store.list_agents" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "agents.json");
-                if items.is_empty() && !s.dir.join("agents.json").exists() {
+            |st| {
+                let mut items = load_array(&st.dir, "agents.json");
+                if items.is_empty() && !st.dir.join("agents.json").exists() {
                     items = default_agents();
-                    save_array(&s.dir, "agents.json", &items);
+                    save_array(&st.dir, "agents.json", &items);
                 }
                 items.sort_by(by_sort);
                 obj([("agents", arr(items))])
@@ -278,44 +278,44 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             obj([("agents", arr(vec![]))]),
         )),
         "store.save_agent" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "agents.json");
+            |st| {
+                let mut items = load_array(&st.dir, "agents.json");
                 upsert(&mut items, p.get("agent").cloned().unwrap_or(Value::Null));
-                save_array(&s.dir, "agents.json", &items);
+                save_array(&st.dir, "agents.json", &items);
                 obj([])
             },
             obj([]),
         )),
         "store.delete_agent" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "agents.json");
+            |st| {
+                let mut items = load_array(&st.dir, "agents.json");
                 let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
-                save_array(&s.dir, "agents.json", &items);
+                save_array(&st.dir, "agents.json", &items);
                 obj([])
             },
             obj([]),
         )),
 
         "store.list_providers" => Some(with(
-            |s| obj([("providers", arr(load_array(&s.dir, "providers.json")))]),
+            |st| obj([("providers", arr(load_array(&st.dir, "providers.json")))]),
             obj([("providers", arr(vec![]))]),
         )),
         "store.save_provider" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "providers.json");
+            |st| {
+                let mut items = load_array(&st.dir, "providers.json");
                 upsert(&mut items, p.get("provider").cloned().unwrap_or(Value::Null));
-                save_array(&s.dir, "providers.json", &items);
+                save_array(&st.dir, "providers.json", &items);
                 obj([])
             },
             obj([]),
         )),
         "store.delete_provider" => Some(with(
-            |s| {
-                let mut items = load_array(&s.dir, "providers.json");
+            |st| {
+                let mut items = load_array(&st.dir, "providers.json");
                 let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
                 remove_by_id(&mut items, id);
-                save_array(&s.dir, "providers.json", &items);
+                save_array(&st.dir, "providers.json", &items);
                 obj([])
             },
             obj([]),
@@ -325,32 +325,32 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             obj([("id", s(""))]),
         )),
         "store.set_active_provider" => Some(with_mut(
-            |s| {
+            |st| {
                 let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                s.active_provider = id.clone();
-                s.config.insert("active_provider".into(), id);
-                let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
-                let _ = write_json(&s.dir.join("config.json"), &cfg);
+                st.active_provider = id.clone();
+                st.config.insert("active_provider".into(), id);
+                let cfg: Value = serde_json::to_value(&st.config).unwrap_or_default();
+                let _ = write_json(&st.dir.join("config.json"), &cfg);
                 obj([])
             },
             obj([]),
         )),
 
         "store.get_all_config" => Some(with(
-            |s| {
+            |st| {
                 let m: serde_json::Map<String, serde_json::Value> =
-                    s.config.iter().map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone()))).collect();
+                    st.config.iter().map(|(k, v)| (k.clone(), serde_json::Value::String(v.clone()))).collect();
                 obj([("values", serde_json::Value::Object(m))])
             },
             obj([("values", obj([]))]),
         )),
         "store.set_config" => Some(with(
-            |s| {
+            |st| {
                 let k = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let v = p.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                s.config.insert(k, v);
-                let cfg: Value = serde_json::to_value(&s.config).unwrap_or_default();
-                let _ = write_json(&s.dir.join("config.json"), &cfg);
+                st.config.insert(k, v);
+                let cfg: Value = serde_json::to_value(&st.config).unwrap_or_default();
+                let _ = write_json(&st.dir.join("config.json"), &cfg);
                 obj([])
             },
             obj([]),
@@ -358,9 +358,9 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
 
         // ---- 历史 ----
         "history.load" => Some(with(
-            |s| {
+            |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
-                let msgs = read_json(&history_file(&s.dir, key))
+                let msgs = read_json(&history_file(&st.dir, key))
                     .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
                 obj([("messages", arr(msgs))])
@@ -368,11 +368,11 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             obj([("messages", arr(vec![]))]),
         )),
         "history.append" => Some(with(
-            |s| {
+            |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let role = p.get("role").and_then(|v| v.as_str()).unwrap_or("user");
                 let content = p.get("content").and_then(|v| v.as_str()).unwrap_or("");
-                let mut msgs = read_json(&history_file(&s.dir, &key))
+                let mut msgs = read_json(&history_file(&st.dir, &key))
                     .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
                 let now_id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
@@ -389,15 +389,15 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                     msgs.drain(0..extra);
                 }
                 let count = msgs.len();
-                let _ = write_json(&history_file(&s.dir, &key), &arr(msgs));
+                let _ = write_json(&history_file(&st.dir, &key), &arr(msgs));
                 obj([("count", serde_json::Value::Number(serde_json::Number::from(count)))])
             },
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
         "history.clear" => Some(with(
-            |s| {
+            |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
-                let f = history_file(&s.dir, key);
+                let f = history_file(&st.dir, key);
                 let n = read_json(&f).and_then(|j| j.as_array().cloned()).map(|a| a.len()).unwrap_or(0);
                 let _ = fs::remove_file(&f);
                 obj([("count", serde_json::Value::Number(serde_json::Number::from(n)))])
@@ -405,9 +405,9 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
         "history.count" => Some(with(
-            |s| {
+            |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
-                let n = read_json(&history_file(&s.dir, key))
+                let n = read_json(&history_file(&st.dir, key))
                     .and_then(|j| j.as_array().cloned())
                     .map(|a| a.len())
                     .unwrap_or(0);

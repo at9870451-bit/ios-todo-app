@@ -26,10 +26,10 @@ fn gender_text(g: &str) -> &'static str {
 }
 
 pub fn build_system_prompt(friend: &Value) -> String {
-    let name = friend.0.get("name").and_then(|v| v.as_str()).unwrap_or("Amore");
-    let persona = friend.0.get("persona").and_then(|v| v.as_str()).unwrap_or("");
-    let gender = friend.0.get("gender").and_then(|v| v.as_str()).unwrap_or("");
-    let age = friend.0.get("age").and_then(|v| v.as_str()).unwrap_or("");
+    let name = friend.get("name").and_then(|v| v.as_str()).unwrap_or("Amore");
+    let persona = friend.get("persona").and_then(|v| v.as_str()).unwrap_or("");
+    let gender = friend.get("gender").and_then(|v| v.as_str()).unwrap_or("");
+    let age = friend.get("age").and_then(|v| v.as_str()).unwrap_or("");
     let memory: Vec<String> = friend
         .0
         .get("memory")

@@ -33,8 +33,8 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                     ("input", s(text)),
                     ("voice", s(if voice_id.is_empty() { "speech:your-voice-uid" } else { voice_id })),
                     ("response_format", s("mp3")),
-                    ("sample_rate", Json(serde_json::Value::Number(serde_json::Number::from(32000)))),
-                    ("speed", Json(serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap()))),
+                    ("sample_rate", serde_json::Value::Number(serde_json::Number::from(32000))),
+                    ("speed", serde_json::Value::Number(serde_json::Number::from_f64(1.0).unwrap())),
                 ])),
             ]))
         }
