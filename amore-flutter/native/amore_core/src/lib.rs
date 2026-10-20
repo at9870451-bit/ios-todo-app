@@ -81,7 +81,7 @@ fn dispatch(method: &str, payload: &str) -> String {
         .or_else(|| tts::dispatch(method, &p));
 
     match module_result {
-        Some(data) => ok(data.0),
+        Some(data) => ok(data),
         None => err("unknown_method", &format!("未实现的方法: {method}")),
     }
 }

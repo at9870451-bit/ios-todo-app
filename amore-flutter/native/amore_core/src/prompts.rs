@@ -2,6 +2,8 @@
 use regex::Regex;
 use std::sync::OnceLock;
 
+use serde_json::Value;
+
 use crate::jsonv::{arr, obj, s, Json};
 
 fn memory_re() -> &'static Regex {
@@ -68,7 +70,7 @@ pub fn build_system_prompt(friend: &Json) -> String {
     parts.join("\n\n")
 }
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
+pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     match method {
         "chat.build_system_prompt" => {
             let friend = p.0.get("friend").cloned().unwrap_or(obj([]).0);

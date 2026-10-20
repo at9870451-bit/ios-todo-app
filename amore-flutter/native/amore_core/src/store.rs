@@ -4,6 +4,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use serde_json::Value;
+
 use crate::jsonv::{arr, obj, s, Json};
 
 /// 简易 id：时间戳36进制 + 随机尾巴
@@ -205,7 +207,7 @@ pub fn set_config_value(key: &str, value: &str) {
 
 // ---------- 分发 ----------
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
+pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     match method {
         "store.list_friends" => Some(with(
             |s| {

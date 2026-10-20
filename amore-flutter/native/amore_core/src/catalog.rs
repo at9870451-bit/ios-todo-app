@@ -1,8 +1,10 @@
 /// 厂商/模型目录：数据在 catalog_data.rs（由 tools/convert_catalog.py 生成）
+use serde_json::Value;
+
 use crate::jsonv::{arr, obj, s, Json};
 use crate::catalog_data::{MODEL_ROWS, VENDOR_ROWS};
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
+pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     match method {
         "catalog.vendors" => Some(obj([("vendors", arr(
             VENDOR_ROWS.iter().map(|v| obj([
@@ -17,7 +19,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
 
         "catalog.models" => {
             let vendor = p.0.get("vendor").and_then(|v| v.as_str()).unwrap_or("");
-            let mut models: Vec<Json> = Vec::new();
+            let mut models: Vec<Value> = Vec::new();
             for (k, list) in MODEL_ROWS {
                 if *k == vendor {
                     for m in *list {
@@ -31,7 +33,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
 
         "catalog.search" => {
             let q = p.0.get("q").and_then(|v| v.as_str()).unwrap_or("").to_lowercase();
-            let mut out: Vec<Json> = Vec::new();
+            let mut out: Vec<Value> = Vec::new();
             if !q.is_empty() {
                 for (vendor, list) in MODEL_ROWS {
                     for m in *list {

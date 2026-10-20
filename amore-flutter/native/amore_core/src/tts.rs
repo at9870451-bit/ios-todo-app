@@ -1,8 +1,10 @@
 /// TTS 请求组装（对齐 SiliconFlowTTS.swift / DoubaoTTS.swift / PersonaVoice.swift）
 /// 纯组装不发请求；HTTP 由 Dart 侧执行。
+use serde_json::Value;
+
 use crate::jsonv::{get_str, obj, s, Json};
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
+pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     if method != "tts.request" {
         return None;
     }

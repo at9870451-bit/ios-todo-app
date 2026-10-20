@@ -4,7 +4,9 @@ use std::sync::OnceLock;
 
 use regex::Regex;
 
-use crate::jsonv::{arr, f, n, obj, s, Json};
+use serde_json::Value;
+
+use crate::jsonv::{arr, obj, s, Json};
 use crate::store;
 
 pub fn guide_text() -> &'static str {
@@ -92,7 +94,7 @@ fn result_xml(name: &str, status: &str, content: &str) -> String {
     format!("<{tag} name=\"{name}\" status=\"{status}\">\n{content}\n</{tag}>")
 }
 
-pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
+pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     match method {
         "chat.tools_guide" => Some(obj([("guide", s(guide_text()))])),
 
