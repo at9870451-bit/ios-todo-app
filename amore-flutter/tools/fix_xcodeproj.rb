@@ -14,7 +14,11 @@ target.build_configurations.each do |cfg|
   cfg.build_settings['OTHER_LDFLAGS'] = lib_flags
   cfg.build_settings['DEAD_CODE_STRIPPING'] = 'NO'
   cfg.build_settings['STRIP_INSTALLED_PRODUCT'] = 'NO'
-  puts "#{cfg.name}: ldflags + strip 设置已注入"
+  # 未签名构建（Flutter --no-codesign 下 pods 路径仍可能要求 team）
+  cfg.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+  cfg.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+  cfg.build_settings['CODE_SIGN_IDENTITY'] = ''
+  puts "#{cfg.name}: ldflags + strip + 签名禁用 已注入"
 end
 
 project.save
