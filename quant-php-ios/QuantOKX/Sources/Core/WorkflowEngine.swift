@@ -40,7 +40,7 @@ final class WorkflowEngine: ObservableObject {
     }
 
     private func saveHistory() {
-        if let data = try? JSONEncoder().encode(history.prefix(10)) {
+        if let data = try? JSONEncoder().encode(Array(history.prefix(10))) {
             UserDefaults.standard.set(data, forKey: histKey)
         }
     }
@@ -94,7 +94,7 @@ final class WorkflowEngine: ObservableObject {
             if let n = evalArithmetic(expr) { return "\(expr) = \(n)" }
             return "算式无法解析"
         default:
-            return "未知工具。可用：" + tools.joined(separator: "；")
+            return "未知工具。可用：" + Self.tools.joined(separator: "；")
         }
     }
 
@@ -118,7 +118,7 @@ final class WorkflowEngine: ObservableObject {
         let sys = """
         你是用户的本地智能体工作流引擎（类 Codex）。人设：\(persona.isEmpty ? "高效可靠的助手" : persona)
         规则：先结论后细节；输出精炼；不要说"作为AI"。若需要本机信息，可单独输出一行 [工具:命令] 请求工具，可用命令：
-        \(tools.joined(separator: "\n"))
+        \(Self.tools.joined(separator: "\n"))
         """
 
         do {
