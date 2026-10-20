@@ -318,10 +318,8 @@ struct GroupChatView: View {
 
     /// 选择本轮回复的成员：@名字 指定；否则多位随机（最多 3 位）
         private func pickResponders(_ text: String) -> [ChatFriend] {
-        // 单响应者：随机一位（避开上一位）
-        if members.count <= 1 { return members }
-        let pool = members.filter { $0.id != lastSpeaker }
-        return [(pool.isEmpty ? members : pool).randomElement()!]
+        // 全员同时回复
+        return members
     }
 
     private func send() {
