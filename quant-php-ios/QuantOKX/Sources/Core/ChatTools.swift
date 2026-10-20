@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Operit 式工具调用循环（本地实现，来源：operit-tools ToolExecutionManager + SystemPromptConfig）
 /// 模型输出 <tool name="..."><param name="...">value</param></tool> → App 本地执行 → 结果以随机 tag XML 回注
@@ -38,7 +39,7 @@ enum ChatTools {
     /// 随机工具结果 tag（对齐 ConversationMarkupManager.generate_random_tool_result_tag_name）
     private static func randomTag() -> String {
         let letters = "abcdefghijklmnopqrstuvwxyz"
-        let s = (0..<6).map { _ in letters.randomElement()! }.joined()
+        let s = String((0..<6).map { _ in letters.randomElement()! })
         return "tool_result_\(s)"
     }
 
