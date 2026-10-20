@@ -447,7 +447,8 @@ struct GroupChatView: View {
                                     .foregroundStyle(isUser ? .white : .primary)
                             }
                         case .voice(let v):
-                            VoiceBubble(id: "\(msgId)-v\(idx)", text: v)
+                            // 群聊里语音条不再自绘卡片背景（避免与外层气泡叠成双层白框）
+                            VoiceBubble(id: "\(msgId)-v\(idx)", text: v, plain: true)
                         default:
                             EmptyView()
                         }

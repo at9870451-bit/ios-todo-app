@@ -555,6 +555,8 @@ extension VoicePlayer: AVAudioPlayerDelegate, AVSpeechSynthesizerDelegate {
 struct VoiceBubble: View {
     let id: String
     let text: String
+    /// true = 不绘制自身卡片背景（用于已在气泡内部的场景，如群聊）
+    var plain: Bool = false
     @ObservedObject private var vp = VoicePlayer.shared
     @EnvironmentObject private var config: AppConfig
 
@@ -587,14 +589,21 @@ struct VoiceBubble: View {
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Theme.card, in: UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous))
-            .overlay(
-                UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
-                    .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
-            )
-            .frame(width: bubbleWidth, alignment: .leading)
+            .padding(.horizontal, plain ? 0 : 12)
+            .padding(.vertical, plain ? 2 : 10)
+            .background {
+                if !plain {
+                    UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
+                        .fill(Theme.card)
+                }
+            }
+            .overlay {
+                if !plain {
+                    UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
+                        .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
+                }
+            }
+            .frame(width: plain ? nil : bubbleWidth, alignment: .leading)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableButtonStyle())
