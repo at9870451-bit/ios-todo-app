@@ -32,13 +32,10 @@ require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelpe
 flutter_ios_podfile_setup
 
 target 'Runner' do
-  # 静态链接（默认），Rust .a 直接链进 Runner 二进制
+  # 插件均已走 SPM；Rust 库链接由 tools/fix_xcodeproj.rb 注入 -force_load，不经 pods
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-
-  # Rust Core（C FFI JSON 总线）—— 本地 pod（:path 引用，不下载）
-  pod 'amore_core', :path => '../native/libs'
 end
 
 post_install do |installer|
