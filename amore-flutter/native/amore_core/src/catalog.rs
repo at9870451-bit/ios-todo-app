@@ -17,10 +17,15 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
 
         "catalog.models" => {
             let vendor = p.0.get("vendor").and_then(|v| v.as_str()).unwrap_or("");
-            let models = MODEL_ROWS.iter()
-                .find(|(k, _)| *k == vendor)
-                .map(|(_, list)| list.iter().map(|m| s(m)).collect::<Vec<_>>())
-                .unwrap_or_default();
+            let mut models: Vec<Json> = Vec::new();
+            for (k, list) in MODEL_ROWS {
+                if *k == vendor {
+                    for m in *list {
+                        models.push(s(*m));
+                    }
+                    break;
+                }
+            }
             Some(obj([("models", arr(models))]))
         }
 

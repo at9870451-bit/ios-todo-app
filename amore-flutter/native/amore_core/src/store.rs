@@ -319,7 +319,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Json> {
             obj([]),
         )),
         "store.get_active_provider" => Some(with(
-            |s| obj([("id", s(&s.active_provider))]),
+            |st| obj([("id", s(&st.active_provider))]),
             obj([("id", s(""))]),
         )),
         "store.set_active_provider" => Some(with_mut(
