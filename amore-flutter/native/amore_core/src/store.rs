@@ -375,13 +375,13 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                 let mut msgs = read_json(&history_file(&s.dir, &key))
                     .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
+                let now_id = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64;
                 msgs.push(obj([
-                    ("id", serde_json::Value::Number(serde_json::Number::from(
-                        SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_micros() as u64)))),
+                    ("id", serde_json::Value::Number(serde_json::Number::from(now_id))),
                     ("role", s(role)),
                     ("content", s(content)),
                     ("ts", serde_json::Value::Number(
-                        serde_json::Number::from_f64(now_ts()).unwrap_or(serde_json::Number::from(0))))),
+                        serde_json::Number::from_f64(now_ts()).unwrap_or(serde_json::Number::from(0)))),
                 ]));
                 // 上限 300 条，超出丢最旧
                 if msgs.len() > 300 {
@@ -400,7 +400,7 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                 let f = history_file(&s.dir, key);
                 let n = read_json(&f).and_then(|j| j.as_array().cloned()).map(|a| a.len()).unwrap_or(0);
                 let _ = fs::remove_file(&f);
-                obj([("count", serde_json::Value::Number(serde_json::Number::from(n))))])
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(n)))])
             },
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
@@ -411,7 +411,7 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                     .and_then(|j| j.as_array().cloned())
                     .map(|a| a.len())
                     .unwrap_or(0);
-                obj([("count", serde_json::Value::Number(serde_json::Number::from(n))))])
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(n)))])
             },
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
