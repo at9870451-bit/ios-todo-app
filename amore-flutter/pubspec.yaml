@@ -1,0 +1,22 @@
+name: amore
+description: "Amore — Flutter UI + Rust Core（iOS / macOS 双端统一运行时）"
+publish_to: "none"
+version: 4.0.0
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # dart:ffi 桥接 Rust Core 的辅助类型（Utf8 等）
+  ffi: ^2.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

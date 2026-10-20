@@ -7,6 +7,7 @@ import UIKit
 
 struct DollStudioView: View {
     @EnvironmentObject var store: BackendStore
+    @EnvironmentObject var router: Router
     @StateObject private var scene = DollSceneController()
 
     @State private var outfit: DollOutfitState = .preset
@@ -52,6 +53,12 @@ struct DollStudioView: View {
             scene.baseURL = store.config.serverURL
             scene.apply(state: newValue, lookup: lookup)
         }
+        .onChange(of: router.tab) { _, tab in
+            // 切回玩偶页时重建的 3D 视口需要重新应用当前穿搭
+            guard tab == 2 else { return }
+            scene.baseURL = store.config.serverURL
+            scene.apply(state: outfit, lookup: lookup)
+        }
         .alert("保存穿搭", isPresented: $showSaveAlert) {
             TextField("搭配名称", text: $saveName)
             Button("保存") { Task { await saveOutfit() } }
@@ -74,10 +81,30 @@ struct DollStudioView: View {
     // MARK: - 3D 视口
 
     private var viewport: some View {
-        DollSceneView(controller: scene)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(alignment: .topLeading) { genderControl.padding(12) }
+        Group {
+            if router.tab == 2 {
+                // 仅在玩偶页签激活时创建 RealityKit 视图：
+                // TabView 常驻所有子页，ARView 若一直存活会持续渲染拖慢全局帧率（卡顿主因之二）
+                DollSceneView(controller: scene)
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous)
+                        .fill(Theme.inset)
+                    Image(systemName: "teddybear")
+                        .font(.system(size: 44))
+                        .foregroundStyle(Theme.accent.opacity(0.45))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.radiusXL, style: .continuous))
+            .overlay(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 8) {
+                    genderControl
+                    baseControl
+                }
+                .padding(12)
+            }
             .overlay(alignment: .topTrailing) {
                 GlassIconButton(icon: "arrow.counterclockwise", size: 38) { scene.resetView() }
                     .padding(12)
@@ -102,7 +129,14 @@ struct DollStudioView: View {
             ForEach(["male", "female", "neutral"], id: \.self) { g in
                 Button {
                     guard outfit.gender != g else { return }
-                    commit { $0.gender = g }
+                    // 切换角色 = 载入该款预设（穿搭 + 底座配色一次到位）
+                    let pre = DollOutfitState.presetOf(g)
+                    commit { st in
+                        st.gender = g
+                        st.skin = pre.skin
+                        st.baseColor = pre.baseColor
+                        st.items = pre.items
+                    }
                     Haptics.tap()
                 } label: {
                     Text(DollCatalog.genderName(g))
@@ -120,6 +154,44 @@ struct DollStudioView: View {
                 }
                 .buttonStyle(PressableButtonStyle())
             }
+        }
+    }
+
+    private var baseControl: some View {
+        HStack(spacing: 7) {
+            Text("底座").font(.caption2).foregroundStyle(.secondary)
+            ForEach([("blue", "#8E9CB2"), ("pink", "#E8B6C8"), ("grey", "#C4C8CF")], id: \.0) { key, hex in
+                Button {
+                    guard outfit.baseColor != key else { return }
+                    commit { $0.baseColor = key }
+                    Haptics.tap()
+                } label: {
+                    Circle()
+                        .fill(Color(uiColor: DollColor.ui(hex)))
+                        .frame(width: 22, height: 22)
+                        .overlay {
+                            if outfit.baseColor == key {
+                                Circle().strokeBorder(Color.white, lineWidth: 2)
+                                    .shadow(color: .black.opacity(0.25), radius: 2)
+                            }
+                        }
+                        .overlay(Circle().strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
+                }
+                .buttonStyle(PressableButtonStyle())
+            }
+            Divider().frame(height: 14)
+            Button {
+                commit { $0.showBadge.toggle() }
+                Haptics.tap()
+            } label: {
+                Text(outfit.showBadge ? "标注开" : "标注关")
+                    .font(.caption2.weight(.medium))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(outfit.showBadge ? Theme.accent.opacity(0.16) : Color.gray.opacity(0.14), in: Capsule())
+                    .foregroundStyle(outfit.showBadge ? Theme.accent : Color.secondary)
+            }
+            .buttonStyle(PressableButtonStyle())
         }
     }
 
@@ -165,8 +237,7 @@ struct DollStudioView: View {
         .padding(.horizontal, 14)
         .padding(.top, 10)
         .padding(.bottom, 6)
-        .background(.ultraThinMaterial)
-        .overlay(alignment: .top) { Divider() }
+        .glassBar()
     }
 
     private var categoryBar: some View {
@@ -190,7 +261,7 @@ struct DollStudioView: View {
                             if active {
                                 Capsule().fill(Theme.heroGradient)
                             } else {
-                                Capsule().fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                                Capsule().fill(Color.white.opacity(0.72))
                             }
                         }
                     }
@@ -354,7 +425,7 @@ extension DollStudioView {
             }
             .foregroundStyle(disabled ? Color.secondary.opacity(0.5) : Color.primary)
             .frame(width: 62, height: 46)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground),
+            .background(Color.white.opacity(0.72),
                         in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(PressableButtonStyle())
@@ -524,7 +595,7 @@ extension DollStudioView {
                     TextField("例如：夏天海边度假，清爽一点的蓝色系", text: $aiPrompt, axis: .vertical)
                         .lineLimit(1...3)
                         .padding(10)
-                        .background(Color(uiColor: .tertiarySystemGroupedBackground),
+                        .background(Color.white.opacity(0.72),
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -535,7 +606,7 @@ extension DollStudioView {
                             } label: {
                                 Text(s).font(.caption).foregroundStyle(.primary)
                                     .padding(.horizontal, 10).padding(.vertical, 7)
-                                    .background(Color(uiColor: .tertiarySystemGroupedBackground), in: Capsule())
+                                    .background(Color.white.opacity(0.72), in: Capsule())
                             }
                             .buttonStyle(PressableButtonStyle())
                         }

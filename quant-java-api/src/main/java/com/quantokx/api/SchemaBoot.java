@@ -161,6 +161,8 @@ public final class SchemaBoot {
             "remark VARCHAR(255), created_at DATETIME DEFAULT CURRENT_TIMESTAMP" +
             ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
 
+        
+
         "CREATE TABLE IF NOT EXISTS sys_admin(" +
             "id BIGINT PRIMARY KEY AUTO_INCREMENT, username VARCHAR(64) NOT NULL UNIQUE, password_hash VARCHAR(128) NOT NULL," +
             "nickname VARCHAR(64), role_id BIGINT NOT NULL DEFAULT 2, status TINYINT NOT NULL DEFAULT 1," +

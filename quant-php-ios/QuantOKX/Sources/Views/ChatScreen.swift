@@ -8,6 +8,7 @@ import AVFoundation
 struct ChatScreen: View {
     @EnvironmentObject var store: BackendStore
     @EnvironmentObject var router: Router
+    @EnvironmentObject var config: AppConfig
     @State private var input = ""
     @State private var messages: [ChatMessage] = []
     @State private var sessionId: Int64 = 0
@@ -25,6 +26,8 @@ struct ChatScreen: View {
     @AppStorage("tts.providerId") private var ttsProviderId = ""
     @AppStorage("chat.reasoning") private var reasoning = "medium"
     @AppStorage("persona.prompt") private var personaPrompt = ""
+    /// 聊天 Tab 的专属会话 ID：本页恢复/历史列表都要排除，两 Tab 记录完全分开
+    @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
     @FocusState private var inputFocus: Bool
 
     var body: some View {
@@ -48,11 +51,17 @@ struct ChatScreen: View {
                                 }.padding(.leading, 16)
                             }
                             Spacer(minLength: 80)
+                                .id("conv.bottom")
                         }
                         .padding(.horizontal, 14)
                     }
+                    .scrollDismissesKeyboard(.interactively)
+                    .simultaneousGesture(TapGesture().onEnded { inputFocus = false })
                     .onChange(of: messages.count) { _, _ in
-                        withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo(messages.last?.id ?? 0, anchor: .bottom) }
+                        // 新消息到达 → 自动定位到最新气泡
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                            withAnimation(.easeOut(duration: 0.22)) { proxy.scrollTo("conv.bottom", anchor: .bottom) }
+                        }
                     }
                 }
             }
@@ -87,6 +96,11 @@ struct ChatScreen: View {
                         Image(systemName: "plus.bubble")
                     }
                 }
+                // 键盘上方「完成」按钮，随时可收起键盘
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") { inputFocus = false }
+                }
             }
             .navigationDestination(isPresented: $showHistory) {
                 ConversationListView(sessionId: $sessionId, messages: $messages)
@@ -114,7 +128,7 @@ struct ChatScreen: View {
                     inputPanel
                 }
                 .padding(.top, 8)
-                .background(.regularMaterial)
+                .glassBar()
             }
             .photosPicker(isPresented: $showPicker, selection: $pickedItems, maxSelectionCount: 6, matching: .any(of: [.images, .videos]))
             .sheet(isPresented: $showFilePicker) {
@@ -130,7 +144,14 @@ struct ChatScreen: View {
                 }
                 .ignoresSafeArea()
             }
-            .task { await store.loadChatModel(); await resumeLastConversation() }
+            .task {
+                await store.loadChatModel()
+                if messages.isEmpty {
+                    let local = LocalHistory.load("single")
+                    if !local.isEmpty { messages = local; return }
+                }
+                await resumeLastConversation()
+            }
             .onChange(of: pickedItems) { _, items in processPicked(items) }
         }
     }
@@ -157,81 +178,111 @@ struct ChatScreen: View {
                 Text("开始新对话").font(.headline).foregroundStyle(.secondary)
                 Text("发送消息、图片或文件，AI 为你解答").font(.footnote).foregroundStyle(.tertiary)
             }
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 ForEach(suggestions, id: \.self) { s in
                     Button {
                         Haptics.light()
                         input = s
                         inputFocus = true
                     } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "wand.and.stars")
-                                .font(.caption)
-                                .foregroundStyle(Theme.accent)
+                        HStack(spacing: 12) {
+                            SquircleIcon(system: "wand.and.stars", size: 36)
                             Text(s)
-                                .font(.subheadline)
+                                .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
                                 .lineLimit(1)
                             Spacer()
-                            Image(systemName: "arrow.up.circle")
-                                .font(.caption)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.tertiary)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.white.opacity(0.3), lineWidth: 0.8))
+                        .padding(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .solidCard(Theme.radiusM)
                     }
                     .buttonStyle(PressableButtonStyle())
                 }
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 2)
         }
         .padding(.top, 20)
     }
 
-    // MARK: - 顶部卡片：第一条消息 + 模型配置
+    // MARK: - 顶部：问候 + 渐变卡 + 摘要/模型（对齐设计稿首页）
+
+    private var greetTitle: String {
+        let h = Calendar.current.component(.hour, from: Date())
+        switch h {
+        case 5..<11: return "早上好"
+        case 11..<13: return "中午好"
+        case 13..<18: return "下午好"
+        default: return "晚上好"
+        }
+    }
 
     private var headerCard: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            if let first = messages.first(where: { $0.role == "user" }) {
-                HStack(alignment: .top, spacing: 7) {
-                    Image(systemName: "text.quote")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 2)
-                    Text(first.content.isEmpty ? "[附件消息]" : first.content)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            } else {
-                HStack(spacing: 7) {
-                    Image(systemName: "sparkles")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    Text("新对话 · 发送第一条消息开始")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(greetTitle + "，" + (config.nickname.isEmpty ? config.username : config.nickname))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                Text("开启你的精彩对话")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 2)
+
+            HeroBanner(
+                title: messages.isEmpty ? "开始全新对话" : "继续当前对话",
+                subtitle: store.chatConfigured ? "模型 · \(store.chatModelName)" : "AI 未配置 · 点击前往「我的」页设置",
+                icon: store.chatConfigured ? "plus" : "chevron.right"
+            ) {
+                if store.chatConfigured {
+                    newChat()
+                } else {
+                    router.tab = 2
                 }
             }
-            Divider()
-            modelRow
+
+            VStack(alignment: .leading, spacing: 9) {
+                if let first = messages.first(where: { $0.role == "user" }) {
+                    HStack(alignment: .top, spacing: 7) {
+                        Image(systemName: "text.quote")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 2)
+                        Text(first.content.isEmpty ? "[附件消息]" : first.content)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                } else {
+                    HStack(spacing: 7) {
+                        Image(systemName: "sparkles")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        Text("发送第一条消息开始")
+                            .font(.footnote)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                Divider()
+                modelRow
+            }
+            .padding(12)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Theme.radiusL, style: .continuous).strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8))
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
         }
-        .padding(12)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.35), lineWidth: 0.8))
-        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
 
     private var modelRow: some View {
         Button {
-            if !store.chatConfigured { router.tab = 3 }
+            if !store.chatConfigured { router.tab = 2 }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "cpu")
                     .font(.caption)
-                    .foregroundStyle(store.chatConfigured ? Theme.accent : Color.red)
+                    .foregroundStyle(store.chatConfigured ? Theme.accent : Theme.danger)
                 if store.chatConfigured {
                     Text("模型：\(store.chatModelName)")
                         .font(.footnote.weight(.medium))
@@ -240,11 +291,11 @@ struct ChatScreen: View {
                     Spacer()
                     Text("已配置")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(Theme.ok)
                 } else {
                     Text("AI 模型未添加")
                         .font(.footnote.weight(.medium))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Theme.warn)
                     Spacer()
                     Text("去添加 ›")
                         .font(.footnote.weight(.semibold))
@@ -326,9 +377,7 @@ struct ChatScreen: View {
         .padding(.leading, 12)
         .padding(.trailing, 8)
         .padding(.vertical, 7)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.white.opacity(0.4), lineWidth: 0.8))
-        .shadow(color: Color.black.opacity(0.07), radius: 12, x: 0, y: 5)
+        .glassPanel(22)
         .padding(.horizontal, 10)
         .padding(.bottom, 6)
     }
@@ -369,19 +418,33 @@ struct ChatScreen: View {
         sending = true
         Task {
             do {
-                let reply = try await store.sendChat(sessionId: sessionId, content: text, attachments: atts, reasoning: reasoning, systemPrompt: personaPrompt)
-                if sessionId != reply.sessionId { sessionId = reply.sessionId }
-                if reply.degraded == true { store.toast = "当前模型不支持图片，已按附件说明回答" }
-                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: reply.reply))
+                // 本地历史 + 本地模型配置（服务端不保存聊天记录与 Key）
+                var payload: [[String: String]] = []
+                for m in messages.dropLast().suffix(19) {
+                    payload.append(["role": m.role == "assistant" ? "assistant" : "user", "content": m.content])
+                }
+                var last = text
+                if !atts.isEmpty {
+                    last += "\n（我另外发了 \(atts.count) 个附件：\(atts.map(\.name).joined(separator: "、"))）"
+                }
+                payload.append(["role": "user", "content": last])
+                let replyText = try await store.oneshot(messages: payload, systemPrompt: personaPrompt, reasoning: reasoning)
+                messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: replyText))
             } catch {
                 messages.append(ChatMessage(id: Int64(Date().timeIntervalSince1970) + 1, role: "assistant", content: "⚠️ \(error.localizedDescription)"))
             }
             sending = false
+            saveLocalMessages()
         }
     }
 
     private func newChat() {
         messages = []; sessionId = 0; pendingAtts = []
+        LocalHistory.clear("single")
+    }
+
+    private func saveLocalMessages() {
+        LocalHistory.save("single", messages)
     }
 
     /// 启动时恢复上一次会话（除非上次就是全新会话）：打开 App 接着上次聊
@@ -389,7 +452,10 @@ struct ChatScreen: View {
         guard messages.isEmpty, sessionId == 0 else { return }
         do {
             let list = try await store.fetchConversations()
-            guard let last = list.first(where: { $0.updatedAt != nil }) ?? list.first else { return }
+            // 恢复最近一次好友会话；群聊会话不参与
+            let groupSessions = Set(GroupStore.shared.groups.compactMap { Int64($0.sessionId) })
+            let candidates = list.filter { !groupSessions.contains($0.id) }
+            guard let last = candidates.first(where: { $0.updatedAt != nil }) ?? candidates.first else { return }
             await MainActor.run {
                 openSession(last.id)
             }
@@ -427,6 +493,8 @@ struct ChatScreen: View {
         }
         if ttsEngine == "model" {
             Task { await speakWithModel(last.content) }
+        } else if ttsEngine == "server" {
+            Task { await speakWithServer(last.content) }
         } else {
             speakLocal(String(last.content.prefix(600)))
         }
@@ -434,9 +502,24 @@ struct ChatScreen: View {
 
     private func speakLocal(_ text: String) {
         let u = AVSpeechUtterance(string: text)
-        u.voice = AVSpeechSynthesisVoice(language: "zh-CN")
-        u.rate = 0.5
+        u.voice = PersonaVoice.localVoice() ?? AVSpeechSynthesisVoice(language: "zh-CN")
+        u.rate = min(1.0, max(0.25, 0.5 * PersonaVoice.speedFactor))
         synthesizer.speak(u)
+    }
+
+    /// 开源语音库朗读（服务器热态服务），失败回退本地语音
+    private func speakWithServer(_ content: String) async {
+        store.toast = "正在合成语音…"
+        do {
+            let data = try await VoicePlayer.serverSynth(text: String(content.prefix(500)), baseURL: config.serverURL)
+            audioPlayer = try AVAudioPlayer(data: data)
+            audioPlayer?.prepareToPlay()
+            audioPlayer?.play()
+            store.toast = ""
+        } catch {
+            store.toast = "语音库合成失败，已用本地朗读"
+            speakLocal(String(content.prefix(600)))
+        }
     }
 
     /// 用配置的语音模型合成并播放；失败或未配置时自动回退本地朗读
@@ -589,7 +672,7 @@ struct AttChip: View {
 struct ChatMessage: Identifiable {
     let id: Int64
     let role: String
-    let content: String
+    var content: String
     var attachments: [ChatAttachment] = []
 }
 
@@ -614,11 +697,17 @@ struct MessageBubble: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
-                isUser ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(Theme.card),
+                isUser ? AnyShapeStyle(Theme.heroBlue) : AnyShapeStyle(Theme.card),
                 in: isUser
-                    ? UnevenRoundedRectangle(topLeadingRadius: 18, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 5, style: .continuous)
-                    : UnevenRoundedRectangle(topLeadingRadius: 5, bottomLeadingRadius: 18, bottomTrailingRadius: 18, topTrailingRadius: 18, style: .continuous)
+                    ? UnevenRoundedRectangle(topLeadingRadius: 20, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 6, style: .continuous)
+                    : UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
             )
+            .overlay {
+                if !isUser {
+                    UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20, style: .continuous)
+                        .strokeBorder(Theme.hairline.opacity(0.5), lineWidth: 0.6)
+                }
+            }
             .shadow(color: Color.black.opacity(isUser ? 0.0 : 0.05), radius: 7, x: 0, y: 2)
             .shadow(color: Color.black.opacity(isUser ? 0.12 : 0.04), radius: 4, y: 2)
             if !isUser { Spacer(minLength: 60) }

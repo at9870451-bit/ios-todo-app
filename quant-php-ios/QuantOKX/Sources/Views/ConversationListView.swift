@@ -10,6 +10,8 @@ struct ConversationListView: View {
     @State private var loading = true
     @State private var renaming: Conversation?
     @State private var renameText = ""
+    /// 聊天 Tab 的专属会话 ID：历史列表中隐藏，两 Tab 记录分开
+    @AppStorage("chat.roomSessionId") private var roomSessionIdStr = ""
 
     struct Conversation: Identifiable, Decodable {
         let id: Int64
@@ -70,7 +72,7 @@ struct ConversationListView: View {
             HStack(spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(isCurrent ? AnyShapeStyle(Theme.heroGradient) : AnyShapeStyle(LinearGradient(colors: [Color(uiColor: .systemGray4), Color(uiColor: .systemGray3)], startPoint: .topLeading, endPoint: .bottomTrailing)))
+                        .fill(isCurrent ? AnyShapeStyle(Theme.accent) : AnyShapeStyle(Color(uiColor: .systemGray3)))
                         .frame(width: 42, height: 42)
                     Image(systemName: "bubble.left.and.bubble.right.fill")
                         .font(.system(size: 15))
@@ -146,7 +148,9 @@ struct ConversationListView: View {
 
     private func loadSessions() async {
         do {
-            conversations = try await store.fetchConversations()
+            // 显示好友会话；群聊记录只在本机，不混进会话列表
+            let groupSessions = Set(GroupStore.shared.groups.compactMap { Int64($0.sessionId) })
+            conversations = try await store.fetchConversations().filter { !groupSessions.contains($0.id) }
         } catch {
             store.toast = "加载会话失败"
         }

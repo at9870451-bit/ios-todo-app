@@ -1,0 +1,20 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+
+# Rust 构建产物（CI 生成，不入库）
+native/amore_core/target/
+native/libs/ios/
+native/libs/macos/
+
+# Flutter 生成的脚手架中随构建变化的部分
+ios/Flutter/ephemeral/
+ios/.symlinks/
+macos/Flutter/ephemeral/
+macos/.symlinks/
+
+.DS_Store

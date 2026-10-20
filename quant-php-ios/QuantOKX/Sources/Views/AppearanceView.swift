@@ -59,33 +59,29 @@ struct AppBackground: View {
             }
         } else {
             ZStack {
-                (scheme == .dark
-                    ? Color(red: 0.066, green: 0.066, blue: 0.082)
-                    : Color.white)
+                Color.white
                     .ignoresSafeArea()
-                LinearGradient(
-                    colors: [.clear, scheme == .dark ? Color.white.opacity(0.045) : Theme.bgLight],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .ignoresSafeArea()
                 GeometryReader { geo in
                     ZStack {
                         Circle()
-                            .fill(Theme.heroBlue.opacity(scheme == .dark ? 0.12 : 0.07))
+                            .fill(Theme.heroBlue.opacity(0.16))
                             .frame(width: geo.size.width * 0.95, height: geo.size.width * 0.95)
-                            .blur(radius: 64)
+                            .blur(radius: 45)
                             .offset(x: -geo.size.width * 0.38, y: -geo.size.height * 0.28)
                         Circle()
-                            .fill(Theme.accent.opacity(scheme == .dark ? 0.09 : 0.06))
+                            .fill(Theme.accent.opacity(0.14))
                             .frame(width: geo.size.width * 0.85, height: geo.size.width * 0.85)
-                            .blur(radius: 72)
+                            .blur(radius: 50)
                             .offset(x: geo.size.width * 0.42, y: geo.size.height * 0.38)
                         Circle()
-                            .fill(Theme.heroSky.opacity(scheme == .dark ? 0.07 : 0.05))
+                            .fill(Theme.heroSky.opacity(0.10))
                             .frame(width: geo.size.width * 0.7, height: geo.size.width * 0.7)
-                            .blur(radius: 60)
+                            .blur(radius: 42)
                             .offset(x: 0, y: -geo.size.height * 0.45)
                     }
+                    // 关键性能优化：把三个实时模糊光斑合并为单个离屏纹理，
+                    // 避免每帧对 3 个大半径 blur 重新采样（低端机滚动卡顿主因）
+                    .drawingGroup()
                 }
                 .ignoresSafeArea()
             }
@@ -134,7 +130,12 @@ struct AppearanceView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Theme.accent, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                    .background(Theme.heroGradient, in: RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Theme.radiusM, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                    }
+                    .shadow(color: Theme.shadowGlow, radius: 9, x: 0, y: 4)
                     .foregroundStyle(.white)
                 }
 
@@ -153,17 +154,17 @@ struct AppearanceView: View {
                         }
                     }
                     .padding(14)
-                    .background(Theme.card, in: RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .glassPanel(Theme.radiusM)
 
                     Button {
                         bg.clear()
                     } label: {
                         Text("恢复默认渐变背景")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(Theme.danger)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            .background(Theme.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                     }
                 }
 
@@ -196,6 +197,8 @@ struct AppearanceView: View {
 
 struct PersonaView: View {
     @AppStorage("persona.prompt") private var prompt = ""
+    @AppStorage("persona.gender") private var gender = ""    // "" / male / female
+    @AppStorage("persona.age") private var age = ""          // 数字文本
 
     private let presets: [(String, String)] = [
         ("默认助手", ""),
@@ -211,6 +214,42 @@ struct PersonaView: View {
                 Text("人设会作为系统提示词随每次对话发送给 AI，决定它的身份、语气与回答方式。")
                     .font(.footnote)
                     .foregroundStyle(.tertiary)
+
+                // 基本属性：性别 / 年龄（自动拼进人设）
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("基本属性")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("性别").font(.subheadline)
+                        Spacer()
+                        Picker("性别", selection: $gender) {
+                            Text("不指定").tag("")
+                            Text("男性").tag("male")
+                            Text("女性").tag("female")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 210)
+                    }
+                    .padding(12)
+                    .solidCard(Theme.radiusS)
+                    HStack {
+                        Text("年龄").font(.subheadline)
+                        Spacer()
+                        TextField("如 24", text: $age)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 90)
+                        Text("岁")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(12)
+                    .solidCard(Theme.radiusS)
+                    Text("性别与年龄会自动拼进人设，影响 AI 的口吻、自称与人称")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("系统提示词")
@@ -255,7 +294,7 @@ struct PersonaView: View {
                                     }
                                 }
                                 .padding(12)
-                                .background(Theme.card, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .solidCard(Theme.radiusS)
                             }
                             .buttonStyle(.plain)
                         }

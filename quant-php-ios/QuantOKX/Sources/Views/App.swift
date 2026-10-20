@@ -1,9 +1,31 @@
 import SwiftUI
+import UIKit
 
 @main
 struct QuantOKXApp: App {
     @StateObject private var store = BackendStore.shared
     @StateObject private var router = Router()
+
+    init() {
+        // 全局固定浅色（HIG 明亮高级氛围），并配置原生玻璃导航/Tab 栏
+        let nav = UINavigationBarAppearance()
+        nav.configureWithDefaultBackground()
+        nav.backgroundColor = UIColor.white.withAlphaComponent(0.65)
+        nav.shadowColor = .clear
+        UINavigationBar.appearance().standardAppearance = nav
+        UINavigationBar.appearance().scrollEdgeAppearance = nav
+        UINavigationBar.appearance().compactAppearance = nav
+
+        let tab = UITabBarAppearance()
+        tab.configureWithDefaultBackground()
+        tab.backgroundColor = UIColor.white.withAlphaComponent(0.65)
+        UITabBar.appearance().standardAppearance = tab
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tab
+        }
+        UITabBar.appearance().unselectedItemTintColor = UIColor(Color(red: 0.557, green: 0.557, blue: 0.576))
+        UITabBar.appearance().tintColor = UIColor(Color(red: 1.0, green: 0.584, blue: 0.0))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -15,6 +37,7 @@ struct QuantOKXApp: App {
                 .environmentObject(BackgroundStore.shared)
                 .environmentObject(AvatarStore.shared)
                 .tint(Theme.accent)
+                .preferredColorScheme(.light)
                 .task { await store.bootstrap() }
         }
     }
@@ -73,40 +96,34 @@ struct ToastView: View {
     }
 }
 
-/// 底部导航：聊天 / 对话 / 玩偶 / 设置 / 我的
+/// 底部导航：聊天 / 对话 / 玩偶 / 我的（设置并入「我的」）
 struct MainTabView: View {
     @EnvironmentObject var config: AppConfig
     @EnvironmentObject var router: Router
 
     var body: some View {
         TabView(selection: $router.tab) {
-            AuthGate(gotoProfile: { router.tab = 4 }) {
-                ChatRoomView()
+            AuthGate(gotoProfile: { router.tab = 3 }) {
+                ChatListView()
             }
             .tabItem { Label("聊天", systemImage: "ellipsis.message.fill") }
             .tag(0)
 
-            AuthGate(gotoProfile: { router.tab = 4 }) {
+            AuthGate(gotoProfile: { router.tab = 3 }) {
                 ChatScreen()
             }
             .tabItem { Label("对话", systemImage: "bubble.left.and.bubble.right.fill") }
             .tag(1)
 
-            AuthGate(gotoProfile: { router.tab = 4 }) {
+            AuthGate(gotoProfile: { router.tab = 3 }) {
                 DollStudioView()
             }
             .tabItem { Label("玩偶", systemImage: "teddybear.fill") }
             .tag(2)
 
-            AuthGate(gotoProfile: { router.tab = 4 }) {
-                SettingsScreen()
-            }
-            .tabItem { Label("设置", systemImage: "gearshape.fill") }
-            .tag(3)
-
             ProfileView(onLoggedIn: { router.tab = 1 })
                 .tabItem { Label("我的", systemImage: "person.crop.circle.fill") }
-                .tag(4)
+                .tag(3)
         }
         .tint(Theme.accent)
     }

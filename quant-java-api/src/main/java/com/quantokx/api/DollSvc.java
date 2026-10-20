@@ -100,7 +100,7 @@ public final class DollSvc {
             String reason = root.path("reason").asText("为你挑选了这套搭配");
             if (reason.length() > 60) reason = reason.substring(0, 60);
             Map<String, Object> out = new LinkedHashMap<>();
-            out.put("items", items);
+            out.put("outfit", items);
             out.put("reason", reason);
             return out;
         } catch (Exception e) {

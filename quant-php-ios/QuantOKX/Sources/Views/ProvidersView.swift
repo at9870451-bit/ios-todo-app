@@ -8,8 +8,29 @@ struct ProviderListView: View {
     @State private var showTypePicker = false
     @State private var editTarget: ProviderStore.Provider?
     @State private var showEditSheet = false
+    /// 首帧就绪开关：规避首次 push 布局空转导致的白屏
+    @State private var ready = false
 
     var body: some View {
+        ZStack {
+            Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
+            if ready {
+                content
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationTitle("AI 模型配置")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            if !ready {
+                // 让首帧先完成布局，再渲染内容（第二次进入不再白屏）
+                try? await Task.sleep(nanoseconds: 30_000_000)
+                ready = true
+            }
+        }
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(ProviderStore.Kind.allCases) { kind in
@@ -22,6 +43,10 @@ struct ProviderListView: View {
                             Text("· \(kind.subtitle)")
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                            Spacer()
+                            Text("\(items.count) 个")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
                         }
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
@@ -75,9 +100,8 @@ struct ProviderListView: View {
             showEditSheet = true
         } label: {
             HStack(spacing: 12) {
-                Circle()
-                    .fill(p.apiKey.isEmpty ? Color(uiColor: .systemGray3) : Color.green)
-                    .frame(width: 9, height: 9)
+                // Operit 风格：厂商色 squircle 图标
+                SquircleIcon(system: p.kind.icon, size: 40, tinted: p.apiKey.isEmpty)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(p.label)
@@ -93,13 +117,9 @@ struct ProviderListView: View {
                                 .background(Theme.accent.opacity(0.12), in: Capsule())
                         }
                     }
-                    Text("API Key · \(p.maskedKey)")
+                    Text(p.model.isEmpty ? "未设置模型 · \(p.maskedKey)" : "\(p.model) · \(p.maskedKey)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    Text(p.model.isEmpty ? ProviderStore.defaultBase(p.vendor) : "模型 · \(p.model)")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
                 Spacer()
@@ -108,7 +128,7 @@ struct ProviderListView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 13)
+            .padding(.vertical, 11)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -138,11 +158,11 @@ struct ProviderTypePicker: View {
     }
 
     private let official: [Option] = [
-        Option(id: "openai", name: "OpenAI", sub: "GPT · o 系列与官方端点", icon: "brain.filled.head.profile", color: .green, label: "OpenAI"),
+        Option(id: "openai", name: "OpenAI", sub: "GPT · o 系列与官方端点", icon: "brain.filled.head.profile", color: Theme.heroBlue, label: "OpenAI"),
         Option(id: "deepseek", name: "DeepSeek", sub: "深度求索官方 API", icon: "whale", color: Theme.accent, label: "DeepSeek"),
-        Option(id: "moonshot", name: "Moonshot Kimi", sub: "Kimi 系列模型", icon: "moon.stars.fill", color: .indigo, label: "Kimi"),
-        Option(id: "grok", name: "xAI (Grok)", sub: "支持 Grok 系列模型", icon: "x.squareroot", color: .black, label: "Grok"),
-        Option(id: "openrouter", name: "OpenRouter", sub: "聚合 GPT、Claude、Gemini 等主流模型", icon: "arrow.triangle.branch", color: .cyan, label: "OpenRouter"),
+        Option(id: "moonshot", name: "Moonshot Kimi", sub: "Kimi 系列模型", icon: "moon.stars.fill", color: Theme.heroBlue, label: "Kimi"),
+        Option(id: "grok", name: "xAI (Grok)", sub: "支持 Grok 系列模型", icon: "x.squareroot", color: Theme.heroBlue, label: "Grok"),
+        Option(id: "openrouter", name: "OpenRouter", sub: "聚合 GPT、Claude、Gemini 等主流模型", icon: "arrow.triangle.branch", color: Theme.heroSky, label: "OpenRouter"),
     ]
 
     var body: some View {
@@ -169,12 +189,12 @@ struct ProviderTypePicker: View {
                                     }
                                     Spacer()
                                     if kind == k {
-                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(kind == .tts ? .orange : Theme.accent)
+                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(kind == .tts ? Theme.warn : Theme.accent)
                                     }
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(kind == k ? (k == .tts ? Color.orange.opacity(0.10) : Theme.accent.opacity(0.10)) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .background(kind == k ? (k == .tts ? Theme.warn.opacity(0.10) : Theme.accent.opacity(0.10)) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -182,14 +202,29 @@ struct ProviderTypePicker: View {
                     }
                     .glassPanel(16)
 
-                    Text("官方模型")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
-                        .padding(.top, 4)
-                    card(official)
+                    // Operit 开源厂商目录（仅列出与 OpenAI 协议兼容的，可直接用）
+                    ForEach(AIVendorCatalog.groups, id: \.self) { g in
+                        let vs = AIVendorCatalog.vendors(in: g).filter { v in
+                            v.base.isEmpty || v.base.contains("/chat/completions") || v.base.contains("/responses")
+                        }
+                        if !vs.isEmpty {
+                            Text(g + "厂商")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.top, 8)
+                            card(vs.map { v in
+                                Option(id: v.key,
+                                       name: v.name,
+                                       sub: v.model.isEmpty ? (v.base.isEmpty ? "自定义端点" : v.base) : "\(v.model) · \(v.base.replacingOccurrences(of: "https://", with: ""))",
+                                       icon: "cpu",
+                                       color: Theme.accent,
+                                       label: v.name)
+                            })
+                        }
+                    }
 
-                    Text("第三方 / 兼容 API")
+                    Text("自定义 / 其他")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 4)
@@ -227,7 +262,7 @@ struct ProviderTypePicker: View {
                 } label: {
                     HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 9, style: .continuous)
-                            .fill(o.color.gradient)
+                            .fill(o.color)
                             .frame(width: 38, height: 38)
                             .overlay(Image(systemName: o.icon).font(.system(size: 15)).foregroundStyle(.white))
                         VStack(alignment: .leading, spacing: 2) {
@@ -334,10 +369,10 @@ struct ProviderEditView: View {
                     if let ok = verifyOK {
                         HStack(alignment: .top, spacing: 6) {
                             Image(systemName: ok ? "checkmark.circle.fill" : "xmark.circle.fill")
-                                .foregroundStyle(ok ? Color.green : Color.red)
+                                .foregroundStyle(ok ? Theme.ok : Theme.danger)
                             Text(verifyMsg)
                                 .font(.caption)
-                                .foregroundStyle(ok ? Color.green : Color.red)
+                                .foregroundStyle(ok ? Theme.ok : Theme.danger)
                         }
                     }
 
@@ -417,12 +452,68 @@ struct ProviderEditView: View {
                         .foregroundStyle(.tertiary)
 
                     field(title: provider.kind == .tts ? "语音模型（可选）" : (provider.kind == .image ? "图片模型（可选）" : "默认模型（可选）")) {
+                        // Operit iOS 模型目录：该厂商有预置模型时，直接选择
+                        let catalogModels = AIModelCatalog.models(for: provider.vendor)
+                        if !catalogModels.isEmpty {
+                            Menu {
+                                ForEach(catalogModels, id: \.self) { m in
+                                    Button {
+                                        provider.model = m
+                                    } label: {
+                                        if provider.model == m {
+                                            Label(m, systemImage: "checkmark")
+                                        } else {
+                                            Text(m)
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "list.bullet.rectangle")
+                                        .foregroundStyle(Theme.accent)
+                                    Text(provider.model.isEmpty ? "从 \(catalogModels.count) 个预置模型中选择" : provider.model)
+                                        .font(.subheadline)
+                                        .foregroundStyle(provider.model.isEmpty ? Color.secondary : Color.primary)
+                                        .lineLimit(1)
+                                    Spacer()
+                                    Image(systemName: "chevron.up.chevron.down")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 11)
+                                .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+                            .padding(.bottom, 6)
+                        }
                         TextField(modelPlaceholder, text: $provider.model)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
                             .background(Theme.inset, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    // Operit 风格：常用模型一键填入
+                    if !modelSuggestions.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(modelSuggestions, id: \.self) { m in
+                                    Button {
+                                        provider.model = m
+                                        Haptics.tap()
+                                    } label: {
+                                        Text(m)
+                                            .font(.caption2.weight(.medium))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(provider.model == m ? Theme.accent.opacity(0.16) : Theme.fillGray, in: Capsule())
+                                            .foregroundStyle(provider.model == m ? Theme.accent : Color.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal, 2)
+                        }
                     }
 
                     if provider.kind == .tts {
@@ -451,10 +542,10 @@ struct ProviderEditView: View {
                         } label: {
                             Text("删除此模型")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Theme.danger)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                                .background(Theme.danger.opacity(0.08), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                         }
                     }
                 }
@@ -462,6 +553,18 @@ struct ProviderEditView: View {
                 .padding(.bottom, 30)
             }
             .background(AppBackground())
+            .onAppear {
+                // Operit 厂商目录：新建时预填默认端点与模型
+                if isNew, let v = AIVendorCatalog.vendor(provider.vendor) {
+                    if provider.model.isEmpty { provider.model = v.model }
+                    if provider.baseURL.isEmpty, !v.base.isEmpty {
+                        provider.baseURL = AIVendorCatalog.rootBase(provider.vendor)
+                    }
+                    if !v.format.isEmpty {
+                        provider.apiFormat = v.format == "responses" ? .responses : .chat
+                    }
+                }
+            }
             .navigationTitle(isNew ? "配置 \(provider.label)" : "编辑 \(provider.label)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -480,6 +583,18 @@ struct ProviderEditView: View {
         case .tts: return "如 tts-1 / tts-1-hd / cosyvoice-v1"
         case .image: return "如 dall-e-3 / gpt-image-1 / flux-schnell"
         default: return "如 gpt-4o / deepseek-chat"
+        }
+    }
+
+    /// 常用模型速选（借鉴 Operit 官方预设）
+    private var modelSuggestions: [String] {
+        switch provider.vendor {
+        case "openai": return ["gpt-4o", "gpt-4o-mini", "o3-mini"]
+        case "deepseek": return ["deepseek-chat", "deepseek-reasoner"]
+        case "moonshot": return ["moonshot-v1-8k", "moonshot-v1-32k", "kimi-latest"]
+        case "grok": return ["grok-3", "grok-3-mini"]
+        case "openrouter": return ["openai/gpt-4o-mini", "anthropic/claude-3.5-sonnet", "google/gemini-2.0-flash-001"]
+        default: return []
         }
     }
 

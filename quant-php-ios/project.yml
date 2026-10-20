@@ -25,13 +25,15 @@ targets:
       properties:
         CFBundleDisplayName: Amore
         CFBundleShortVersionString: "3.9"
-        CFBundleVersion: "30"
+        CFBundleVersion: "89"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         NSCameraUsageDescription: 用于拍照并附带给 AI 助手识别
         NSPhotoLibraryAddUsageDescription: 用于保存玩偶穿搭照片到相册
+        NSMicrophoneUsageDescription: 用于发送语音消息和与 AI 语音通话
+        NSSpeechRecognitionUsageDescription: 用于将语音消息转成文字发给 AI
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
