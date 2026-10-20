@@ -1,60 +1,91 @@
 // amore_core — Rust Core 入口
 //
 // 桥接协议（C FFI JSON 总线）：
-//   Dart 调用 amore_call(method, payload_json) -> resp_json（每次调用互不共享状态，
-//   需要跨调用的状态放在 Core 内部全局存储里）。返回统一信封：
+//   Dart 调用 amore_call(method, payload_json) -> resp_json。返回统一信封：
 //   { "ok": true, "data": ... } 或 { "ok": false, "error": { "code", "message" } }
 //
-// M0 里程碑只实现 core.ping / core.version / core.sysinfo，用于验证
-// Flutter ↔ Rust 工具链全链路（CI 编译 + FFI 桥 + 真机运行）。
+// 模块：
+//   store   — JSON 文件持久化（好友/群组/智能体/供应商/配置/历史）
+//   catalog — 厂商/模型目录（34 厂商 505 模型，Operit 迁移）
+//   tools   — 工具调用协议（XML 解析 + 本地工具执行）
+//   prompts — 提示词组装（人设/记忆/工具指南）+ 记忆标记抽取
+//   tts     — TTS 请求组装
+
+mod catalog;
+mod catalog_data;
+mod jsonv;
+mod prompts;
+mod store;
+mod tools;
+mod tts;
 
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
-use serde_json::{json, Value};
+use serde_json::Value;
 
-/// 成功信封
+use jsonv::{obj, s, Json};
+
 fn ok(data: Value) -> String {
-    json!({ "ok": true, "data": data }).to_string()
+    serde_json::json!({ "ok": true, "data": data }).to_string()
 }
 
-/// 失败信封
 fn err(code: &str, message: &str) -> String {
-    json!({ "ok": false, "error": { "code": code, "message": message } }).to_string()
+    serde_json::json!({ "ok": false, "error": { "code": code, "message": message } }).to_string()
 }
 
-/// 方法分发：所有业务入口从这里走（后续里程碑按模块拆分到子模块）
 fn dispatch(method: &str, payload: &str) -> String {
     let parsed: Value = match serde_json::from_str(payload) {
         Ok(v) => v,
         Err(e) => return err("bad_payload", &format!("payload 不是合法 JSON: {e}")),
     };
+    let p = Json(parsed);
 
-    match method {
-        "core.ping" => ok(json!({
-            "pong": true,
-            "echo": parsed,
-        })),
+    let out = match method {
+        "core.ping" => Some(obj([("pong", Value::Bool(true)), ("echo", p.0.clone())])),
+        "core.version" => Some(obj([
+            ("name", s("AmoreCore")),
+            ("version", s(env!("CARGO_PKG_VERSION"))),
+            ("api", Value::Number(serde_json::Number::from(2))),
+            ("platform", s(std::env::consts::OS)),
+            ("arch", s(std::env::consts::ARCH)),
+        ])),
+        "core.sysinfo" => Some(obj([
+            ("api_version", Value::Number(serde_json::Number::from(2))),
+            ("build_mode", s("release")),
+            ("runtime_targets", Value::Array(vec![
+                s("aarch64-apple-ios"),
+                s("aarch64-apple-darwin"),
+            ])),
+            ("milestone", s("M1-storage")),
+        ])),
+        "core.init" => {
+            let dir = p.0.get("data_dir").and_then(|v| v.as_str()).unwrap_or("");
+            if dir.is_empty() {
+                return err("bad_args", "data_dir 为空");
+            }
+            store::init(dir);
+            Some(obj([]))
+        }
+        _ => None,
+    };
 
-        "core.version" => ok(json!({
-            "name": "AmoreCore",
-            "version": env!("CARGO_PKG_VERSION"),
-            "api": 1,
-            "platform": std::env::consts::OS,
-            "arch": std::env::consts::ARCH,
-        })),
+    if let Some(data) = out {
+        return ok(data);
+    }
 
-        "core.sysinfo" => ok(json!({
-            "api_version": 1,
-            "build_mode": "release",
-            "runtime_targets": ["aarch64-apple-ios", "aarch64-apple-darwin"],
-            "milestone": "M0-skeleton",
-        })),
+    // 模块分发链
+    let module_result = store::dispatch(method, &p)
+        .or_else(|| catalog::dispatch(method, &p))
+        .or_else(|| tools::dispatch(method, &p))
+        .or_else(|| prompts::dispatch(method, &p))
+        .or_else(|| tts::dispatch(method, &p));
 
-        _ => err("unknown_method", &format!("未实现的方法: {method}")),
+    match module_result {
+        Some(data) => ok(data.0),
+        None => err("unknown_method", &format!("未实现的方法: {method}")),
     }
 }
 
-/// 统一入口：把 panic 转成错误信封，保证 C ABI 不跨边界 unwind
 fn dispatch_safe(method: &str, payload: &str) -> String {
     match std::panic::catch_unwind(|| dispatch(method, payload)) {
         Ok(s) => s,
@@ -82,7 +113,6 @@ pub extern "C" fn amore_call(method: *const c_char, payload: *const c_char) -> *
     let resp = dispatch_safe(&m, &p);
     match CString::new(resp) {
         Ok(s) => s.into_raw(),
-        // 返回串里出现 NUL（理论上不可能：JSON 字符串会转义）时兜底
         Err(_) => CString::new(err("core_error", "响应包含非法 NUL")).unwrap().into_raw(),
     }
 }
