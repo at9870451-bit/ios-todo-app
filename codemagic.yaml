@@ -47,6 +47,12 @@ workflows:
           cp native/amore_core/include/amore_core.h native/libs/
           nm -gU native/libs/ios/libamore_core.a | grep -E 'amore_(call|free)'
 
+      - name: Runner 工程注入链接设置（force_load + 禁 strip）
+        script: |
+          set -e
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
+          ruby tools/fix_xcodeproj.rb
+
       - name: 编译 Flutter iOS（未签名）
         script: |
           set -e
