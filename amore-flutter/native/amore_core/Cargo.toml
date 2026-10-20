@@ -1,0 +1,20 @@
+[package]
+name = "amore_core"
+version = "0.1.0"
+edition = "2021"
+description = "Amore Rust Core — 共享运行时（存储/业务逻辑/网络），通过 C FFI JSON 总线暴露给 Flutter"
+
+[lib]
+name = "amore_core"
+crate-type = ["staticlib"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = "z"     # iOS 包体积优先
+lto = true
+strip = true
+codegen-units = 1
+panic = "unwind"

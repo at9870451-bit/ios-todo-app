@@ -1,0 +1,133 @@
+# Amore Flutter + Rust Core（重构版 4.x）
+# iOS 里程碑构建：Flutter UI + Rust staticlib（aarch64-apple-ios）→ 未签名 ipa → Release
+name: Build Amore Flutter
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["flutter-core"]
+    paths:
+      - "amore-flutter/**"
+      - ".github/workflows/amore-flutter.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Flutter + Rust → ipa
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Rust（iOS 目标）
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: 版本信息
+        run: |
+          flutter --version
+          rustc --version
+          cargo --version
+
+      - name: 生成 Flutter 脚手架（已存在文件不会被覆盖）
+        working-directory: amore-flutter
+        run: flutter create --org com.quantokx --project-name amore .
+
+      - name: xcconfig 补丁（禁 strip / dead-strip，保住 FFI 符号）
+        working-directory: amore-flutter
+        run: |
+          for cfg in Debug Release; do
+            printf '\n// Amore: 保留 Rust FFI 符号（Dart dlsym 需要）\nSTRIP_INSTALLED_PRODUCT=NO\nDEAD_CODE_STRIPPING=NO\n' >> "ios/Flutter/${cfg}.xcconfig"
+          done
+          tail -4 ios/Flutter/Release.xcconfig
+
+      - name: Rust → iOS 静态库
+        working-directory: amore-flutter
+        run: |
+          set -o pipefail
+          cargo build --release --target aarch64-apple-ios --manifest-path native/amore_core/Cargo.toml 2>&1 | tee rust-ios.log | tail -20
+          mkdir -p native/libs/ios
+          cp native/amore_core/target/aarch64-apple-ios/release/libamore_core.a native/libs/ios/
+          cp native/amore_core/include/amore_core.h native/libs/
+          echo "=== 静态库 ==="; ls -lh native/libs/ios/
+          echo "符号检查:"; nm -gU native/libs/ios/libamore_core.a | grep -E 'amore_(call|free)'
+
+      - name: pod install
+        working-directory: amore-flutter/ios
+        run: pod install 2>&1 | tail -20
+
+      - name: 编译 iOS（未签名）
+        working-directory: amore-flutter
+        run: |
+          set -o pipefail
+          flutter build ios --release --no-codesign 2>&1 | tee build.log | tail -60
+
+      - name: 验证符号已链入（-force_load 生效）
+        working-directory: amore-flutter
+        run: |
+          BIN=build/ios/iphoneos/Runner.app/Runner
+          test -f "$BIN"
+          if nm "$BIN" | grep -q '_amore_call'; then
+            echo "✓ amore_call 已链入 Runner"
+          else
+            echo "::error::amore_call 不在 Runner 二进制里（检查 -force_load / podspec）"
+            exit 1
+          fi
+
+      - name: 打包 ipa
+        working-directory: amore-flutter
+        run: |
+          APP=build/ios/iphoneos/Runner.app
+          rm -rf Payload Amore.ipa
+          mkdir Payload
+          cp -R "$APP" Payload/
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Amore" Payload/Runner.app/Info.plist 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Amore" Payload/Runner.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString 4.0.0" Payload/Runner.app/Info.plist
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${GITHUB_RUN_NUMBER}" Payload/Runner.app/Info.plist
+          zip -qry Amore.ipa Payload
+          echo "=== 产物 ==="
+          ls -lh Amore.ipa
+          echo "SHA256: $(shasum -a 256 Amore.ipa | awk '{print $1}')"
+          echo "架构: $(lipo -archs Payload/Runner.app/Runner)"
+          echo "最低系统: $(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' Payload/Runner.app/Info.plist)"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Amore-flutter-ipa
+          path: amore-flutter/Amore.ipa
+          retention-days: 30
+
+      - name: 发 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: flutter-build-${{ github.run_number }}
+          name: "Amore Flutter 构建 #${{ github.run_number }}"
+          body: |
+            Amore 4.0 重构版（Flutter UI + Rust Core）。M0 骨架里程碑。
+            提交：`${{ github.sha }}`
+          files: amore-flutter/Amore.ipa
+          draft: false
+          prerelease: false
+
+      - name: 失败上传日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amore-flutter-build-log
+          path: |
+            amore-flutter/build.log
+            amore-flutter/rust-ios.log
+          retention-days: 7
+          if-no-files-found: ignore
