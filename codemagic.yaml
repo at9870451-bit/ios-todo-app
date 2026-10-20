@@ -59,17 +59,31 @@ workflows:
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter/ios"
           pod install
 
-      - name: 编译 Flutter iOS（未签名）
+      - name: 编译 iOS（flutter 配置 + xcodebuild 未签名）
         script: |
           set -e
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
-          flutter build ios --release --no-codesign
+          flutter precache --ios
+          # 只生成 Xcode 配置（Generated.xcconfig / pods 同步），不编译
+          flutter build ios --config-only --release --no-codesign
+          cd ios
+          set -o pipefail
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee ../xcodebuild.log | tail -40
 
       - name: 打包 ipa
         script: |
           set -e
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
-          APP=build/ios/iphoneos/Runner.app
+          APP=build/Build/Products/Release-iphoneos/Runner.app
           test -f "$APP/Runner"
           nm "$APP/Runner" | grep -q _amore_call || { echo 'amore_call 未链入'; exit 1; }
           rm -rf Payload Amore.ipa
@@ -87,3 +101,4 @@ workflows:
       - amore-flutter/Amore.ipa
       - amore-flutter/*.log
       - amore-flutter/*.txt
+      - amore-flutter/ios/*.log
