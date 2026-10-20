@@ -15,8 +15,12 @@ permissions:
 
 jobs:
   build:
-    name: Flutter + Rust → ipa
-    runs-on: macos-15
+    name: Flutter + Rust → ipa（${{ matrix.runner }}）
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15, macos-14, macos-latest]
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
 
     steps:
@@ -110,6 +114,7 @@ jobs:
           retention-days: 30
 
       - name: 发 Release
+        if: matrix.runner == 'macos-15'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: flutter-build-${{ github.run_number }}
