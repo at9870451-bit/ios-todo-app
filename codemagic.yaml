@@ -22,14 +22,16 @@ workflows:
       - name: 生成 Flutter 脚手架
         script: |
           set -e
-          cd "$CM_REPO_DIR/amore-flutter"
+          REPO="${CM_REPO_DIR:-$HOME/clone}"
+          echo "REPO=$REPO"; ls "$REPO"
+          cd "$REPO/amore-flutter"
           flutter create --org com.quantokx --project-name amore .
           flutter pub get
 
       - name: xcconfig 补丁（保 FFI 符号）
         script: |
           set -e
-          cd "$CM_REPO_DIR/amore-flutter"
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           for cfg in Debug Release; do
             printf '\nSTRIP_INSTALLED_PRODUCT=NO\nDEAD_CODE_STRIPPING=NO\n' >> "ios/Flutter/${cfg}.xcconfig"
           done
@@ -38,7 +40,7 @@ workflows:
         script: |
           set -e
           source "$HOME/.cargo/env"
-          cd "$CM_REPO_DIR/amore-flutter"
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           cargo build --release --target aarch64-apple-ios --manifest-path native/amore_core/Cargo.toml
           mkdir -p native/libs/ios
           cp native/amore_core/target/aarch64-apple-ios/release/libamore_core.a native/libs/ios/
@@ -48,13 +50,13 @@ workflows:
       - name: 编译 Flutter iOS（未签名）
         script: |
           set -e
-          cd "$CM_REPO_DIR/amore-flutter"
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           flutter build ios --release --no-codesign
 
       - name: 打包 ipa
         script: |
           set -e
-          cd "$CM_REPO_DIR/amore-flutter"
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           APP=build/ios/iphoneos/Runner.app
           test -f "$APP/Runner"
           nm "$APP/Runner" | grep -q _amore_call || { echo 'amore_call 未链入'; exit 1; }
