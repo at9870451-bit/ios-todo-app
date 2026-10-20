@@ -61,7 +61,7 @@ fn history_file(root: &Path, key: &str) -> PathBuf {
     history_dir(root).join(format!("{safe}.json"))
 }
 
-fn read_json(path: &Path) -> Option<Json> {
+fn read_json(path: &Path) -> Option<Value> {
     let text = fs::read_to_string(path).ok()?;
     serde_json::from_str(&text).ok()
 }
@@ -83,7 +83,7 @@ pub fn init(data_dir: &str) {
     let dir = PathBuf::from(data_dir);
     let _ = fs::create_dir_all(dir.join("history"));
     let config: HashMap<String, String> = read_json(&dir.join("config.json"))
-        .and_then(|j| serde_json::from_value(j.0).ok())
+        .and_then(|j| serde_json::from_value(j).ok())
         .unwrap_or_default();
     let active_provider = config.get("active_provider").cloned().unwrap_or_default();
     *STORE.lock().unwrap() = Some(Store {
@@ -114,7 +114,7 @@ fn with_mut<R>(f: impl FnOnce(&mut Store) -> R, fallback: R) -> R {
 
 fn load_array(root: &Path, name: &str) -> Vec<Json> {
     read_json(&root.join(name))
-        .and_then(|j| j.0.as_array().cloned())
+        .and_then(|j| j.as_array().cloned())
         .unwrap_or_default()
 }
 
@@ -182,7 +182,7 @@ pub fn count_history(key: &str) -> usize {
     with(
         |s| {
             read_json(&history_file(&s.dir, key))
-                .and_then(|j| j.0.as_array().cloned())
+                .and_then(|j| j.as_array().cloned())
                 .map(|a| a.len())
                 .unwrap_or(0)
         },
@@ -361,7 +361,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
             |s| {
                 let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let msgs = read_json(&history_file(&s.dir, key))
-                    .and_then(|j| j.0.as_array().cloned())
+                    .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
                 obj([("messages", arr(msgs))])
             },
@@ -373,7 +373,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
                 let role = p.0.get("role").and_then(|v| v.as_str()).unwrap_or("user");
                 let content = p.0.get("content").and_then(|v| v.as_str()).unwrap_or("");
                 let mut msgs = read_json(&history_file(&s.dir, &key))
-                    .and_then(|j| j.0.as_array().cloned())
+                    .and_then(|j| j.as_array().cloned())
                     .unwrap_or_default();
                 msgs.push(obj([
                     ("id", Json(serde_json::Value::Number(serde_json::Number::from(
@@ -398,7 +398,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
             |s| {
                 let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let f = history_file(&s.dir, key);
-                let n = read_json(&f).and_then(|j| j.0.as_array().cloned()).map(|a| a.len()).unwrap_or(0);
+                let n = read_json(&f).and_then(|j| j.as_array().cloned()).map(|a| a.len()).unwrap_or(0);
                 let _ = fs::remove_file(&f);
                 obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(n))))])
             },
@@ -408,7 +408,7 @@ pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
             |s| {
                 let key = p.0.get("key").and_then(|v| v.as_str()).unwrap_or("");
                 let n = read_json(&history_file(&s.dir, key))
-                    .and_then(|j| j.0.as_array().cloned())
+                    .and_then(|j| j.as_array().cloned())
                     .map(|a| a.len())
                     .unwrap_or(0);
                 obj([("count", Json(serde_json::Value::Number(serde_json::Number::from(n))))])

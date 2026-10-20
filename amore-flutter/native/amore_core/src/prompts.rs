@@ -73,16 +73,16 @@ pub fn build_system_prompt(friend: &Json) -> String {
 pub fn dispatch(method: &str, p: &Json) -> Option<Value> {
     match method {
         "chat.build_system_prompt" => {
-            let friend = p.0.get("friend").cloned().unwrap_or(obj([]).0);
+            let friend = p.0.get("friend").cloned().unwrap_or_default();
             Some(obj([("prompt", s(&build_system_prompt(&Json(friend))))]))
         }
 
         "chat.extract_memory" => {
             let text = p.0.get("text").and_then(|v| v.as_str()).unwrap_or("");
-            let memories: Vec<Json> = memory_re()
+            let memories: Vec<Value> = memory_re()
                 .captures_iter(text)
                 .map(|c| s(c.get(1).map(|m| m.as_str().trim()).unwrap_or("")))
-                .filter(|j| !j.0.as_str().unwrap_or("").is_empty())
+                .filter(|v| !v.as_str().unwrap_or("").is_empty())
                 .collect();
             Some(obj([("memories", arr(memories))]))
         }

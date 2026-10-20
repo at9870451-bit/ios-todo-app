@@ -1,7 +1,7 @@
 /// serde_json 轻量包装：简化信封组装
 use serde_json::{Map, Value};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Json(pub Value);
 
 pub fn obj<const N: usize>(fields: [(&str, Value); N]) -> Value {
