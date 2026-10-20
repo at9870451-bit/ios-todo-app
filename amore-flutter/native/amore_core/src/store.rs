@@ -344,7 +344,7 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             },
             obj([("values", obj([]))]),
         )),
-        "store.set_config" => Some(with(
+        "store.set_config" => Some(with_mut(
             |st| {
                 let k = p.get("key").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let v = p.get("value").and_then(|v| v.as_str()).unwrap_or("").to_string();

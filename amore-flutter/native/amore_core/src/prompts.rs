@@ -31,7 +31,6 @@ pub fn build_system_prompt(friend: &Value) -> String {
     let gender = friend.get("gender").and_then(|v| v.as_str()).unwrap_or("");
     let age = friend.get("age").and_then(|v| v.as_str()).unwrap_or("");
     let memory: Vec<String> = friend
-        .0
         .get("memory")
         .and_then(|v| v.as_array())
         .map(|a| a.iter().filter_map(|x| x.as_str().map(String::from)).collect())

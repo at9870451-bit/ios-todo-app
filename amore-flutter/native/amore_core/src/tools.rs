@@ -128,7 +128,7 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
                     ("name", s(&c.name)),
                     ("params", serde_json::Value::Object(params)),
                 ]));
-                let (status, content) = exec(c.name, &c.params.iter().cloned().collect());
+                let (status, content) = exec(&c.name, &c.params.iter().cloned().collect());
                 if !feedback.is_empty() {
                     feedback.push('\n');
                 }
