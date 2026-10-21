@@ -6,6 +6,7 @@
 import Foundation
 import ModelIO
 import SceneKit
+import SceneKit.ModelIO
 
 let args = CommandLine.arguments
 guard args.count >= 3 else {
