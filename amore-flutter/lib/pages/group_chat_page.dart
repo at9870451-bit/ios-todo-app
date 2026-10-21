@@ -240,7 +240,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
               style: const TextStyle(fontSize: 14.5),
               decoration: InputDecoration(
                 hintText: '发到群里…',
-                fillColor: const const Color(0xFFF2F2F7),
+                fillColor: const Color(0xFFF2F2F7),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),

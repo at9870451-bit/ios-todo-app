@@ -447,7 +447,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               style: const TextStyle(fontSize: 14.5),
               decoration: InputDecoration(
                 hintText: '说点什么…',
-                fillColor: const const Color(0xFFF2F2F7),
+                fillColor: const Color(0xFFF2F2F7),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 border: OutlineInputBorder(
