@@ -282,15 +282,8 @@ class AmoreTheme {
       ),
       chipTheme: ChipThemeData(
         selectedColor: AmoreBrand.orangeBg,
-        labelStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-              fontSize: 13,
-              color: s.contains(WidgetState.selected)
-                  ? AmoreBrand.orangeDeep
-                  : p.textSecondary,
-              fontWeight: s.contains(WidgetState.selected)
-                  ? FontWeight.w600
-                  : FontWeight.w400,
-            )),
+        labelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
+        secondaryLabelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
         side: BorderSide(color: p.cardBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
