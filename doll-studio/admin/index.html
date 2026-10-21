@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Doll Studio 3D 管理后台</title>
+<style>
+  :root { --bg:#F5F5F7; --card:#FFF; --line:#E3E3E8; --txt:#1D1D1F; --sub:#86868B; --orange:#FF9500; --blue:#3478F6; }
+  * { box-sizing:border-box; margin:0; font-family:-apple-system,"PingFang SC",sans-serif; }
+  body { background:var(--bg); color:var(--txt); }
+  header { display:flex; align-items:center; gap:14px; padding:14px 24px; background:#FFF; border-bottom:1px solid var(--line); position:sticky; top:0; }
+  header h1 { font-size:18px; }
+  header .sp { flex:1; }
+  header button { border:0; background:#F2F2F7; padding:8px 14px; border-radius:10px; cursor:pointer; }
+  main { max-width:1180px; margin:20px auto; padding:0 20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .tabs button { border:0; padding:9px 16px; border-radius:20px; cursor:pointer; background:#FFF; color:var(--txt); font-size:14px; }
+  .tabs button.on { background:var(--orange); color:#FFF; font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--sub); font-weight:500; }
+  input, select { padding:8px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; }
+  input.w80 { width:80px; } input.w140 { width:140px; } input.w240 { width:240px; }
+  button.pri { background:var(--orange); color:#FFF; border:0; padding:9px 18px; border-radius:12px; cursor:pointer; font-weight:600; }
+  button.mini { background:#F2F2F7; border:0; padding:6px 10px; border-radius:8px; cursor:pointer; font-size:12px; }
+  button.danger { color:#FF3B30; }
+  .stat { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  .stat .card { text-align:center; padding:22px; }
+  .stat b { font-size:30px; display:block; }
+  .login-box { max-width:360px; margin:12vh auto; }
+  .login-box input { width:100%; margin-bottom:12px; padding:12px; }
+  .muted { color:var(--sub); font-size:12px; }
+  .swatch { width:18px; height:18px; border-radius:5px; display:inline-block; vertical-align:middle; border:1px solid var(--line); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const API = location.origin + '/api';
+let token = sessionStorage.getItem('admin_token') || '';
+let tab = 'stats';
+let catalogCache = [];
+
+async function api(path, opt = {}) {
+  const r = await fetch(API + path, {
+    method: opt.method || 'GET',
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: opt.body ? JSON.stringify(opt.body) : undefined,
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+  return j.data;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  if (!token) { app.innerHTML = loginHTML(); return; }
+  app.innerHTML = `
+    <header>
+      <h1>🎨 Doll Studio 3D 管理后台</h1><div class="sp"></div>
+      <button onclick="logout()">退出</button>
+    </header>
+    <main>
+      <div class="tabs">
+        ${[['stats','概览'],['clothes','服装'],['dolls','玩偶'],['categories','分类'],['ai','AI 配置'],['logs','AI 日志']]
+          .map(([k,t]) => `<button class="${tab===k?'on':''}" onclick="tab='${k}';render()">${t}</button>`).join('')}
+      </div>
+      <div id="content">加载中…</div>
+    </main>`;
+  load();
+}
+
+function loginHTML() {
+  return `
+    <div class="login-box card">
+      <h2 style="margin-bottom:14px">🎨 Doll Studio 3D 管理后台</h2>
+      <input id="u" placeholder="管理员用户名" value="admin">
+      <input id="p" type="password" placeholder="密码">
+      <button class="pri" style="width:100%" onclick="doLogin()">登 录</button>
+      <p class="muted" id="lerr" style="color:#FF3B30;margin-top:8px"></p>
+    </div>`;
+}
+
+async function doLogin() {
+  try {
+    const d = await api('/admin/login', { method: 'POST', body: { username: u.value, password: p.value } });
+    token = d.token; sessionStorage.setItem('admin_token', token); render();
+  } catch (e) { document.getElementById('lerr').textContent = e.message; }
+}
+function logout() { token = ''; sessionStorage.removeItem('admin_token'); render(); }
+
+async function load() {
+  const c = document.getElementById('content');
+  try {
+    if (tab === 'stats') {
+      const d = await api('/admin/stats');
+      c.innerHTML = `<div class="stat">
+        <div class="card"><b>${d.users}</b>用户</div>
+        <div class="card"><b>${d.clothes}</b>在售服装</div>
+        <div class="card"><b>${d.outfits}</b>穿搭作品</div>
+        <div class="card"><b>${d.ai_calls_today}</b>今日 AI 调用</div></div>`;
+    }
+    if (tab === 'clothes') {
+      const d = await api('/admin/clothes');
+      catalogCache = d.clothes;
+      c.innerHTML = `<div class="card">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <input id="c_id" class="w140" placeholder="ID 如 top_dress_red">
+          <input id="c_name" class="w140" placeholder="名称">
+          <input id="c_cat" class="w80" placeholder="分类" value="top">
+          <input id="c_kind" class="w80" placeholder="kind" value="tee">
+          <input id="c_color" class="w80" placeholder="#颜色" value="#FF9500">
+          <input id="c_price" class="w80" placeholder="价格0" type="number">
+          <input id="c_group" class="w80" placeholder="互斥组">
+          <input id="c_model" class="w240" placeholder="USDZ URL（可选）">
+          <button class="pri" onclick="saveCloth()">保存 / 更新</button>
+        </div>
+        <table><tr><th>ID</th><th>名称</th><th>分类</th><th>kind</th><th>颜色</th><th>价格</th><th>互斥</th><th></th></tr>
+        ${d.clothes.map(x => `<tr>
+          <td>${x.id}</td><td>${x.name}</td><td>${x.category}</td><td>${x.kind}</td>
+          <td><span class="swatch" style="background:${x.color}"></span> ${x.color}</td>
+          <td>${x.price}</td><td>${x.exclusive_group || '-'}</td>
+          <td><button class="mini danger" onclick="delCloth('${x.id}')">删除</button></td></tr>`).join('')}
+        </table></div>`;
+    }
+    if (tab === 'dolls') {
+      const d = await api('/admin/dolls');
+      c.innerHTML = `<div class="card"><table><tr><th>ID</th><th>名称</th><th>性别</th><th>肤色</th><th>身高</th><th>USDZ</th></tr>
+        ${d.dolls.map(x => `<tr><td>${x.id}</td><td>${x.name}</td><td>${x.gender}</td>
+          <td><span class="swatch" style="background:${x.skin}"></span></td>
+          <td>${x.height_scale}</td><td>${x.usdz_url || '（程序化）'}</td></tr>`).join('')}</table>
+        <p class="muted" style="margin-top:10px">新增玩偶：POST /api/admin/dolls {id,name,gender,skin,height_scale,usdz_url}</p></div>`;
+    }
+    if (tab === 'categories') {
+      const d = await api('/admin/categories');
+      c.innerHTML = `<div class="card"><table><tr><th>key</th><th>标题</th><th>排序</th><th>启用</th></tr>
+        ${d.categories.map(x => `<tr><td>${x.key}</td><td>${x.title}</td><td>${x.sort}</td><td>${x.enabled}</td></tr>`).join('')}</table></div>`;
+    }
+    if (tab === 'ai') {
+      const d = await api('/admin/ai-config');
+      c.innerHTML = `<div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:640px">
+          <label>API Base<input id="ai_base" class="w240" style="width:100%" value="${d.api_base || ''}"></label>
+          <label>API Key（留空=不改）<input id="ai_key" type="password" class="w240" style="width:100%" placeholder="${d.api_key_masked || '未配置'}"></label>
+          <label>模型<input id="ai_model" class="w240" style="width:100%" value="${d.model || ''}"></label>
+          <label>超时(秒)<input id="ai_timeout" class="w80" type="number" value="${d.timeout_sec}"></label>
+          <label>每日上限<input id="ai_limit" class="w80" type="number" value="${d.daily_limit}"></label>
+          <label>启用<select id="ai_enabled"><option value="1" ${d.enabled==1?'selected':''}>开</option><option value="0" ${d.enabled!=1?'selected':''}>关</option></select></label>
+        </div>
+        <p class="muted" style="margin:10px 0">API Key 只存服务端，客户端永远拿不到；走 OpenAI 兼容 /chat/completions。</p>
+        <button class="pri" onclick="saveAI()">保存配置</button></div>`;
+    }
+    if (tab === 'logs') {
+      const d = await api('/admin/ai-logs?limit=100');
+      c.innerHTML = `<div class="card"><table><tr><th>时间</th><th>用户</th><th>状态</th><th>延迟</th><th>prompt</th><th>错误</th></tr>
+        ${d.logs.map(l => `<tr><td>${(l.created_at||'').slice(0,19)}</td><td>${l.user_id||'-'}</td>
+          <td>${l.status}</td><td>${l.latency_ms}ms</td>
+          <td style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(l.prompt||'').slice(0,60)}</td>
+          <td>${l.error_msg||'-'}</td></tr>`).join('')}</table></div>`;
+    }
+  } catch (e) {
+    c.innerHTML = `<div class="card" style="color:#FF3B30">加载失败：${e.message}</div>`;
+  }
+}
+
+async function saveCloth() {
+  try {
+    await api('/admin/clothes', { method: 'POST', body: {
+      id: c_id.value.trim(), name: c_name.value.trim() || c_id.value.trim(),
+      category: c_cat.value.trim(), kind: c_kind.value.trim(), color: c_color.value.trim(),
+      price: parseFloat(c_price.value || '0'), exclusive_group: c_group.value.trim() || null,
+      model_url: c_model.value.trim() || null, enabled: 1,
+    }});
+    load();
+  } catch (e) { alert(e.message); }
+}
+async function delCloth(id) {
+  if (!confirm('删除 ' + id + '？')) return;
+  try { await api('/admin/clothes?id=' + encodeURIComponent(id), { method: 'DELETE' }); load(); }
+  catch (e) { alert(e.message); }
+}
+async function saveAI() {
+  try {
+    await api('/admin/ai-config', { method: 'POST', body: {
+      api_base: ai_base.value.trim(), api_key: ai_key.value.trim(),
+      model: ai_model.value.trim(), timeout_sec: +ai_timeout.value,
+      daily_limit: +ai_limit.value, enabled: +ai_enabled.value,
+    }});
+    alert('已保存'); load();
+  } catch (e) { alert(e.message); }
+}
+
+render();
+</script>
+</body>
+</html>

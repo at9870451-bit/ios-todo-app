@@ -1,0 +1,96 @@
+# Doll Studio 3D — iOS 构建（SwiftUI + SceneKit，程序化模型无三方依赖）
+name: Build DollStudio3D
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - "doll-studio/**"
+      - ".github/workflows/doll-studio-ios.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: SwiftUI + SceneKit → ipa
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 显示环境
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成工程
+        working-directory: doll-studio/ios
+        run: xcodegen generate --spec project.yml
+
+      - name: 编译（未签名）
+        working-directory: doll-studio/ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project DollStudio3D.xcodeproj \
+            -scheme DollStudio3D \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee build.log | tail -60
+
+      - name: 打包 ipa
+        working-directory: doll-studio/ios
+        run: |
+          APP_PATH="build/Build/Products/Release-iphoneos/DollStudio3D.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::找不到产物 $APP_PATH"
+            exit 1
+          fi
+          rm -rf Payload DollStudio3D.ipa
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          rm -rf Payload/DollStudio3D.app/_CodeSignature 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${GITHUB_RUN_NUMBER}" Payload/DollStudio3D.app/Info.plist
+          zip -qry DollStudio3D.ipa Payload
+          echo "=== 产物 ==="
+          ls -lh DollStudio3D.ipa
+          echo "SHA256: $(shasum -a 256 DollStudio3D.ipa | awk '{print $1}')"
+          echo "架构: $(lipo -archs Payload/DollStudio3D.app/DollStudio3D)"
+
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: DollStudio3D-ipa
+          path: doll-studio/ios/DollStudio3D.ipa
+          retention-days: 30
+
+      - name: 发 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: doll-build-${{ github.run_number }}
+          name: "Doll Studio 3D 构建 #${{ github.run_number }}"
+          body: |
+            Doll Studio 3D（SwiftUI + SceneKit 程序化 3D 玩偶换装）。
+            后端：doll-studio/api-java（Spring Boot 3）；管理后台：doll-studio/admin/index.html。
+            提交：`${{ github.sha }}`
+          files: doll-studio/ios/DollStudio3D.ipa
+          draft: false
+          prerelease: false
+
+      - name: 失败上传日志
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: doll-studio-build-log
+          path: doll-studio/ios/build.log
+          retention-days: 7
