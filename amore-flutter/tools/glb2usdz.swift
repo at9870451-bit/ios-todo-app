@@ -14,7 +14,9 @@ let outURL = URL(fileURLWithPath: args[2])
 
 let asset = MDLAsset(url: inURL)
 asset.loadTextures()
-let scene = SCNScene(mdlAsset: asset)
+let scene = SCNScene()
+let root = SCNNode(mdlObject: asset.rootNode)
+scene.rootNode.addChildNode(root)
 guard scene.rootNode.childNodes.isEmpty == false else {
     print("empty scene")
     exit(2)
