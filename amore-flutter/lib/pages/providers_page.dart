@@ -362,7 +362,7 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               Container(
                 constraints: const BoxConstraints(maxHeight: 180),
                 decoration: BoxDecoration(
-                  color: const const Color(0xFFF2F2F7),
+                  color: const Color(0xFFF2F2F7),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: AmoreTheme.cardBorder),
                 ),

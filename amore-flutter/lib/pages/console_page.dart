@@ -207,7 +207,7 @@ class _ConsolePageState extends State<ConsolePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('本地终端', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
       body: Container(
-        color: const const Color(0xFF1D1D1F),
+        color: const Color(0xFF1D1D1F),
         child: SafeArea(
           child: Column(
             children: [
@@ -221,8 +221,8 @@ class _ConsolePageState extends State<ConsolePage> {
                     final color = switch (l.kind) {
                       _LineKind.info => const Color(0xFF7FB98A),
                       _LineKind.prompt => const Color(0xFFB8E986),
-                      _LineKind.error => const const Color(0xFFFF3B30),
-                      _LineKind.normal => const const Color(0xFF34C759),
+                      _LineKind.error => const Color(0xFFFF3B30),
+                      _LineKind.normal => const Color(0xFF34C759),
                     };
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 3),
@@ -254,7 +254,7 @@ class _ConsolePageState extends State<ConsolePage> {
                         onSubmitted: _exec,
                         style: const TextStyle(
                             fontFamily: 'monospace', fontSize: 13, color: Color(0xFFB8E986)),
-                        cursorColor: const const Color(0xFF34C759),
+                        cursorColor: const Color(0xFF34C759),
                         decoration: const InputDecoration.collapsed(
                             hintText: '输入命令…',
                             hintStyle: TextStyle(color: const Color(0xFF86868B))),
