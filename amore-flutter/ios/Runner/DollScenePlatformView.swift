@@ -29,7 +29,7 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
 
     init(frame: CGRect, viewId: Int64, args: Any?,
          messenger: FlutterBinaryMessenger, controller: DollSceneController3D) {
-        controller_ = controller
+        self.controller = controller
         scnView = SCNView()
         scnView.scene = controller.scene
         scnView.antialiasingMode = .multisampling4X
@@ -53,8 +53,6 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
             target: self, action: #selector(onPinch(_:))))
     }
 
-    private let controller_: DollSceneController3D
-
     func view() -> UIView { scnView }
 
     // MARK: MethodChannel 处理
@@ -66,28 +64,28 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
             let gender = args["gender"] as? String ?? "female"
             let skin = args["skin"] as? String ?? "#F3C6A5"
             let hs = (args["heightScale"] as? NSNumber)?.doubleValue ?? 1.0
-            controller_.setCharacter(gender: gender, skin: skin, heightScale: hs)
+            controller.setCharacter(gender: gender, skin: skin, heightScale: hs)
             result(true)
         case "updateSlots":
             if let slots = args["slots"] as? [String: [String: String]] {
-                controller_.updateSlots(slots)
+                controller.updateSlots(slots)
             }
             result(true)
         case "applyPose":
             let pose = DollPose3D(rawValue: args["pose"] as? String ?? "standing") ?? .standing
-            controller_.applyPose(pose)
+            controller.applyPose(pose)
             result(true)
         case "face":
-            controller_.face(args["label"] as? String ?? "正面")
+            controller.face(args["label"] as? String ?? "正面")
             result(true)
         case "resetView":
-            controller_.resetView()
+            controller.resetView()
             result(true)
         case "loadSkinned":
             let name = args["name"] as? String ?? "CesiumMan"
-            result(controller_.loadSkinned(named: name))
+            result(controller.loadSkinned(named: name))
         case "unloadSkinned":
-            controller_.unloadSkinned()
+            controller.unloadSkinned()
             result(true)
         case "snapshot":
             DispatchQueue.main.async {
@@ -103,13 +101,13 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
 
     @objc private func onPan(_ g: UIPanGestureRecognizer) {
         let t = g.translation(in: scnView)
-        controller_.orbit(dx: Float(t.x), dy: Float(t.y))
+        controller.orbit(dx: Float(t.x), dy: Float(t.y))
         g.setTranslation(.zero, in: scnView)
     }
 
     @objc private func onPinch(_ g: UIPinchGestureRecognizer) {
         if g.state == .changed {
-            controller_.zoom(Float(g.scale))
+            controller.zoom(Float(g.scale))
             g.scale = 1
         }
     }
