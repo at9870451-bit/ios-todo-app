@@ -137,7 +137,7 @@ enum BuiltInCatalog {
         // 帽子（互斥组 hat）
         .init(id: "hat_cap_black", name: "黑色棒球帽", category: "hat", kind: "cap", color: "#2B2B2E", exclusiveGroup: "hat"),
         .init(id: "hat_beanie_knit", name: "针织帽", category: "hat", kind: "beanie", color: "#7A5A8A", exclusiveGroup: "hat"),
-        .init(id: "hat_beret_red", name: "红色贝雷帽", category: "hat", kind: "beret", color: "#B4443C", exclusiveGroup: "hat", price: 5),
+        .init(id: "hat_beret_red", name: "红色贝雷帽", category: "hat", kind: "beret", color: "#B4443C", price: 5, exclusiveGroup: "hat"),
         .init(id: "hat_bucket_cream", name: "渔夫帽", category: "hat", kind: "bucket", color: "#E8DCC8", exclusiveGroup: "hat"),
         // 鞋子
         .init(id: "shoe_sneakers_white", name: "白色运动鞋", category: "shoes", kind: "sneakers", color: "#F0F0F2"),

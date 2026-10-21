@@ -45,7 +45,10 @@ struct OutfitListView: View {
             }
         }
         .navigationTitle("我的作品")
-        .alert("删除该作品？", item: $pendingDelete) { o in
+        .alert("删除该作品？",
+               isPresented: Binding(get: { pendingDelete != nil },
+                                    set: { if !$0 { pendingDelete = nil } }),
+               presenting: pendingDelete) { o in
             Button("删除", role: .destructive) { store.deleteOutfit(o) }
             Button("取消", role: .cancel) {}
         } message: { o in

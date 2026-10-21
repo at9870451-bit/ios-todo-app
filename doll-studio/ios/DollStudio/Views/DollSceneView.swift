@@ -50,7 +50,7 @@ final class DollSceneController: ObservableObject {
         scene.rootNode.addChildNode(yawNode)
         yawNode.addChildNode(pitchNode)
         let camera = SCNCamera()
-        camera.fov = 42
+        camera.fieldOfView = 42
         camera.zNear = 0.1
         camera.zFar = 50
         cameraNode.camera = camera
@@ -293,9 +293,11 @@ enum DollBuilder {
     /// 换装入口：kind == "usdz" 走引用节点，否则程序化
     static func buildGarment(item: ClothItem, hex: String, body: SCNNode, usdzURL: String?) -> SCNNode {
         if item.kind == "usdz", let urlStr = usdzURL ?? item.modelURL, let url = URL(string: urlStr) {
-            let ref = SCNReferenceNode(url: url)
-            ref.load()
-            return ref
+            if let ref = SCNReferenceNode(url: url) {
+                ref.load()
+                return ref
+            }
+            return SCNNode()
         }
         let (r, g, b) = ClothItem.colorFromHex(hex)
         let color = UIColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
