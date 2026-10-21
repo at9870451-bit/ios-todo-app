@@ -1,8 +1,15 @@
-// 对应 Swift：DollStudioView.swift —— 玩偶工作室（3D 渲染 M5 接入 RealityKit 替代方案，装扮配置本期完整）
+// Amore 玩偶 Tab — 3D 换装工作室（SceneKit PlatformView + 衣橱面板）
+// Apple 白×橙视觉；服装目录 lib/pages/doll/catalog.dart；3D 原生层 ios/Runner/DollScene*
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../core/store.dart';
 import '../core/theme.dart';
+import 'doll/catalog.dart';
+import 'doll/scene3d.dart';
 
 class DollStudioPage extends StatefulWidget {
   const DollStudioPage({super.key});
@@ -13,165 +20,216 @@ class DollStudioPage extends StatefulWidget {
 
 class _DollStudioPageState extends State<DollStudioPage> {
   int _tab = 0;
+  String _gender = 'female';
+  String _skin = '#F3C6A5';
+  String _dollName = '小雅';
+  double _heightScale = 1.0;
 
-  static const _tabs = ['发型', '表情', '服装', '配饰'];
-  static const _configKeys = ['doll_hair', 'doll_face', 'doll_outfit', 'doll_acc'];
+  /// 当前穿搭：category → {kind, color}
+  Map<String, Map<String, String>> _slots = {};
 
-  static const Map<String, List<(String, IconData)>> _options = {
-    'doll_hair': [
-      ('长直发', Icons.waves_rounded),
-      ('双马尾', Icons.animation_rounded),
-      ('丸子头', Icons.egg_alt_rounded),
-      ('短发', Icons.spa_rounded),
-      ('卷发', Icons.blur_circular_rounded),
-      ('侧编发', Icons.linear_scale_rounded),
-      ('高马尾', Icons.thermostat_rounded),
-      ('公主卷', Icons.filter_vintage_rounded),
-    ],
-    'doll_face': [
-      ('元气笑', Icons.sentiment_very_satisfied_rounded),
-      ('温柔笑', Icons.sentiment_satisfied_rounded),
-      ('傲娇脸', Icons.sentiment_neutral_rounded),
-      ('思考中', Icons.psychology_rounded),
-      ('惊讶', Icons.sentiment_dissatisfied_rounded),
-      ('困困', Icons.bedtime_rounded),
-      ('星星眼', Icons.star_rounded),
-      ('wink', Icons.sentiment_satisfied_alt_rounded),
-    ],
-    'doll_outfit': [
-      ('JK 制服', Icons.school_rounded),
-      ('和风浴衣', Icons.checkroom_rounded),
-      ('卫仔装', Icons.sports_baseball_rounded),
-      ('礼服', Icons.local_florist_rounded),
-      ('居家服', Icons.nightlight_rounded),
-      ('运动风', Icons.sports_soccer_rounded),
-      ('哥特', Icons.dark_mode_rounded),
-      ('未来感', Icons.rocket_launch_rounded),
-    ],
-    'doll_acc': [
-      ('蝴蝶结', Icons.celebration_rounded),
-      ('猫耳', Icons.pets_rounded),
-      ('眼镜', Icons.remove_red_eye_rounded),
-      ('发卡', Icons.brightness_high_rounded),
-      ('项链', Icons.diamond_rounded),
-      ('帽子', Icons.face_retouching_natural_rounded),
-      ('耳机', Icons.headphones_rounded),
-      ('无', Icons.block_rounded),
-    ],
-  };
+  final List<Map<String, Map<String, String>>> _undo = [];
+  final List<Map<String, Map<String, String>>> _redo = [];
+  bool get _canUndo => _undo.isNotEmpty;
+  bool get _canRedo => _redo.isNotEmpty;
+
+  final Set<String> _favorites = {};
+  final List<String> _recent = [];
+  final Set<String> _owned = {};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restore());
+    _slots = {
+      'top': const {'kind': 'tee', 'color': '#F5F5F7'},
+      'bottom': const {'kind': 'pants', 'color': '#4A6B9A'},
+      'shoes': const {'kind': 'sneakers', 'color': '#F0F0F2'},
+    };
+  }
+
+  Future<void> _restore() async {
+    final saved = AmoreStore.getConfig('doll_slots');
+    if (saved == null || saved.isEmpty) return;
+    try {
+      final decoded = jsonDecode(saved) as Map<String, dynamic>;
+      setState(() {
+        _gender = (decoded['gender'] ?? 'female') as String;
+        _skin = (decoded['skin'] ?? '#F3C6A5') as String;
+        _dollName = (decoded['name'] ?? '小雅') as String;
+        _heightScale = (decoded['height'] as num?)?.toDouble() ?? 1.0;
+        _slots = ((decoded['slots'] ?? {}) as Map).map((k, v) => MapEntry(
+              k as String,
+              (v as Map).map((kk, vv) =>
+                  MapEntry(kk as String, Map<String, String>.from(vv as Map))),
+            ));
+        final owned = AmoreStore.getConfig('doll_owned');
+        if (owned != null && owned.isNotEmpty) _owned.addAll(owned.split(','));
+      });
+    } catch (_) {
+      // 损坏数据忽略
+    }
+  }
+
+  Future<void> _persist() async {
+    AmoreStore.setConfig('doll_slots',
+        '{"gender":"$_gender","skin":"$_skin","name":"$_dollName","height":$_heightScale,"slots":${jsonEncode(_slots)}}');
+    AmoreStore.setConfig('doll_owned', _owned.join(','));
+    context.read<AppState>().refreshAll();
+  }
+
+  void _pushUndo() {
+    _undo.add(Map.of(_slots));
+    if (_undo.length > 50) _undo.removeAt(0);
+    _redo.clear();
+    _persist();
+  }
+
+  void _undo() {
+    if (_undo.isEmpty) return;
+    _redo.add(Map.of(_slots));
+    setState(() => _slots = _undo.removeLast());
+    _persist();
+    HapticFeedback.selectionClick();
+  }
+
+  void _redo() {
+    if (_redo.isEmpty) return;
+    _undo.add(Map.of(_slots));
+    setState(() => _slots = _redo.removeLast());
+    _persist();
+    HapticFeedback.selectionClick();
+  }
+
+  void _wear(DollCloth item) {
+    if (item.price > 0 && !_owned.contains(item.id)) {
+      setState(() => _owned.add(item.id)); // 本地模拟解锁；正式接服务端订单
+      _persist();
+      _toast('已解锁「${item.name}」（¥${item.price.toInt()}，本地模拟）');
+      return;
+    }
+    _pushUndo();
+    if (item.exclusiveGroup != null) {
+      _slots.removeWhere((cat, slot) {
+        final matches = DollCatalog.clothes.any((c) =>
+            c.kind == slot['kind'] &&
+            c.exclusiveGroup == item.exclusiveGroup &&
+            cat != item.category);
+        return matches;
+      });
+    }
+    setState(() {
+      _slots[item.category] = {'kind': item.kind, 'color': item.color};
+      _recent
+        ..remove(item.id)
+        ..insert(0, item.id);
+      if (_recent.length > 20) _recent.removeLast();
+    });
+    HapticFeedback.selectionClick();
+  }
+
+  void _removeSlot(String category) {
+    if (_slots[category] == null) return;
+    _pushUndo();
+    setState(() => _slots.remove(category));
+  }
+
+  void _setColor(String hex) {
+    if (_slots[_tabCategory] == null) return;
+    _pushUndo();
+    setState(() {
+      _slots[_tabCategory] = {..._slots[_tabCategory]!, 'color': hex};
+    });
+  }
+
+  void _reset() {
+    _pushUndo();
+    setState(() {
+      _slots = {
+        'top': const {'kind': 'tee', 'color': '#F5F5F7'},
+        'bottom': const {'kind': 'pants', 'color': '#4A6B9A'},
+        'shoes': const {'kind': 'sneakers', 'color': '#F0F0F2'},
+      };
+    });
+  }
+
+  String get _tabCategory =>
+      DollCatalog.categories[_tab.clamp(0, DollCatalog.categories.length - 1)].key;
+
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg), duration: const Duration(milliseconds: 1400)));
+  }
+
+  // MARK: 截图分享（原生 snapshot → PNG bytes → 存剪贴板提示 + 预览）
+
+  Future<void> _shareSnapshot() async {
+    final data = await DollSceneChannel.snapshot();
+    if (data == null) {
+      _toast('截图不可用（原生层未就绪）');
+      return;
+    }
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('穿搭截图'),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 280),
+          child: Image.memory(data, fit: BoxFit.contain),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(
+                  ClipboardData(text: 'data:image/png;base64,${base64Encode(data)}'));
+              if (ctx.mounted) Navigator.pop(ctx);
+              _toast('截图已复制（base64），保存到相册 M5 接入');
+            },
+            child: const Text('复制'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('完成'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final key = _configKeys[_tab];
-    final current = AmoreStore.getConfig(key) ?? _options[key]!.first.$1;
-    final summary = _configKeys
-        .map((k) => AmoreStore.getConfig(k) ?? _options[k]!.first.$1)
-        .join(' · ');
+    final items = DollCatalog.clothes
+        .where((c) => c.category == _tabCategory)
+        .toList()
+      ..sort((a, b) {
+        final fa = _favorites.contains(a.id) ? 0 : 1;
+        final fb = _favorites.contains(b.id) ? 0 : 1;
+        if (fa != fb) return fa - fb;
+        final ra = _recent.indexOf(a.id);
+        final rb = _recent.indexOf(b.id);
+        return (ra < 0 ? 999 : ra) - (rb < 0 ? 999 : rb);
+      });
 
     return Scaffold(
-      appBar: AppBar(title: const Text('玩偶工作室', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700))),
+      appBar: AppBar(
+        title: const Text('玩偶工作室',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+        actions: [
+          IconButton(
+            tooltip: '保存截图',
+            onPressed: _shareSnapshot,
+            icon: const Icon(Icons.photo_camera_outlined),
+          ),
+        ],
+      ),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(
           child: Column(
             children: [
-              // 3D 预览区
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                height: 250,
-                decoration: BoxDecoration(
-                  gradient: const RadialGradient(
-                    center: Alignment(0, -0.4),
-                    radius: 1.2,
-                    colors: [Color(0xFFEAF4FF), Color(0xFFFFF0DE)],
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AmoreTheme.cardBorder),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Icon(
-                        _options[key]!
-                            .firstWhere((o) => o.$1 == current, orElse: () => _options[key]!.first)
-                            .$2,
-                        key: ValueKey(current),
-                        size: 84,
-                        color: AmoreBrand.orange.withOpacity(0.9),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(summary,
-                        style: const TextStyle(fontSize: 12, color: AmoreTheme.textSecondary)),
-                    const SizedBox(height: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AmoreTheme.accent.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text('3D 实时渲染 M5 接入（RealityKit 替代方案）',
-                          style: TextStyle(fontSize: 10, color: AmoreTheme.accent)),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              // 页签
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: SegmentedButton<int>(
-                  segments: _tabs
-                      .asMap()
-                      .entries
-                      .map((e) => ButtonSegment(value: e.key, label: Text(e.value)))
-                      .toList(),
-                  selected: {_tab},
-                  onSelectionChanged: (s) => setState(() => _tab = s.first),
-                ),
-              ),
-
-              // 选项网格
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4, mainAxisSpacing: 10, crossAxisSpacing: 10),
-                  itemCount: _options[key]!.length,
-                  itemBuilder: (_, i) {
-                    final (name, icon) = _options[key]![i];
-                    final selected = current == name;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {});
-                        _save(key, name);
-                      },
-                      child: Container(
-                        decoration: AmoreTheme.cardBox(
-                          border: selected ? AmoreTheme.accent : null,
-                          radius: 13,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(icon,
-                                size: 26,
-                                color: selected ? AmoreTheme.accent : AmoreTheme.textSecondary),
-                            const SizedBox(height: 6),
-                            Text(name,
-                                style: TextStyle(
-                                    fontSize: 10.5,
-                                    color: selected ? AmoreTheme.accent : AmoreTheme.textSecondary)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _sceneArea()),
+              _wardrobePanel(items),
             ],
           ),
         ),
@@ -179,10 +237,421 @@ class _DollStudioPageState extends State<DollStudioPage> {
     );
   }
 
-  void _save(String key, String value) {
-    AmoreStore.setConfig(key, value);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        duration: const Duration(milliseconds: 900),
-        content: Text('已保存：$value')));
+  // MARK: 3D 区
+
+  Widget _sceneArea() {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: DollScene3D(
+            gender: _gender,
+            skin: _skin,
+            heightScale: _heightScale,
+            slots: _slots,
+          ),
+        ),
+        Positioned(
+          left: 14,
+          top: 8,
+          child: Column(
+            children: [
+              _viewBtn('正面'),
+              const SizedBox(height: 8),
+              _viewBtn('侧面'),
+              const SizedBox(height: 8),
+              _viewBtn('背面'),
+              const SizedBox(height: 8),
+              _roundBtn(Icons.arrow_counterclockwise, () {
+                DollSceneChannel.resetView();
+                HapticFeedback.selectionClick();
+              }),
+            ],
+          ),
+        ),
+        Positioned(
+          right: 14,
+          top: 8,
+          child: Column(
+            children: [
+              _poseBtn('站姿', 'standing'),
+              const SizedBox(height: 8),
+              _poseBtn('自然', 'relaxed'),
+              const SizedBox(height: 8),
+              _poseBtn('展示', 'presentation'),
+            ],
+          ),
+        ),
+        Positioned(
+          left: 20,
+          right: 20,
+          bottom: 8,
+          child: Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.92),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('$_genderLabel · $_dollName',
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF86868B))),
+              ),
+              const Spacer(),
+              const Text('单指旋转 · 双指缩放',
+                  style: TextStyle(fontSize: 11, color: Color(0xFFAEAEB2))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String get _genderLabel => _gender == 'male'
+      ? '男性玩偶'
+      : _gender == 'female'
+          ? '女性玩偶'
+          : '中性玩偶';
+
+  Widget _viewBtn(String label) {
+    return GestureDetector(
+      onTap: () {
+        DollSceneChannel.face(label);
+        HapticFeedback.selectionClick();
+      },
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child:
+            Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF1D1D1F))),
+      ),
+    );
+  }
+
+  Widget _poseBtn(String label, String pose) {
+    return GestureDetector(
+      onTap: () {
+        DollSceneChannel.applyPose(pose);
+        HapticFeedback.selectionClick();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child:
+            Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF1D1D1F))),
+      ),
+    );
+  }
+
+  Widget _roundBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: Icon(icon, size: 17, color: const Color(0xFF1D1D1F)),
+      ),
+    );
+  }
+
+  // MARK: 衣橱面板（Liquid Glass）
+
+  Widget _wardrobePanel(List<DollCloth> items) {
+    return GlassContainer(
+      radius: 24,
+      blur: 20,
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 38,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: [
+                for (var i = 0; i < DollCatalog.categories.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(DollCatalog.categories[i].title),
+                      selected: _tab == i,
+                      onSelected: (_) => setState(() => _tab = i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 92,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: [
+                if (_slots[_tabCategory] != null) _removeThumb(),
+                for (final item in items)
+                  if (_slots[_tabCategory] == null ||
+                      _slots[_tabCategory]!['kind'] != item.kind ||
+                      _slots[_tabCategory]!['color'] != item.color)
+                    _thumb(item),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                if (_slots[_tabCategory] != null)
+                  Expanded(child: _colorRow())
+                else
+                  const Spacer(),
+                _panelBtn(Icons.arrow_uturn_left_rounded, _canUndo, _undo),
+                const SizedBox(width: 6),
+                _panelBtn(Icons.arrow_uturn_right_rounded, _canRedo, _redo),
+                const SizedBox(width: 6),
+                _panelBtn(Icons.restart_alt_rounded, true, _reset),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _removeThumb() {
+    return GestureDetector(
+      onTap: () => _removeSlot(_tabCategory),
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: AmoreBrand.orangeBg,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(Icons.remove, color: AmoreBrand.orangeDeep, size: 18),
+            ),
+            const SizedBox(height: 5),
+            const Text('脱下',
+                style: TextStyle(fontSize: 10.5, color: Color(0xFF86868B))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _thumb(DollCloth item) {
+    final locked = item.price > 0 && !_owned.contains(item.id);
+    final fav = _favorites.contains(item.id);
+    return GestureDetector(
+      onTap: () => _wear(item),
+      onLongPress: () {
+        setState(() {
+          if (fav) {
+            _favorites.remove(item.id);
+          } else {
+            _favorites.add(item.id);
+          }
+        });
+        _toast(fav ? '已取消收藏' : '已收藏');
+      },
+      child: Padding(
+        padding: const EdgeInsets.only(right: 12),
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    color: Color(int.parse('FF${item.color.substring(1)}', radix: 16)),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE3E3E8)),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    _iconFor(item),
+                    color: Colors.white.withOpacity(0.95),
+                    size: 22,
+                  ),
+                ),
+                if (locked)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.35),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.lock_rounded,
+                          color: Colors.white, size: 16),
+                    ),
+                  ),
+                if (fav)
+                  const Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Icon(Icons.favorite_rounded,
+                        color: Color(0xFFFF3B30), size: 11),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(item.name,
+                style: TextStyle(
+                    fontSize: 10.5,
+                    color: locked
+                        ? const Color(0xFFAEAEB2)
+                        : const Color(0xFF1D1D1F))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _iconFor(DollCloth item) {
+    switch (item.kind) {
+      case 'tee':
+        return Icons.checkroom_rounded;
+      case 'shirt':
+        return Icons.workspaces_rounded;
+      case 'hoodie':
+      case 'sweater':
+        return Icons.dry_cleaning_rounded;
+      case 'jacket':
+      case 'coat':
+        return Icons.storm_rounded;
+      case 'pants':
+      case 'shorts':
+        return Icons.airline_seat_legroom_normal_rounded;
+      case 'skirt':
+      case 'longskirt':
+        return Icons.change_history_rounded;
+      case 'scarf':
+      case 'scarflong':
+      case 'scarfneck':
+        return Icons.join_full_rounded;
+      case 'cap':
+      case 'beanie':
+      case 'beret':
+      case 'bucket':
+        return Icons.ac_unit_rounded;
+      case 'sneakers':
+      case 'leather':
+      case 'boots':
+        return Icons.hiking_rounded;
+      case 'hairShort':
+      case 'hairLong':
+      case 'hairCurly':
+      case 'hairPony':
+        return Icons.face_retouching_natural_rounded;
+      case 'glasses':
+        return Icons.remove_red_eye_rounded;
+      case 'necklace':
+        return Icons.auto_awesome_rounded;
+      case 'bag':
+        return Icons.shopping_bag_rounded;
+      case 'earring':
+        return Icons.blur_circular_rounded;
+      default:
+        return Icons.grid_view_rounded;
+    }
+  }
+
+  Widget _colorRow() {
+    const colors = [
+      '#2B2B2E', '#5A5A5E', '#8E8E93', '#F5F5F7',
+      '#5B8DEF', '#3478F6', '#67C7FF', '#8C9EFF',
+      '#FF9500', '#FF6A00', '#F4A6C0', '#C4453C',
+      '#34C759', '#6B4A32', '#C8A882', '#7A5A8A',
+    ];
+    final current = _slots[_tabCategory]?['color']?.toLowerCase();
+    return SizedBox(
+      height: 30,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final hex in colors)
+            GestureDetector(
+              onTap: () => _setColor(hex),
+              child: Container(
+                width: 26,
+                height: 26,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Color(int.parse('FF${hex.substring(1)}', radix: 16)),
+                  border: Border.all(
+                    color: current == hex.toLowerCase()
+                        ? const Color(0xFF1D1D1F)
+                        : const Color(0xFFD1D1D6),
+                    width: current == hex.toLowerCase() ? 2.2 : 1,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _panelBtn(IconData icon, bool enabled, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 38,
+        height: 38,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: enabled
+              ? const Color(0xFFF2F2F7)
+              : const Color(0xFFF2F2F7).withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(icon,
+            size: 16,
+            color: enabled ? const Color(0xFF1D1D1F) : const Color(0xFFC7C7CC)),
+      ),
+    );
   }
 }
