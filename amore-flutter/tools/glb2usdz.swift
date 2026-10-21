@@ -41,7 +41,7 @@ let ok: Bool = exporter.write(
     to: outURL,
     options: [:] as [String: Any],
     delegate: nil as (any SCNSceneExportDelegate)?,
-    progressHandler: nil as ((Float) -> Void)?
+    progressHandler: nil as ((Float, (any Error)?, UnsafeMutablePointer<ObjCBool>) -> Void)?
 )
 if ok {
     print("USDZ written: \(outURL.path)")
