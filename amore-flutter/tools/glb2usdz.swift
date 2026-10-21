@@ -22,12 +22,12 @@ guard scene.rootNode.childNodes.isEmpty == false else {
     exit(2)
 }
 
-do {
-    try scene.write(to: outURL, options: [:],
-                    delegate: nil as SCNSceneExportDelegate?,
-                    progressHandler: nil as SCNSceneExportProgressHandler?)
+let okWrite = scene.write(to: outURL, options: [:],
+                          delegate: nil as SCNSceneExportDelegate?,
+                          progressHandler: nil as SCNSceneExportProgressHandler?)
+if okWrite {
     print("USDZ written: \(outURL.path)")
-} catch {
-    print("write error: \(error)")
+} else {
+    print("write failed")
     exit(2)
 }
