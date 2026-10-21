@@ -59,11 +59,15 @@ class _DollStudioPageState extends State<DollStudioPage> {
         _skin = (decoded['skin'] ?? '#F3C6A5') as String;
         _dollName = (decoded['name'] ?? '小雅') as String;
         _heightScale = (decoded['height'] as num?)?.toDouble() ?? 1.0;
-        _slots = ((decoded['slots'] ?? {}) as Map).map((k, v) => MapEntry(
-              k as String,
-              (v as Map).map((kk, vv) =>
-                  MapEntry(kk as String, Map<String, String>.from(vv as Map))),
-            ));
+        final restored = <String, Map<String, String>>{};
+        ((decoded['slots'] ?? {}) as Map).forEach((k, v) {
+          final inner = <String, String>{};
+          (v as Map).forEach((kk, vv) {
+            inner[kk.toString()] = vv.toString();
+          });
+          restored[k.toString()] = inner;
+        });
+        _slots = restored;
         final owned = AmoreStore.getConfig('doll_owned');
         if (owned != null && owned.isNotEmpty) _owned.addAll(owned.split(','));
       });
@@ -95,9 +99,9 @@ class _DollStudioPageState extends State<DollStudioPage> {
   }
 
   void _redo() {
-    if (_redo.isEmpty) return;
+    if (_redoStack.isEmpty) return;
     _undoStack.add(Map.of(_slots));
-    setState(() => _slots = _redo.removeLast());
+    setState(() => _slots = _redoStack.removeLast());
     _persist();
     HapticFeedback.selectionClick();
   }
