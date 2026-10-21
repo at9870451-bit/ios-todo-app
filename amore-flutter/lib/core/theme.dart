@@ -127,21 +127,21 @@ class AmoreTheme {
   AmoreTheme._();
 
   // ---- 兼容旧代码的浅色常量（页面静态引用）----
-  static const bg = APalette.light.bg;
-  static const card = APalette.light.card;
-  static const cardBorder = APalette.light.cardBorder;
-  static const textPrimary = APalette.light.textPrimary;
-  static const textSecondary = APalette.light.textSecondary;
-  static const textFaint = APalette.light.textFaint;
+  static const bg = Color(0xFFF5F5F7);
+  static const card = Colors.white;
+  static const cardBorder = Color(0xFFE3E3E8);
+  static const textPrimary = Color(0xFF1D1D1F);
+  static const textSecondary = Color(0xFF86868B);
+  static const textFaint = Color(0xFFAEAEB2);
   static const bubbleMe = AmoreBrand.brandBlue; // 我方气泡渐变起点
   static const bubbleMeDeep = AmoreBrand.warmOrange; // 我方气泡渐变终点
-  static const bubbleOther = APalette.light.bubbleOther;
+  static const bubbleOther = Color(0xFFFFFFFF);
   static const accent = AmoreBrand.orange;
   static const accent2 = AmoreBrand.brandBlue;
   static const danger = AmoreBrand.danger;
   static const success = AmoreBrand.success;
   static const warn = AmoreBrand.warn;
-  static const tabBg = APalette.light.barBg;
+  static const tabBg = Color(0xF7FFFFFF);
 
   /// 语义色板（build 内使用，自动亮暗）
   static APalette pal(BuildContext context) =>
