@@ -114,11 +114,7 @@ final class DollSceneController3D: NSObject, ObservableObject {
         for entry in src.entries(passingTest: { o, _, _ in o is CAAnimation }) {
             if let anim = entry as? CAAnimation {
                 anim.repeatCount = Float.greatestFiniteMagnitude
-                if let key = anim.identifier?.stringValue ?? entryValueKey(entry) {
-                    root.addAnimation(anim, forKey: key)
-                } else {
-                    root.addAnimation(anim, forKey: "skinned_\(animationSeq())")
-                }
+                root.addAnimation(anim, forKey: "skinned_\(animationSeq())")
             }
         }
 
