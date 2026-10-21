@@ -110,12 +110,10 @@ final class DollSceneController3D: NSObject, ObservableObject {
 
         let root = sceneObj.rootNode.clone()
 
-        // 收集内置动画（.identifier 为 key）并在根节点循环播放
-        var animationKeys: [String] = []
-        src.identifiersOfEntries(withClass: CAAnimation.self).forEach { key in
-            if let anim = src.entry(withIdentifier: key) as? CAAnimation {
+        // 收集内置动画（entries 返回 (Any, String, UnsafeMutablePointer<ObjCBool>) 元组）并循环播放
+        for (obj, key, _) in src.entries(passingTest: { o, _, _ in o is CAAnimation }) {
+            if let anim = obj as? CAAnimation {
                 anim.repeatCount = Float.greatestFiniteMagnitude
-                animationKeys.append(key)
                 root.addAnimation(anim, forKey: key)
             }
         }
@@ -133,7 +131,6 @@ final class DollSceneController3D: NSObject, ObservableObject {
         dollRoot.addChildNode(wrapper)
         skinnedNode = wrapper
         skinnedLoaded = true
-        _ = animationKeys.count
         return true
     }
 
