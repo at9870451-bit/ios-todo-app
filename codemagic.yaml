@@ -54,7 +54,6 @@ workflows:
           ruby tools/fix_xcodeproj.rb
           # 玩偶 3D：把自定义 Swift（DollScene*）加入 Runner target
           ruby tools/add_native_files.rb
-          ruby tools/add_resources.rb
 
       - name: 真 3D 骨骼模型（CesiumMan GLB → assimp → DAE，SceneKit 原生支持）
         script: |
