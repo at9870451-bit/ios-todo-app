@@ -280,7 +280,7 @@ class AmoreTheme {
             )),
         height: 62,
       ),
-      choiceChipTheme: ChoiceChipThemeData(
+      chipTheme: ChipThemeData(
         selectedColor: AmoreBrand.orangeBg,
         labelStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
               fontSize: 13,
