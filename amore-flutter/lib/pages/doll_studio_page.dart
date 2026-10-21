@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import '../state/app_state.dart';
 import '../core/theme.dart';
 import 'doll/catalog.dart';
 import 'doll/scene3d.dart';
@@ -28,10 +29,10 @@ class _DollStudioPageState extends State<DollStudioPage> {
   /// 当前穿搭：category → {kind, color}
   Map<String, Map<String, String>> _slots = {};
 
-  final List<Map<String, Map<String, String>>> _undo = [];
-  final List<Map<String, Map<String, String>>> _redo = [];
-  bool get _canUndo => _undo.isNotEmpty;
-  bool get _canRedo => _redo.isNotEmpty;
+  final List<Map<String, Map<String, String>>> _undoStack = [];
+  final List<Map<String, Map<String, String>>> _redoStack = [];
+  bool get _canUndo => _undoStack.isNotEmpty;
+  bool get _canRedo => _redoStack.isNotEmpty;
 
   final Set<String> _favorites = {};
   final List<String> _recent = [];
@@ -79,23 +80,23 @@ class _DollStudioPageState extends State<DollStudioPage> {
   }
 
   void _pushUndo() {
-    _undo.add(Map.of(_slots));
-    if (_undo.length > 50) _undo.removeAt(0);
-    _redo.clear();
+    _undoStack.add(Map.of(_slots));
+    if (_undoStack.length > 50) _undoStack.removeAt(0);
+    _redoStack.clear();
     _persist();
   }
 
   void _undo() {
-    if (_undo.isEmpty) return;
-    _redo.add(Map.of(_slots));
-    setState(() => _slots = _undo.removeLast());
+    if (_undoStack.isEmpty) return;
+    _redoStack.add(Map.of(_slots));
+    setState(() => _slots = _undoStack.removeLast());
     _persist();
     HapticFeedback.selectionClick();
   }
 
   void _redo() {
     if (_redo.isEmpty) return;
-    _undo.add(Map.of(_slots));
+    _undoStack.add(Map.of(_slots));
     setState(() => _slots = _redo.removeLast());
     _persist();
     HapticFeedback.selectionClick();
@@ -261,7 +262,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
               const SizedBox(height: 8),
               _viewBtn('背面'),
               const SizedBox(height: 8),
-              _roundBtn(Icons.arrow_counterclockwise, () {
+              _roundBtn(Icons.refresh_rounded, () {
                 DollSceneChannel.resetView();
                 HapticFeedback.selectionClick();
               }),
@@ -441,9 +442,9 @@ class _DollStudioPageState extends State<DollStudioPage> {
                   Expanded(child: _colorRow())
                 else
                   const Spacer(),
-                _panelBtn(Icons.arrow_uturn_left_rounded, _canUndo, _undo),
+                _panelBtn(Icons.undo_rounded, _canUndo, _undo),
                 const SizedBox(width: 6),
-                _panelBtn(Icons.arrow_uturn_right_rounded, _canRedo, _redo),
+                _panelBtn(Icons.redo_rounded, _canRedo, _redo),
                 const SizedBox(width: 6),
                 _panelBtn(Icons.restart_alt_rounded, true, _reset),
               ],
