@@ -23,7 +23,7 @@ let scene = SCNScene()
 var added = 0
 
 // 遍历 asset 顶层对象（MDLObject 集合下标 API，稳定）
-for i in 0..<asset.count(objectAt: 0) {
+for i in 0..<asset.count {
     let obj: MDLObject = asset.object(at: i)
     let node = SCNNode(mdlObject: obj)
     scene.rootNode.addChildNode(node)
