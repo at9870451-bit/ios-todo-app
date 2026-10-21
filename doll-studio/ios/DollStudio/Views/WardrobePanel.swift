@@ -34,13 +34,13 @@ struct WardrobePanel: View {
                         } label: {
                             Text(cat.title)
                                 .font(.system(size: 13.5, weight: selected ? .bold : .regular))
-                                .foregroundStyle(selected ? Color.white : Color(0xFF1D1D1F))
+                                .foregroundStyle(selected ? Color.white : Color(hex: 0xFF1D1D1F))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
                                 .background(
                                     Capsule().fill(selected
-                                        ? AnyShapeStyle(Color(0xFFFF9500))
-                                        : AnyShapeStyle(Color(0xFFF2F2F7))))
+                                        ? AnyShapeStyle(Color(hex: 0xFFFF9500))
+                                        : AnyShapeStyle(Color(hex: 0xFFF2F2F7))))
                         }
                     }
                 }
@@ -59,15 +59,15 @@ struct WardrobePanel: View {
                             VStack(spacing: 5) {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 14)
-                                        .fill(Color(0xFFFFF4E8))
+                                        .fill(Color(hex: 0xFFFFF4E8))
                                     Image(systemName: "minus")
                                         .font(.system(size: 17, weight: .bold))
-                                        .foregroundStyle(Color(0xFFE87500))
+                                        .foregroundStyle(Color(hex: 0xFFE87500))
                                 }
                                 .frame(width: 62, height: 62)
                                 Text("脱下")
                                     .font(.system(size: 10.5))
-                                    .foregroundStyle(Color(0xFF86868B))
+                                    .foregroundStyle(Color(hex: 0xFF86868B))
                             }
                         }
                         thumbnail(for: wornItem, worn: true, colorOverride: worn.color)
@@ -101,7 +101,7 @@ struct WardrobePanel: View {
                 } label: {
                     Label("保存穿搭", systemImage: "square.and.arrow.down")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color(0xFF1D1D1F))
+                        .foregroundStyle(Color(hex: 0xFF1D1D1F))
                         .frame(maxWidth: .infinity).frame(height: 48)
                         .background(RoundedRectangle(cornerRadius: 16)
                             .fill(.white)
@@ -113,7 +113,7 @@ struct WardrobePanel: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity).frame(height: 48)
                         .background(
-                            LinearGradient(colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
+                            LinearGradient(colors: [Color(hex: 0xFF3478F6), Color(hex: 0xFF6CA8FF), Color(hex: 0xFFFF9500)],
                                            startPoint: .topLeading, endPoint: .bottomTrailing)
                                 .clipShape(RoundedRectangle(cornerRadius: 16)))
                 }
@@ -139,8 +139,8 @@ struct WardrobePanel: View {
                             .fill(Color(hexString: hex))
                             .frame(width: 26, height: 26)
                             .overlay(Circle().strokeBorder(
-                                isCurrent ? Color(0xFF1D1D1F) : Color(0xFFD1D1D6),
-                                lineWidth: isCurrent ? 2.2 : 1))
+                                isCurrent ? Color(hex: 0xFF1D1D1F) : Color(hex: 0xFFD1D1D6),
+                                lineWidth: isCurrent ? 2.2 : 1.0))
                     }
                 }
             }
@@ -170,9 +170,9 @@ struct WardrobePanel: View {
                 ZStack(alignment: .topTrailing) {
                     RoundedRectangle(cornerRadius: 14)
                         .fill(worn
-                              ? LinearGradient(colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
+                              ? LinearGradient(colors: [Color(hex: 0xFF3478F6), Color(hex: 0xFF6CA8FF), Color(hex: 0xFFFF9500)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing)
-                              : LinearGradient(colors: [Color(0xFFF7F7F9), Color(0xFFEFEFF3)],
+                              : LinearGradient(colors: [Color(hex: 0xFFF7F7F9), Color(hex: 0xFFEFEFF3)],
                                                startPoint: .top, endPoint: .bottom))
                         .frame(width: 62, height: 62)
                     if let thumb = item.thumb, let url = URL(string: thumb) {
@@ -197,16 +197,16 @@ struct WardrobePanel: View {
                     if fav {
                         Image(systemName: "heart.fill")
                             .font(.system(size: 9))
-                            .foregroundStyle(Color(0xFFFF3B30))
+                            .foregroundStyle(Color(hex: 0xFFFF3B30))
                             .padding(4)
                     }
                 }
                 .frame(width: 62, height: 62)
                 .overlay(RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(worn ? Color.clear : Color(0xFFE3E3E8), lineWidth: 1))
+                    .strokeBorder(worn ? Color.clear : Color(hex: 0xFFE3E3E8), lineWidth: 1))
                 Text(item.name)
                     .font(.system(size: 10.5, weight: worn ? .semibold : .regular))
-                    .foregroundStyle(worn ? Color(0xFFE87500) : Color(0xFF1D1D1F))
+                    .foregroundStyle(worn ? Color(hex: 0xFFE87500) : Color(hex: 0xFF1D1D1F))
                     .lineLimit(1)
             }
             .contextMenu {
@@ -246,9 +246,9 @@ struct WardrobePanel: View {
         } label: {
             Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(disabled ? Color(0xFFC7C7CC) : Color(0xFF1D1D1F))
+                .foregroundStyle(disabled ? Color(hex: 0xFFC7C7CC) : Color(hex: 0xFF1D1D1F))
                 .frame(width: 38, height: 38)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(0xFFF2F2F7)))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: 0xFFF2F2F7)))
         }
         .disabled(disabled)
     }

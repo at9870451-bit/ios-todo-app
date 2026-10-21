@@ -20,7 +20,7 @@ struct RootView: View {
         NavigationStack {
             ZStack {
                 // 背景柔和渐变
-                LinearGradient(colors: [Color(0xFFF7F9FD), Color(0xFFFDF6EE)],
+                LinearGradient(colors: [Color(hex: 0xFFF7F9FD), Color(hex: 0xFFFDF6EE)],
                                startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
 
@@ -52,14 +52,14 @@ struct RootView: View {
         HStack(spacing: 14) {
             Text("Doll Studio 3D")
                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundStyle(Color(0xFF1D1D1F))
+                .foregroundStyle(Color(hex: 0xFF1D1D1F))
 
             Spacer()
 
             NavigationLink { FavoritesView() } label: {
                 Image(systemName: "heart.fill")
                     .font(.system(size: 17))
-                    .foregroundStyle(Color(0xFFFF3B30))
+                    .foregroundStyle(Color(hex: 0xFFFF3B30))
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(.white).shadow(color: .black.opacity(0.06), radius: 5, y: 2))
             }
@@ -68,7 +68,7 @@ struct RootView: View {
             } label: {
                 Image(systemName: "person.crop.circle")
                     .font(.system(size: 19))
-                    .foregroundStyle(Color(0xFF3478F6))
+                    .foregroundStyle(Color(hex: 0xFF3478F6))
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(.white).shadow(color: .black.opacity(0.06), radius: 5, y: 2))
             }
@@ -77,7 +77,7 @@ struct RootView: View {
             } label: {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 17))
-                    .foregroundStyle(Color(0xFF86868B))
+                    .foregroundStyle(Color(hex: 0xFF86868B))
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(.white).shadow(color: .black.opacity(0.06), radius: 5, y: 2))
             }
@@ -110,7 +110,7 @@ struct RootView: View {
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color(0xFF1D1D1F))
+                        .foregroundStyle(Color(hex: 0xFF1D1D1F))
                         .frame(width: 40, height: 40)
                         .background(Circle().fill(.white).shadow(color: .black.opacity(0.08), radius: 6, y: 2))
                 }
@@ -128,12 +128,12 @@ struct RootView: View {
                     } label: {
                         Text(pose.title)
                             .font(.system(size: 12, weight: scene.pose == pose ? .bold : .regular))
-                            .foregroundStyle(scene.pose == pose ? Color.white : Color(0xFF1D1D1F))
+                            .foregroundStyle(scene.pose == pose ? Color.white : Color(hex: 0xFF1D1D1F))
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
                             .background(
                                 Capsule().fill(scene.pose == pose
-                                        ? AnyShapeStyle(Color(0xFFFF9500))
+                                        ? AnyShapeStyle(Color(hex: 0xFFFF9500))
                                         : AnyShapeStyle(Color.white))
                                     .shadow(color: .black.opacity(0.08), radius: 5, y: 2))
                     }
@@ -149,14 +149,14 @@ struct RootView: View {
                 HStack {
                     Text("\(store.gender.title) · \(store.dollName)")
                         .font(.system(size: 12.5, weight: .medium))
-                        .foregroundStyle(Color(0xFF86868B))
+                        .foregroundStyle(Color(hex: 0xFF86868B))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
                         .background(Capsule().fill(.white.opacity(0.9)))
                     Spacer()
                     Text("单指旋转 · 双指缩放")
                         .font(.system(size: 11))
-                        .foregroundStyle(Color(0xFFAEAEB2))
+                        .foregroundStyle(Color(hex: 0xFFAEAEB2))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                         .background(Capsule().fill(.white.opacity(0.9)))
@@ -174,10 +174,10 @@ struct RootView: View {
         } label: {
             Text(label)
                 .font(.system(size: 12, weight: scene.viewLabel == label ? .bold : .regular))
-                .foregroundStyle(scene.viewLabel == label ? Color.white : Color(0xFF1D1D1F))
+                .foregroundStyle(scene.viewLabel == label ? Color.white : Color(hex: 0xFF1D1D1F))
                 .frame(width: 40, height: 40)
                 .background(Circle().fill(scene.viewLabel == label
-                        ? AnyShapeStyle(Color(0xFF3478F6))
+                        ? AnyShapeStyle(Color(hex: 0xFF3478F6))
                         : AnyShapeStyle(Color.white))
                     .shadow(color: .black.opacity(0.08), radius: 6, y: 2))
         }
@@ -243,7 +243,7 @@ struct SaveOutfitView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
                     .background(
-                        LinearGradient(colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
+                        LinearGradient(colors: [Color(hex: 0xFF3478F6), Color(hex: 0xFF6CA8FF), Color(hex: 0xFFFF9500)],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
                             .clipShape(RoundedRectangle(cornerRadius: 16)))
             }
@@ -275,7 +275,7 @@ struct AIAssistantView: View {
                 .font(.system(size: 18, weight: .bold))
             Text("输入想要的风格，AI 根据玩偶性别与现有衣橱返回搭配方案")
                 .font(.system(size: 12.5))
-                .foregroundStyle(Color(0xFF86868B))
+                .foregroundStyle(Color(hex: 0xFF86868B))
 
             TextField("例如：帮我搭配一套秋冬街头风格的衣服", text: $prompt, axis: .vertical)
                 .lineLimit(2...4)
@@ -287,8 +287,8 @@ struct AIAssistantView: View {
                         Button(q) { prompt = "帮我搭配一套\(q)的衣服。" }
                             .font(.system(size: 12.5))
                             .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(Capsule().fill(Color(0xFFFFF4E8)))
-                            .foregroundStyle(Color(0xFFE87500))
+                            .background(Capsule().fill(Color(hex: 0xFFFFF4E8)))
+                            .foregroundStyle(Color(hex: 0xFFE87500))
                     }
                 }
             }
@@ -307,7 +307,7 @@ struct AIAssistantView: View {
                 .font(.system(size: 15.5, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
-                .background(LinearGradient(colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
+                .background(LinearGradient(colors: [Color(hex: 0xFF3478F6), Color(hex: 0xFF6CA8FF), Color(hex: 0xFFFF9500)],
                                            startPoint: .topLeading, endPoint: .bottomTrailing)
                     .clipShape(RoundedRectangle(cornerRadius: 16)))
             }
@@ -317,14 +317,14 @@ struct AIAssistantView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(resultText)
                         .font(.system(size: 13.5))
-                        .foregroundStyle(Color(0xFF1D1D1F))
+                        .foregroundStyle(Color(hex: 0xFF1D1D1F))
                     Text(source)
                         .font(.system(size: 11))
-                        .foregroundStyle(Color(0xFFAEAEB2))
+                        .foregroundStyle(Color(hex: 0xFFAEAEB2))
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(0xFFF2F2F7)))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(hex: 0xFFF2F2F7)))
             }
             Spacer()
         }

@@ -11,8 +11,8 @@ struct OutfitListView: View {
         List {
             if store.outfits.isEmpty {
                 VStack(spacing: 10) {
-                    Image(systemName: "tshirt").font(.system(size: 40)).foregroundStyle(Color(0xFFC7C7CC))
-                    Text("还没有保存的穿搭").foregroundStyle(Color(0xFF86868B)).font(.system(size: 14))
+                    Image(systemName: "tshirt").font(.system(size: 40)).foregroundStyle(Color(hex: 0xFFC7C7CC))
+                    Text("还没有保存的穿搭").foregroundStyle(Color(hex: 0xFF86868B)).font(.system(size: 14))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 60)
@@ -22,9 +22,9 @@ struct OutfitListView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(o.name).font(.system(size: 16, weight: .semibold))
                     HStack(spacing: 8) {
-                        Text(o.gender.title).font(.system(size: 12)).foregroundStyle(Color(0xFF86868B))
-                        Text("\(o.slots.count) 件单品").font(.system(size: 12)).foregroundStyle(Color(0xFF86868B))
-                        Text(o.createdAt, style: .date).font(.system(size: 12)).foregroundStyle(Color(0xFFAEAEB2))
+                        Text(o.gender.title).font(.system(size: 12)).foregroundStyle(Color(hex: 0xFF86868B))
+                        Text("\(o.slots.count) 件单品").font(.system(size: 12)).foregroundStyle(Color(hex: 0xFF86868B))
+                        Text(o.createdAt, style: .date).font(.system(size: 12)).foregroundStyle(Color(hex: 0xFFAEAEB2))
                     }
                     // 单品速览
                     HStack(spacing: 4) {
@@ -34,9 +34,9 @@ struct OutfitListView: View {
                     }
                     HStack(spacing: 14) {
                         Button("穿着它") { store.loadOutfit(o) }
-                            .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(0xFFFF9500))
+                            .font(.system(size: 12.5, weight: .semibold)).foregroundStyle(Color(hex: 0xFFFF9500))
                         Button("复制") { store.duplicateOutfit(o) }
-                            .font(.system(size: 12.5)).foregroundStyle(Color(0xFF3478F6))
+                            .font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xFF3478F6))
                         Button("删除", role: .destructive) { pendingDelete = o }
                             .font(.system(size: 12.5))
                     }
@@ -67,8 +67,8 @@ struct FavoritesView: View {
         List {
             if favItems.isEmpty {
                 VStack(spacing: 10) {
-                    Image(systemName: "heart").font(.system(size: 40)).foregroundStyle(Color(0xFFC7C7CC))
-                    Text("长按服装缩略图可收藏").foregroundStyle(Color(0xFF86868B)).font(.system(size: 14))
+                    Image(systemName: "heart").font(.system(size: 40)).foregroundStyle(Color(hex: 0xFFC7C7CC))
+                    Text("长按服装缩略图可收藏").foregroundStyle(Color(hex: 0xFF86868B)).font(.system(size: 14))
                 }
                 .frame(maxWidth: .infinity).padding(.vertical, 60)
                 .listRowSeparator(.hidden)
@@ -81,16 +81,16 @@ struct FavoritesView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.name).font(.system(size: 15, weight: .medium))
                         Text(store.categories.first { $0.key == item.category }?.title ?? item.category)
-                            .font(.system(size: 12)).foregroundStyle(Color(0xFF86868B))
+                            .font(.system(size: 12)).foregroundStyle(Color(hex: 0xFF86868B))
                     }
                     Spacer()
                     if !item.isFree {
-                        Text("¥\(Int(item.price))").font(.system(size: 13)).foregroundStyle(Color(0xFFFF9500))
+                        Text("¥\(Int(item.price))").font(.system(size: 13)).foregroundStyle(Color(hex: 0xFFFF9500))
                     }
                     Button {
                         store.toggleFavorite(item.id)
                     } label: {
-                        Image(systemName: "heart.slash").foregroundStyle(Color(0xFFC7C7CC))
+                        Image(systemName: "heart.slash").foregroundStyle(Color(hex: 0xFFC7C7CC))
                     }
                 }
             }
@@ -129,17 +129,17 @@ struct GenderPickerView: View {
                         }
                         .frame(maxWidth: .infinity).frame(height: 110)
                         .background(RoundedRectangle(cornerRadius: 18)
-                            .fill(selected ? Color(0xFFFFF4E8) : Color(0xFFF2F2F7)))
+                            .fill(selected ? Color(hex: 0xFFFFF4E8) : Color(hex: 0xFFF2F2F7)))
                         .overlay(RoundedRectangle(cornerRadius: 18)
-                            .strokeBorder(selected ? Color(0xFFFF9500) : Color.clear, lineWidth: 2))
-                        .foregroundStyle(selected ? Color(0xFFE87500) : Color(0xFF1D1D1F))
+                            .strokeBorder(selected ? Color(hex: 0xFFFF9500) : Color.clear, lineWidth: 2))
+                        .foregroundStyle(selected ? Color(hex: 0xFFE87500) : Color(hex: 0xFF1D1D1F))
                     }
                 }
             }
             .padding(.horizontal, 20)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("肤色").font(.system(size: 13)).foregroundStyle(Color(0xFF86868B))
+                Text("肤色").font(.system(size: 13)).foregroundStyle(Color(hex: 0xFF86868B))
                 HStack(spacing: 10) {
                     ForEach(skins, id: \.self) { hex in
                         let selected = store.skin.lowercased() == hex.lowercased()
@@ -149,7 +149,7 @@ struct GenderPickerView: View {
                             Circle().fill(Color(hexString: hex))
                                 .frame(width: 34, height: 34)
                                 .overlay(Circle().strokeBorder(
-                                    selected ? Color(0xFFFF9500) : Color(0xFFE3E3E8),
+                                    selected ? Color(hex: 0xFFFF9500) : Color(hex: 0xFFE3E3E8),
                                     lineWidth: selected ? 2.4 : 1))
                         }
                     }
@@ -158,7 +158,7 @@ struct GenderPickerView: View {
             .padding(.horizontal, 20)
 
             HStack {
-                Text("玩偶名称").font(.system(size: 13)).foregroundStyle(Color(0xFF86868B))
+                Text("玩偶名称").font(.system(size: 13)).foregroundStyle(Color(hex: 0xFF86868B))
                 Spacer()
                 TextField("名称", text: $store.dollName)
                     .multilineTextAlignment(.trailing)
@@ -172,7 +172,7 @@ struct GenderPickerView: View {
                 Text("开始搭配")
                     .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
                     .frame(maxWidth: .infinity).frame(height: 50)
-                    .background(LinearGradient(colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
+                    .background(LinearGradient(colors: [Color(hex: 0xFF3478F6), Color(hex: 0xFF6CA8FF), Color(hex: 0xFFFF9500)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing)
                         .clipShape(RoundedRectangle(cornerRadius: 16)))
             }
@@ -199,14 +199,14 @@ struct SettingsView: View {
                 Section("账号") {
                     HStack {
                         Image(systemName: "person.crop.circle.fill")
-                            .font(.system(size: 30)).foregroundStyle(Color(0xFF3478F6))
+                            .font(.system(size: 30)).foregroundStyle(Color(hex: 0xFF3478F6))
                         Text(store.username).font(.system(size: 15, weight: .semibold))
                         Spacer()
                         if store.authToken == nil {
                             Button("登录") { showLogin = true }
                                 .font(.system(size: 13, weight: .semibold))
                                 .buttonStyle(.borderedProminent)
-                                .tint(Color(0xFFFF9500))
+                                .tint(Color(hex: 0xFFFF9500))
                         } else {
                             Button("退出") {
                                 store.authToken = nil
@@ -227,7 +227,7 @@ struct SettingsView: View {
                         .font(.system(size: 14))
                     }
                     if let e = loginError {
-                        Text(e).font(.system(size: 11.5)).foregroundStyle(Color(0xFFFF3B30))
+                        Text(e).font(.system(size: 11.5)).foregroundStyle(Color(hex: 0xFFFF3B30))
                     }
                 }
 
@@ -236,10 +236,10 @@ struct SettingsView: View {
                         Text("交互音效").font(.system(size: 14.5))
                     }
                     if !audio.sfxOn {
-                        Text("音效已关闭").font(.system(size: 11.5)).foregroundStyle(Color(0xFFAEAEB2))
+                        Text("音效已关闭").font(.system(size: 11.5)).foregroundStyle(Color(hex: 0xFFAEAEB2))
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("音效音量（跟随系统播放）").font(.system(size: 12.5)).foregroundStyle(Color(0xFF86868B))
+                        Text("音效音量（跟随系统播放）").font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xFF86868B))
                         Slider(value: $audio.sfxVolume)
                     }
                     Toggle(isOn: $audio.bgmOn) {
@@ -247,33 +247,33 @@ struct SettingsView: View {
                             Text("背景音乐").font(.system(size: 14.5))
                             if !audio.bgmAvailable {
                                 Text("未检测到 bgm.mp3（放到 App 沙盒 Documents 目录后可用）")
-                                    .font(.system(size: 11)).foregroundStyle(Color(0xFFAEAEB2))
+                                    .font(.system(size: 11)).foregroundStyle(Color(hex: 0xFFAEAEB2))
                             }
                         }
                     }
                     .disabled(!audio.bgmAvailable)
                     if audio.bgmOn && audio.bgmAvailable {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("背景音乐音量").font(.system(size: 12.5)).foregroundStyle(Color(0xFF86868B))
+                            Text("背景音乐音量").font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xFF86868B))
                             Slider(value: $audio.bgmVolume)
                         }
                     }
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("AI 语音音量").font(.system(size: 12.5)).foregroundStyle(Color(0xFF86868B))
+                        Text("AI 语音音量").font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xFF86868B))
                         Slider(value: $audio.voiceVolume)
                     }
                 }
 
                 Section("服务端") {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("API 地址（留空 = 纯本地模式）").font(.system(size: 12.5)).foregroundStyle(Color(0xFF86868B))
+                        Text("API 地址（留空 = 纯本地模式）").font(.system(size: 12.5)).foregroundStyle(Color(hex: 0xFF86868B))
                         TextField("https://your-server.example.com", text: Binding(
                             get: { store.apiBase },
                             set: { store.apiBase = $0 }))
                             .font(.system(size: 13))
                             .textFieldStyle(.roundedBorder)
                         Text("服装目录通过 GET /api/clothes 动态获取；AI 搭配经 POST /api/ai/outfits（API Key 仅保存在服务端）。")
-                            .font(.system(size: 11)).foregroundStyle(Color(0xFFAEAEB2))
+                            .font(.system(size: 11)).foregroundStyle(Color(hex: 0xFFAEAEB2))
                     }
                     Button("重新拉取服装目录") {
                         Task { await store.fetchRemoteCatalog() }
@@ -313,7 +313,7 @@ struct LoginView: View {
             Capsule().fill(.gray.opacity(0.3)).frame(width: 40, height: 5).padding(.top, 10)
             Text("账号登录").font(.system(size: 18, weight: .bold))
             Text("游客模式无需登录，本地数据始终可用")
-                .font(.system(size: 12)).foregroundStyle(Color(0xFF86868B))
+                .font(.system(size: 12)).foregroundStyle(Color(hex: 0xFF86868B))
 
             TextField("用户名", text: $username)
                 .textFieldStyle(.roundedBorder).padding(.horizontal, 20)
@@ -321,7 +321,7 @@ struct LoginView: View {
                 .textFieldStyle(.roundedBorder).padding(.horizontal, 20)
 
             if let e = errorText {
-                Text(e).font(.system(size: 12)).foregroundStyle(Color(0xFFFF3B30))
+                Text(e).font(.system(size: 12)).foregroundStyle(Color(hex: 0xFFFF3B30))
                     .padding(.horizontal, 20)
             }
 
@@ -353,7 +353,7 @@ struct LoginView: View {
                 }
                 .font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
                 .frame(maxWidth: .infinity).frame(height: 48)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color(0xFFFF9500)))
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color(hex: 0xFFFF9500)))
             }
             .padding(.horizontal, 20)
             .disabled(busy)

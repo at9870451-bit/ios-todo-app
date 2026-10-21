@@ -158,3 +158,15 @@ enum BuiltInCatalog {
     /// 互斥规则（后台可配置；内置兜底）
     static let exclusiveRules: [String: String] = ["hat": "hat"]
 }
+
+// MARK: - SwiftUI Color(hex:)
+
+import SwiftUI
+
+extension Color {
+    init(hex: UInt) {
+        self.init(red: Double((hex >> 16) & 0xFF) / 255,
+                  green: Double((hex >> 8) & 0xFF) / 255,
+                  blue: Double(hex & 0xFF) / 255)
+    }
+}
