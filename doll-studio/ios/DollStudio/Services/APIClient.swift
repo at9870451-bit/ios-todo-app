@@ -17,6 +17,9 @@ enum APIError: LocalizedError {
     }
 }
 
+/// { data: ... } 信封
+struct Envelope<T: Decodable>: Decodable { let data: T }
+
 struct AIOutfitResponse: Codable {
     struct Plan: Codable {
         var category: String
@@ -100,7 +103,6 @@ final class APIClient {
         do {
             return try JSONDecoder().decode(T.self, from: data)
         } catch {
-            struct Envelope<T: Decodable>: Decodable { let data: T }
             if let env = try? JSONDecoder().decode(Envelope<T>.self, from: data) {
                 return env.data
             }

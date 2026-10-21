@@ -14,7 +14,7 @@ enum AIAssistant {
     static func plan(store: OutfitStore, prompt: String) async -> AIPlanResult {
         let base = store.apiBase
         if base.hasPrefix("http"), store.remoteCatalogLoaded || base.contains("http") {
-            if let r = try? APIClient.shared.aiOutfit(
+            if let r = try? await APIClient.shared.aiOutfit(
                 base: base, token: store.authToken, gender: store.gender,
                 prompt: prompt, catalog: store.catalog) {
                 var slots: [String: OutfitSlot] = [:]
