@@ -13,9 +13,9 @@ final class DollSceneFactory: NSObject, FlutterPlatformViewFactory {
         super.init()
     }
 
-    func create(withFrame frame: CGRect, viewIdentifier: Int64,
-                arguments args: Any?, binaryMessenger: FlutterBinaryMessenger) -> FlutterPlatformView {
-        DollScenePlatformView(frame: frame, viewId: viewIdentifier,
+    func create(withFrame frame: CGRect, viewIdentifier viewId: Int64,
+                arguments args: Any?) -> FlutterPlatformView {
+        DollScenePlatformView(frame: frame, viewId: viewId,
                               args: args, messenger: messenger, controller: controller)
     }
 
@@ -82,6 +82,12 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
             result(true)
         case "resetView":
             controller_.resetView()
+            result(true)
+        case "loadSkinned":
+            let name = args["name"] as? String ?? "CesiumMan"
+            result(controller_.loadSkinned(named: name))
+        case "unloadSkinned":
+            controller_.unloadSkinned()
             result(true)
         case "snapshot":
             DispatchQueue.main.async {

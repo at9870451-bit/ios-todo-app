@@ -116,6 +116,23 @@ class DollSceneChannel {
     }
   }
 
+  /// 加载内置真骨骼模型（CesiumMan：完整骨骼+蒙皮+行走动画）
+  static Future<bool> loadSkinned([String name = 'CesiumMan']) async {
+    try {
+      return await _channel.invokeMethod<bool>('loadSkinned', {'name': name}) ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  static Future<void> unloadSkinned() async {
+    try {
+      await _channel.invokeMethod('unloadSkinned');
+    } on PlatformException {
+      // ignore
+    }
+  }
+
   /// 返回 PNG 数据（保存/分享用）
   static Future<Uint8List?> snapshot() async {
     try {

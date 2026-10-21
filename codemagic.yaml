@@ -55,6 +55,16 @@ workflows:
           # 玩偶 3D：把自定义 Swift（DollScene*）加入 Runner target
           ruby tools/add_native_files.rb
 
+      - name: 真 3D 骨骼模型（CesiumMan GLB → USDZ 打进 bundle）
+        script: |
+          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter/ios/Runner"
+          mkdir -p Resources
+          curl -sL --max-time 120 -o /tmp/CesiumMan.glb             https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Binary/CesiumMan.glb             || echo "download failed"
+          if [ -s /tmp/CesiumMan.glb ]; then
+            (xcrun usdzconvert /tmp/CesiumMan.glb Resources/CesiumMan.usdz 2>&1 || true) | tail -5
+            ls -lh Resources/CesiumMan.usdz 2>/dev/null || echo "usdzconvert failed - 骨骼模型将不可用（回退程序化）"
+          fi
+
       - name: pod install（同步 sandbox）
         script: |
           set -e

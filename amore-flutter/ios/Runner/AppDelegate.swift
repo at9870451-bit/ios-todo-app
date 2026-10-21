@@ -12,7 +12,7 @@ import Flutter
             return super.application(application, didFinishLaunchingWithOptions: launchOptions)
         }
         let factory = DollSceneFactory(messenger: controller.binaryMessenger)
-        registrar(forPlugin: "DollScenePlugin")!.register(factory, forView: "doll_scene")
+        registrar(forPlugin: "DollScenePlugin")!.register(factory, withId: "doll_scene")
         GeneratedPluginRegistrant.register(with: self)
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }

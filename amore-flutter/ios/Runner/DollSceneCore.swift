@@ -93,6 +93,70 @@ final class DollSceneController3D: NSObject, ObservableObject {
         }
     }
 
+    // MARK: 真 3D 骨骼模型（SCNSkinner）
+
+    private var skinnedLoaded = false
+    private var skinnedNode: SCNNode?
+
+    /// 加载带骨骼的人物 USDZ（bundle 内置或远程），播放其内置动画（如行走）
+    @discardableResult
+    func loadSkinned(named: String = "CesiumMan") -> Bool {
+        unloadSkinned()
+        guard let url = Bundle.main.url(forResource: named, withExtension: "usdz") else {
+            return false
+        }
+        guard let src = SCNSceneSource(url: url, options: nil) else { return false }
+        guard let sceneObj = src.scene() else { return false }
+
+        let root = sceneObj.rootNode.clone()
+        // 收集内置动画并播放
+        var animations: [CAAnimation] = []
+        for entry in src.entries(withClass: CAAnimation.self) {
+            if let anim = entry as? CAAnimation {
+                anim.repeatCount = .infinity
+                anim.fadeInDuration = 0.3
+                animations.append(anim)
+            }
+        }
+        // 归一化：包围球缩放到 ~1.6m 高度并落地
+        let (minB, maxB) = root.boundingBox
+        let height = max(0.001, Float(maxB.y - minB.y))
+        let scale = 1.6 / height
+        root.scale = SCNVector3(scale, scale, scale)
+        root.position = SCNVector3(0, Float(-minB.y * scale), 0)
+
+        let wrapper = SCNNode()
+        wrapper.addChildNode(root)
+        wrapper.name = "skinned"
+        dollRoot.addChildNode(wrapper)
+        skinnedNode = wrapper
+        skinnedLoaded = true
+
+        for anim in animations {
+            scnRootAdd(animation: anim)
+        }
+        return true
+    }
+
+    private func scnRootAdd(animation: CAAnimation) {
+        // 动画加在 skinner 根节点上
+        skinnedNode?.enumerateHierarchy { node, _ in
+            if node.skinner != nil {
+                node.addAnimation(animation, forKey: "walk")
+            }
+        }
+    }
+
+    func unloadSkinned() {
+        skinnedNode?.removeFromParentNode()
+        skinnedNode = nil
+        skinnedLoaded = false
+        // 恢复程序化身体
+        setCharacter(gender: gender, skin: skin, heightScale: heightScale)
+    }
+
+    var isSkinnedLoaded: Bool { skinnedLoaded }
+
     // MARK: 换装（slots: [category: ["kind": String, "color": String]]）
 
     func updateSlots(_ slots: [String: [String: String]]) {

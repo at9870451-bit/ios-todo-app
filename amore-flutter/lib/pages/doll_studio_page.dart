@@ -37,6 +37,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
   final Set<String> _favorites = {};
   final List<String> _recent = [];
   final Set<String> _owned = {};
+  bool _skinned = false;
 
   @override
   void initState() {
@@ -221,6 +222,25 @@ class _DollStudioPageState extends State<DollStudioPage> {
         title: const Text('玩偶工作室',
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
         actions: [
+          Tooltip(
+            message: _skinned ? '切换程序化玩偶' : '切换骨骼模型',
+            child: IconButton(
+              onPressed: () async {
+                if (_skinned) {
+                  await DollSceneChannel.unloadSkinned();
+                  setState(() => _skinned = false);
+                } else {
+                  final ok = await DollSceneChannel.loadSkinned();
+                  setState(() => _skinned = ok);
+                  _toast(ok ? '已加载骨骼模型（含行走动画）' : '骨骼模型资源不可用');
+                }
+              },
+              icon: Icon(
+                _skinned ? Icons.accessibility_new_rounded : Icons.accessibility_rounded,
+                color: _skinned ? const Color(0xFFFF9500) : const Color(0xFF1D1D1F),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: '保存截图',
             onPressed: _shareSnapshot,
