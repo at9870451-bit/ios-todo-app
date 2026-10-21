@@ -110,11 +110,15 @@ final class DollSceneController3D: NSObject, ObservableObject {
 
         let root = sceneObj.rootNode.clone()
 
-        // 收集内置动画（entries 返回 (Any, String, UnsafeMutablePointer<ObjCBool>) 元组）并循环播放
-        for (obj, key, _) in src.entries(passingTest: { o, _, _ in o is CAAnimation }) {
-            if let anim = obj as? CAAnimation {
+        // 收集内置动画并循环播放（entries 的返回经过 ObjC 桥接，元素为 Any，逐个强转）
+        for entry in src.entries(passingTest: { o, _, _ in o is CAAnimation }) {
+            if let anim = entry as? CAAnimation {
                 anim.repeatCount = Float.greatestFiniteMagnitude
-                root.addAnimation(anim, forKey: key)
+                if let key = anim.identifier?.stringValue ?? entryValueKey(entry) {
+                    root.addAnimation(anim, forKey: key)
+                } else {
+                    root.addAnimation(anim, forKey: "skinned_\(animationSeq())")
+                }
             }
         }
 
@@ -186,6 +190,12 @@ final class DollSceneController3D: NSObject, ObservableObject {
         lArm?.eulerAngles = SCNVector3(0, 0, -angle)
         rArm?.eulerAngles = SCNVector3(0, 0, angle)
         SCNTransaction.commit()
+    }
+
+    private var _animSeq = 0
+    private func animationSeq() -> Int {
+        _animSeq += 1
+        return _animSeq
     }
 
     // MARK: 视角
