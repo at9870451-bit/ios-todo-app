@@ -24,5 +24,18 @@ Dir[File.expand_path('../ios/Runner/*.swift', __dir__)].each do |path|
   added += 1
 end
 
+# 资源文件（Resources/*.dae 等）→ Resources build phase
+res_dir = File.expand_path('../ios/Runner/Resources', __dir__)
+if File.directory?(res_dir)
+  res_phase = target.resources_build_phase
+  Dir["#{res_dir}/*"].each do |path|
+    name = File.basename(path)
+    next if project.files.any? { |f| f.display_name == name }
+    ref = group.new_reference("Resources/#{name}")
+    res_phase.add_file_reference(ref)
+    puts "Added resource #{name}"
+  end
+end
+
 project.save
 puts "native files injected (#{added})"
