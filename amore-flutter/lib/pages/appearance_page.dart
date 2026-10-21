@@ -41,13 +41,13 @@ class _AppearancePageState extends State<AppearancePage> {
       'pink': ('樱花粉', const Color(0xFFF472B6)),
       'green': ('薄荷绿', AmoreTheme.success),
       'orange': ('暖阳橙', const Color(0xFFFB923C)),
-      'mono': ('极简灰白', const const Color(0xFF86868B)),
+      'mono': ('极简灰白', const Color(0xFF86868B)),
     };
     final bgs = {
-      'gradient': ('深空渐变', const [Color(0xFF1A2238), const Color(0xFFF5F5F7)]),
+      'gradient': ('深空渐变', const [Color(0xFF1A2238), Color(0xFFF5F5F7)]),
       'graphite': ('石墨黑', const [Color(0xFF17191F), Color(0xFF0C0D11)]),
-      'indigo': ('靛蓝夜', const [Color(0xFF1E1B4B), const Color(0xFFF5F5F7)]),
-      'teal': ('深海青', const [Color(0xFF134E4A), const Color(0xFFF5F5F7)]),
+      'indigo': ('靛蓝夜', const [Color(0xFF1E1B4B), Color(0xFFF5F5F7)]),
+      'teal': ('深海青', const [Color(0xFF134E4A), Color(0xFFF5F5F7)]),
     };
 
     return Scaffold(

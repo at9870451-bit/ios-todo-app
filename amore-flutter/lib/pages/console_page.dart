@@ -261,7 +261,7 @@ class _ConsolePageState extends State<ConsolePage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.arrow_upward_rounded, color: const Color(0xFF34C759), size: 18),
+                      icon: const Icon(Icons.arrow_upward_rounded, color: Color(0xFF34C759), size: 18),
                       onPressed: () => _exec(_inputCtl.text),
                     ),
                   ],

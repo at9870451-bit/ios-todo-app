@@ -45,7 +45,7 @@ class _CallViewState extends State<CallView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const const Color(0xFFF5F5F7),
+      backgroundColor: const Color(0xFFF5F5F7),
       body: SafeArea(
         child: Column(
           children: [
