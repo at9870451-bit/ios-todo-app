@@ -111,7 +111,7 @@ final class DollSceneController3D: NSObject, ObservableObject {
         let root = sceneObj.rootNode.clone()
         // 收集内置动画并播放
         var animations: [CAAnimation] = []
-        for entry in src.entries(passingTest: { $0 is CAAnimation }) {
+        for entry in src.entries(passingTest: { obj, _, _ in obj is CAAnimation }) {
             if let anim = entry as? CAAnimation {
                 anim.repeatCount = Float.greatestFiniteMagnitude
                 anim.fadeInDuration = 0.3
