@@ -26,7 +26,10 @@ class AmoreApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Amore',
         debugShowCheckedModeBanner: false,
-        theme: AmoreTheme.dark(),
+        // Apple 白为主视觉（浅色先行）；darkTheme 已就绪，全页面 palette 化后开启 system
+        theme: AmoreTheme.light(),
+        darkTheme: AmoreTheme.dark(),
+        themeMode: ThemeMode.light,
         home: const RootGate(),
       ),
     );
@@ -87,12 +90,19 @@ class _RootGateState extends State<RootGate> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AmoreTheme.accent),
+            Container(
+              width: 64,
+              height: 64,
+              decoration: AmoreTheme.brandBox(radius: 18),
+              child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 30),
+            ),
+            const SizedBox(height: 20),
+            const CircularProgressIndicator(color: AmoreBrand.orange),
             const SizedBox(height: 18),
             Text(
               _error ?? '正在启动 Rust Core…',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AmoreTheme.textSecondary, fontSize: 13),
+              style: const TextStyle(color: Color(0xFF86868B), fontSize: 13),
             ),
           ],
         ),
@@ -120,22 +130,10 @@ class _MainShellState extends State<MainShell> {
   ];
 
   static const _items = [
-    BottomNavigationBarItem(
-        icon: Icon(Icons.forum_outlined),
-        activeIcon: Icon(Icons.forum_rounded),
-        label: '聊天'),
-    BottomNavigationBarItem(
-        icon: Icon(Icons.chat_bubble_outline_rounded),
-        activeIcon: Icon(Icons.chat_bubble_rounded),
-        label: '对话'),
-    BottomNavigationBarItem(
-        icon: Icon(Icons.pets_outlined),
-        activeIcon: Icon(Icons.pets_rounded),
-        label: '玩偶'),
-    BottomNavigationBarItem(
-        icon: Icon(Icons.person_outline_rounded),
-        activeIcon: Icon(Icons.person_rounded),
-        label: '我的'),
+    (Icons.forum_outlined, Icons.forum_rounded, '聊天'),
+    (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, '对话'),
+    (Icons.pets_outlined, Icons.pets_rounded, '玩偶'),
+    (Icons.person_outline_rounded, Icons.person_rounded, '我的'),
   ];
 
   @override
@@ -152,37 +150,45 @@ class _MainShellState extends State<MainShell> {
     }
     return Scaffold(
       body: IndexedStack(index: _tab, children: _pages),
-      bottomNavigationBar: NavigationBarTheme(
-        data: NavigationBarThemeData(
-          backgroundColor: AmoreTheme.tabBg,
-          indicatorColor: AmoreTheme.accent.withOpacity(0.16),
-          labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-                fontSize: 11.5,
-                color: s.contains(WidgetState.selected)
-                    ? AmoreTheme.accent
-                    : AmoreTheme.textFaint,
-              )),
-          height: 62,
-        ),
-        child: NavigationBar(
-          selectedIndex: _tab,
-          onDestinationSelected: (i) {
-            final state = context.read<AppState>();
-            if (i == 1 &&
-                state.activeFriend.value == null &&
-                state.friends.isNotEmpty) {
-              state.setActiveFriend(state.friends.first);
-            }
-            state.pendingTab = -1;
-            setState(() => _tab = i);
-          },
-          destinations: _items
-              .map((e) => NavigationDestination(
-                    icon: e.icon!,
-                    selectedIcon: e.activeIcon,
-                    label: e.label!,
-                  ))
-              .toList(),
+      bottomNavigationBar: GlassContainer(
+        radius: 24,
+        blur: 22,
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            indicatorColor: AmoreBrand.orange.withOpacity(0.14),
+            labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
+                  fontSize: 11.5,
+                  fontWeight:
+                      s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
+                  color: s.contains(WidgetState.selected)
+                      ? AmoreBrand.orange
+                      : const Color(0xFF86868B),
+                )),
+            height: 60,
+          ),
+          child: NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) {
+              final st = context.read<AppState>();
+              if (i == 1 &&
+                  st.activeFriend.value == null &&
+                  st.friends.isNotEmpty) {
+                st.setActiveFriend(st.friends.first);
+              }
+              st.pendingTab = -1;
+              setState(() => _tab = i);
+            },
+            destinations: _items
+                .map((e) => NavigationDestination(
+                      icon: Icon(e.$1,
+                          color: const Color(0xFF86868B), size: 24),
+                      selectedIcon: Icon(e.$2, color: AmoreBrand.orange, size: 24),
+                      label: e.$3,
+                    ))
+                .toList(),
+          ),
         ),
       ),
     );

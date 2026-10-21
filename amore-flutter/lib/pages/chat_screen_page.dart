@@ -190,7 +190,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFE8613C)),
+              leading: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFF9500)),
               title: const Text('发红包'),
               onTap: () {
                 Navigator.pop(context);
@@ -391,9 +391,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AmoreTheme.bubbleOther,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AmoreTheme.cardBorder),
+              border: Border.all(color: const Color(0xFFE3E3E8)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -420,7 +420,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       decoration: BoxDecoration(
         color: AmoreTheme.tabBg,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+        border: Border(top: BorderSide(color: Color(0xFFE3E3E8))),
       ),
       child: Row(
         children: [
@@ -447,7 +447,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               style: const TextStyle(fontSize: 14.5),
               decoration: InputDecoration(
                 hintText: '说点什么…',
-                fillColor: const Color(0xFF0C111C),
+                fillColor: const const Color(0xFFF2F2F7),
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 border: OutlineInputBorder(

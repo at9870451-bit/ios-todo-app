@@ -45,7 +45,7 @@ class _CallViewState extends State<CallView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0D16),
+      backgroundColor: const const Color(0xFFF5F5F7),
       body: SafeArea(
         child: Column(
           children: [
@@ -75,7 +75,7 @@ class _CallViewState extends State<CallView>
             const SizedBox(height: 20),
             Text(widget.friend.name,
                 style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.w700, color: AmoreTheme.textPrimary)),
+                    fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF1D1D1F))),
             const SizedBox(height: 8),
             Text(
               _phase == CallPhase.connecting
@@ -103,15 +103,20 @@ class _CallViewState extends State<CallView>
                     gradient: _pressing
                         ? AmoreTheme.accentGradient()
                         : const LinearGradient(colors: [
-                            Color(0xFF232B40),
-                            Color(0xFF1A2133)
+                            Color(0xFFFFF4E8),
+                            Color(0xFFFFE2C2),
                           ]),
                     border: Border.all(
-                        color: _pressing ? Colors.white : AmoreTheme.cardBorder,
+                        color: _pressing
+                            ? AmoreBrand.orange
+                            : const Color(0xFFFFE2C2),
                         width: 1.4),
                   ),
                   child: Icon(_pressing ? Icons.mic_rounded : Icons.mic_none_rounded,
-                      color: Colors.white, size: 34),
+                      color: _pressing
+                          ? Colors.white
+                          : AmoreBrand.orangeDeep,
+                      size: 34),
                 ),
               ),
             const SizedBox(height: 40),

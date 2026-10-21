@@ -207,7 +207,7 @@ class _ConsolePageState extends State<ConsolePage> {
     return Scaffold(
       appBar: AppBar(title: const Text('本地终端', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
       body: Container(
-        color: const Color(0xFF050807),
+        color: const const Color(0xFF1D1D1F),
         child: SafeArea(
           child: Column(
             children: [
@@ -221,8 +221,8 @@ class _ConsolePageState extends State<ConsolePage> {
                     final color = switch (l.kind) {
                       _LineKind.info => const Color(0xFF7FB98A),
                       _LineKind.prompt => const Color(0xFFB8E986),
-                      _LineKind.error => const Color(0xFFF87171),
-                      _LineKind.normal => const Color(0xFF4ADE80),
+                      _LineKind.error => const const Color(0xFFFF3B30),
+                      _LineKind.normal => const const Color(0xFF34C759),
                     };
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 3),
@@ -241,27 +241,27 @@ class _ConsolePageState extends State<ConsolePage> {
               Container(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF0A0F0C),
+                  color: const Color(0xFFF2F2F7),
                   border: Border(top: BorderSide(color: Color(0xFF1E3325))),
                 ),
                 child: Row(
                   children: [
                     const Text('❯ ',
-                        style: TextStyle(color: Color(0xFF4ADE80), fontSize: 15, fontWeight: FontWeight.w700)),
+                        style: TextStyle(color: const Color(0xFF34C759), fontSize: 15, fontWeight: FontWeight.w700)),
                     Expanded(
                       child: TextField(
                         controller: _inputCtl,
                         onSubmitted: _exec,
                         style: const TextStyle(
                             fontFamily: 'monospace', fontSize: 13, color: Color(0xFFB8E986)),
-                        cursorColor: const Color(0xFF4ADE80),
+                        cursorColor: const const Color(0xFF34C759),
                         decoration: const InputDecoration.collapsed(
                             hintText: '输入命令…',
-                            hintStyle: TextStyle(color: Color(0xFF3A5243))),
+                            hintStyle: TextStyle(color: const Color(0xFF86868B))),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.arrow_upward_rounded, color: Color(0xFF4ADE80), size: 18),
+                      icon: const Icon(Icons.arrow_upward_rounded, color: const Color(0xFF34C759), size: 18),
                       onPressed: () => _exec(_inputCtl.text),
                     ),
                   ],

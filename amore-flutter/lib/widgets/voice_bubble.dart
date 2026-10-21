@@ -125,7 +125,7 @@ class _VoiceBubbleState extends State<VoiceBubble> {
               : _playing
                   ? Icons.stop_rounded
                   : Icons.play_arrow_rounded,
-          color: widget.plain || widget.mine ? Colors.white : AmoreTheme.accent,
+          color: widget.plain || widget.mine ? Colors.white : AmoreBrand.orange,
           size: 22,
         ),
         const SizedBox(width: 8),
@@ -139,7 +139,7 @@ class _VoiceBubbleState extends State<VoiceBubble> {
             decoration: BoxDecoration(
               color: (widget.plain || widget.mine
                       ? Colors.white.withOpacity(0.85)
-                      : AmoreTheme.accent.withOpacity(0.75))
+                      : AmoreBrand.orange.withOpacity(0.75))
                   .withOpacity(_playing ? 1.0 : 0.6),
               borderRadius: BorderRadius.circular(2),
             ),

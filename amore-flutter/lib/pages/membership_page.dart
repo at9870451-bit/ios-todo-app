@@ -44,7 +44,7 @@ class _MembershipPageState extends State<MembershipPage> {
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF3B3663), Color(0xFF161C2C)],
+                    colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
                   ),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: AmoreTheme.accent2.withOpacity(0.3)),
@@ -124,8 +124,8 @@ class _MembershipPageState extends State<MembershipPage> {
                 width: double.infinity,
                 child: FilledButton(
                   style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFD166),
-                      foregroundColor: const Color(0xFF3A2E00),
+                      backgroundColor: AmoreBrand.orange,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14)),
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

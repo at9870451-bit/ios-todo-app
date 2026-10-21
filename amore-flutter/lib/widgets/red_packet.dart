@@ -81,12 +81,12 @@ class RedPacketCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFE8613C), Color(0xFFD03A2B)],
+            colors: [Color(0xFFFF9500), Color(0xFFFF6A00)],
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: const Color(0xFFD03A2B).withOpacity(0.3),
+                color: const Color(0xFFFF6A00).withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4)),
           ],
@@ -104,7 +104,7 @@ class RedPacketCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Icon(Icons.redeem_rounded,
-                      color: Color(0xFFB71C1C), size: 18),
+                      color: Color(0xFFB25400), size: 18),
                 ),
                 const SizedBox(width: 8),
                 const Text('Amore 红包',
@@ -155,7 +155,7 @@ class _RedPacketOpenedView extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8613C), Color(0xFFB93026)],
+          colors: [Color(0xFFFF7A00), Color(0xFFE87500)],
         ),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -219,7 +219,7 @@ class _RedPacketComposeSheetState extends State<RedPacketComposeSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFE8613C)),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF9500)),
               onPressed: () {
                 final amount = double.tryParse(_amountCtl.text.trim());
                 if (amount == null || amount <= 0) {

@@ -83,7 +83,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
                   gradient: const RadialGradient(
                     center: Alignment(0, -0.4),
                     radius: 1.2,
-                    colors: [Color(0xFF232B47), Color(0xFF12182A)],
+                    colors: [Color(0xFFEAF4FF), Color(0xFFFFF0DE)],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: AmoreTheme.cardBorder),
@@ -99,7 +99,7 @@ class _DollStudioPageState extends State<DollStudioPage> {
                             .$2,
                         key: ValueKey(current),
                         size: 84,
-                        color: AmoreTheme.accent2.withOpacity(0.9),
+                        color: AmoreBrand.orange.withOpacity(0.9),
                       ),
                     ),
                     const SizedBox(height: 14),

@@ -226,7 +226,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       decoration: BoxDecoration(
         color: AmoreTheme.tabBg,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
+        border: Border(top: BorderSide(color: Color(0xFFE3E3E8))),
       ),
       child: Row(
         children: [
@@ -240,7 +240,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
               style: const TextStyle(fontSize: 14.5),
               decoration: InputDecoration(
                 hintText: '发到群里…',
-                fillColor: const Color(0xFF0C111C),
+                fillColor: const const Color(0xFFF2F2F7),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),

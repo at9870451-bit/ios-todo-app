@@ -1,4 +1,4 @@
-// 对应 Swift：LinkCard.swift —— 链接检测与卡片
+// 对应 Swift：LinkCard.swift —— 链接检测与卡片（Apple 白卡样式）
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -13,11 +13,10 @@ List<String> extractUrls(String text) =>
 /// 文本主体是否就是一个链接
 bool isPureLink(String text) {
   final t = text.trim();
-  return _urlRe.hasMatch(t) &&
-      t.replaceAll(_urlRe, '').trim().isEmpty;
+  return _urlRe.hasMatch(t) && t.replaceAll(_urlRe, '').trim().isEmpty;
 }
 
-/// 链接预览卡片（Safari 风格：图标 + 域名 + URL + 操作）
+/// 链接预览卡片（自带浅灰底，在渐变/白色气泡上均可读）
 class LinkPreviewCard extends StatelessWidget {
   final String url;
   const LinkPreviewCard({super.key, required this.url});
@@ -36,9 +35,9 @@ class LinkPreviewCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.08),
+        color: const Color(0xFFF2F2F7),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: const Color(0xFFE3E3E8)),
       ),
       child: Row(
         children: [
@@ -46,10 +45,10 @@ class LinkPreviewCard extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AmoreTheme.accent.withOpacity(0.18),
+              gradient: AmoreGradients.clear,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.public_rounded, color: AmoreTheme.accent, size: 19),
+            child: const Icon(Icons.public_rounded, color: Colors.white, size: 19),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -60,12 +59,14 @@ class LinkPreviewCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w600, color: AmoreTheme.textPrimary)),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1D1D1F))),
                 const SizedBox(height: 2),
                 Text(url,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: AmoreTheme.textSecondary)),
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF86868B))),
               ],
             ),
           ),
@@ -74,17 +75,18 @@ class LinkPreviewCard extends StatelessWidget {
             onTap: () {
               Clipboard.setData(ClipboardData(text: url));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('链接已复制'), duration: Duration(milliseconds: 1200)),
+                const SnackBar(content: Text('链接已复制'),
+                    duration: Duration(milliseconds: 1200)),
               );
             },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: AmoreTheme.accent.withOpacity(0.18),
+                color: AmoreBrand.orangeBg,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text('复制',
-                  style: TextStyle(fontSize: 12, color: AmoreTheme.accent)),
+                  style: TextStyle(fontSize: 12, color: AmoreBrand.orangeDeep)),
             ),
           ),
         ],
@@ -93,7 +95,7 @@ class LinkPreviewCard extends StatelessWidget {
   }
 }
 
-/// 富文本消息段：URL 部分高亮
+/// 富文本消息段：URL 部分加粗下划线（颜色继承气泡文字色，保证两种气泡上都可读）
 Widget messageTextWithLinks(String text, TextStyle baseStyle) {
   final spans = <TextSpan>[];
   var cursor = 0;
@@ -104,7 +106,7 @@ Widget messageTextWithLinks(String text, TextStyle baseStyle) {
     spans.add(TextSpan(
         text: m.group(0),
         style: baseStyle.copyWith(
-            color: AmoreTheme.accent, decoration: TextDecoration.underline)));
+            fontWeight: FontWeight.w600, decoration: TextDecoration.underline)));
     cursor = m.end;
   }
   if (cursor < text.length) {
