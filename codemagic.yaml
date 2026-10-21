@@ -59,10 +59,11 @@ workflows:
         script: |
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter/ios/Runner"
           mkdir -p Resources
-          curl -sL --max-time 120 -o /tmp/CesiumMan.glb             https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Binary/CesiumMan.glb             || echo "download failed"
+          curl -sL --max-time 120 -o /tmp/CesiumMan.glb https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Binary/CesiumMan.glb
+          echo "GLB size: $(wc -c < /tmp/CesiumMan.glb 2>/dev/null || echo 0)"
           if [ -s /tmp/CesiumMan.glb ]; then
-            (xcrun usdzconvert /tmp/CesiumMan.glb Resources/CesiumMan.usdz 2>&1 || true) | tail -5
-            ls -lh Resources/CesiumMan.usdz 2>/dev/null || echo "usdzconvert failed - 骨骼模型将不可用（回退程序化）"
+            swift tools/glb2usdz.swift /tmp/CesiumMan.glb Resources/CesiumMan.usdz 2>&1 | tail -5 || true
+            ls -lh Resources/CesiumMan.usdz 2>/dev/null || echo "USDZ 转换失败 - 骨骼模型不可用（App 内回退程序化玩偶）"
           fi
 
       - name: pod install（同步 sandbox）
