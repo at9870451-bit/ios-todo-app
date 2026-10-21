@@ -1,8 +1,8 @@
 // glb2usdz.swift — GLB → USDZ（ModelIO 导入 → SceneKit 导出）
 // CI 用法：swift glb2usdz.swift in.glb out.usdz
-// 说明：新版 Xcode 已移除 usdzconvert，且命令行 swift 脚本下 MDLAsset 的
-// rootNode/rootObject 便利访问在 SDK 变动中不可靠，这里统一走 MDLAsset.count/indexed
-// 子项遍历（稳定 API）。
+// 说明：新版 Xcode 已移除 usdzconvert。这里用稳定 API 组合：
+//   MDLAsset(indexed children) → SCNNode(mdlObject:) → scene.write(...)
+// 若 SCNSceneExportDelegate 签名在目标 SDK 变化，见底部注释。
 import Foundation
 import ModelIO
 import SceneKit
@@ -23,7 +23,7 @@ var added = 0
 
 // 遍历 asset 顶层对象（MDLObject 集合下标 API，稳定）
 for i in 0..<asset.count(objectAt: 0) {
-    guard let obj = asset.object(at: i) as? MDLObject else { continue }
+    let obj: MDLObject = asset.object(at: i)
     let node = SCNNode(mdlObject: obj)
     scene.rootNode.addChildNode(node)
     added += 1
@@ -35,10 +35,15 @@ guard added > 0 else {
 }
 print("imported \(added) top-level objects")
 
-let okWrite = scene.write(to: outURL, options: [:],
-                          delegate: nil as SCNSceneExportDelegate?,
-                          progressHandler: nil as SCNSceneExportProgressHandler?)
-if okWrite {
+// 新 SDK 的 write 返回 Bool（不抛错）；delegate/progressHandler 需显式类型
+let exporter = scene
+let ok: Bool = exporter.write(
+    to: outURL,
+    options: [:] as [String: Any],
+    delegate: nil as (any SCNSceneExportDelegate)?,
+    progressHandler: nil as ((Float) -> Void)?
+)
+if ok {
     print("USDZ written: \(outURL.path)")
 } else {
     print("write failed")

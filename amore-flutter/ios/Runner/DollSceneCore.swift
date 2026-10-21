@@ -105,20 +105,22 @@ final class DollSceneController3D: NSObject, ObservableObject {
         guard let url = Bundle.main.url(forResource: named, withExtension: "usdz") else {
             return false
         }
-        guard let src = SCNSceneSource(url: url, options: nil) else { return false }
-        guard let sceneObj = src.scene() else { return false }
+        guard let src = SCNSceneSource(url: url, options: nil),
+              let sceneObj = src.scene() else { return false }
 
         let root = sceneObj.rootNode.clone()
-        // 收集内置动画并播放
-        var animations: [CAAnimation] = []
-        for entry in src.entries(passingTest: { obj, _, _ in obj is CAAnimation }) {
-            if let anim = entry as? CAAnimation {
+
+        // 收集内置动画（.identifier 为 key）并在根节点循环播放
+        var animationKeys: [String] = []
+        src.identifiersOfEntries(withClass: CAAnimation.self).forEach { key in
+            if let anim = src.entry(withIdentifier: key) as? CAAnimation {
                 anim.repeatCount = Float.greatestFiniteMagnitude
-                anim.fadeInDuration = 0.3
-                animations.append(anim)
+                animationKeys.append(key)
+                root.addAnimation(anim, forKey: key)
             }
         }
-        // 归一化：包围球缩放到 ~1.6m 高度并落地
+
+        // 归一化：缩放到 ~1.6m 高度并落地
         let (minB, maxB) = root.boundingBox
         let height = max(0.001, Float(maxB.y - minB.y))
         let scale = 1.6 / height
@@ -131,20 +133,8 @@ final class DollSceneController3D: NSObject, ObservableObject {
         dollRoot.addChildNode(wrapper)
         skinnedNode = wrapper
         skinnedLoaded = true
-
-        for anim in animations {
-            scnRootAdd(animation: anim)
-        }
+        _ = animationKeys.count
         return true
-    }
-
-    private func scnRootAdd(animation: CAAnimation) {
-        // 动画加在 skinner 根节点上
-        skinnedNode?.enumerateHierarchy { node, _ in
-            if node.skinner != nil {
-                node.addAnimation(animation, forKey: "walk")
-            }
-        }
     }
 
     func unloadSkinned() {
