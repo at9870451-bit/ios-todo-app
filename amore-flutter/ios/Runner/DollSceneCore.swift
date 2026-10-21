@@ -102,9 +102,10 @@ final class DollSceneController3D: NSObject, ObservableObject {
     @discardableResult
     func loadSkinned(named: String = "CesiumMan") -> Bool {
         unloadSkinned()
-        guard let url = Bundle.main.url(forResource: named, withExtension: "usdz") else {
-            return false
-        }
+        // 优先 .dae（assimp 转换产物，骨骼动画完整），回退 .usdz
+        let url = Bundle.main.url(forResource: named, withExtension: "dae")
+            ?? Bundle.main.url(forResource: named, withExtension: "usdz")
+        guard let url = url else { return false }
         guard let src = SCNSceneSource(url: url, options: nil),
               let sceneObj = src.scene() else { return false }
 
