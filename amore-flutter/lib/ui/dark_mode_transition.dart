@@ -71,11 +71,11 @@ class _CircleClipper extends CustomClipper<Path> {
   _CircleClipper({required this.center, required this.radius});
 
   @override
-  Path getClip(Path path) {
-    // 全屏矩形减去圆外区域 = 只显示圆内（forward 扩散圆内是“新主题”）
-    path.addRect(Rect.largest);
-    path.addOval(Rect.fromCircle(center: center, radius: radius));
-    path.fillType = PathFillType.evenOdd;
+  Path getClip(Size size) {
+    final path = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(Offset.zero & size)
+      ..addOval(Rect.fromCircle(center: center, radius: radius));
     return path;
   }
 
