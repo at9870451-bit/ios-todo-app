@@ -1,80 +1,58 @@
-// Amore Design Tokens v2 — Apple 白 × 橙色 × 蓝橙渐变 × Liquid Glass
-// 浅色为主视觉；深色色板已定义（ThemeMode 接入下一版）
+// Amore Design Tokens v3 — Apple White × Liquid Glass × 苹果蓝 #007AFF
+// 纯色 / 半透明玻璃 / 自然阴影；零渐变（背景、按钮、阴影一律纯色）
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-/// ===== 品牌（亮暗通用）=====
+/// ===== 品牌（Apple 系统蓝 #007AFF 单一强调色）=====
 class AmoreBrand {
   AmoreBrand._();
-  // 橙色品牌系统
-  static const orange = Color(0xFFFF9500);
-  static const orangeVivid = Color(0xFFFF7A00);
-  static const orangeDeep = Color(0xFFE87500);
-  static const orangeLight = Color(0xFFFFE2C2);
-  static const orangeBg = Color(0xFFFFF4E8);
-  // 蓝橙渐变系统
-  static const gradientBlue = Color(0xFF4DA3FF);
-  static const skyBlue = Color(0xFF67C7FF);
-  static const purpleBlue = Color(0xFF8C9EFF);
-  static const brandBlue = Color(0xFF3478F6);
-  static const brandBlueLight = Color(0xFF6CA8FF);
-  static const warmOrange = Color(0xFFFF6A00);
+
+  // Apple 系统蓝
+  static const accent = Color(0xFF007AFF);
+  static const accentLight = Color(0xFF4DA3FF);
+  static const accentDeep = Color(0xFF0062CC);
+  static const accentBg = Color(0xFFF0F7FF);
+  static const accentTint = Color(0xFFE5F1FF);
+
+  // ---- 兼容别名：旧渐变体系常量名保留，值统一映射到苹果蓝系 ----
+  static const orange = accent;
+  static const orangeVivid = accent;
+  static const orangeDeep = accentDeep;
+  static const orangeLight = accentTint;
+  static const orangeBg = accentBg;
+  static const gradientBlue = accentLight;
+  static const skyBlue = accentLight;
+  static const purpleBlue = accent;
+  static const brandBlue = accent;
+  static const brandBlueLight = accentLight;
+  static const warmOrange = accentDeep;
+
   // 系统功能色（Apple 惯例）
   static const danger = Color(0xFFFF3B30);
   static const success = Color(0xFF34C759);
   static const warn = Color(0xFFFF9500);
 }
 
-/// ===== 渐变 =====
+/// ===== 渐变（已移除：全部改为纯色/玻璃）=====
+/// 保留类名以兼容旧代码，但不再定义渐变常量，业务零引用。
 class AmoreGradients {
   AmoreGradients._();
-
-  /// A. 清透蓝橙渐变（图标底 / 局部装饰）
-  static const clear = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AmoreBrand.gradientBlue, AmoreBrand.skyBlue, AmoreBrand.orange],
-  );
-
-  /// B. 高级品牌渐变（主按钮 / 重点卡 / 选中态）
-  static const brand = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AmoreBrand.brandBlue, AmoreBrand.brandBlueLight, AmoreBrand.orange],
-    stops: [0.0, 0.55, 1.0],
-  );
-
-  /// C. 柔和背景渐变（页面底色）
-  static const softPage = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFFEAF4FF), Colors.white, Color(0xFFFFF0DE)],
-    stops: [0.0, 0.55, 1.0],
-  );
-
-  /// 红包 / 橙色强调
-  static const orangePop = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [AmoreBrand.orangeVivid, AmoreBrand.warmOrange],
-  );
-}
-
-/// ===== 语义色板（浅/深两套）=====
+}/// ===== 语义色板（浅/深两套）=====
 class APalette {
   final Brightness brightness;
-  final Color bg; // 页面背景
-  final Color card; // 卡片背景
-  final Color cardBorder; // 分割线 / 卡片描边
-  final Color textPrimary; // 主标题 #1D1D1F
-  final Color textSecondary; // 次级文字 #86868B
-  final Color textFaint; // 辅助文字 #AEAEB2
-  final Color bubbleOther; // 对方气泡
-  final Color inputBg; // 输入框填充
-  final Color barBg; // 导航/底栏玻璃底色
-  final Color shadow; // 阴影基色
-  final Color overlayGlass; // 玻璃填充
+  final Color bg;
+  final Color card;
+  final Color cardBorder;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textFaint;
+  final Color bubbleOther;
+  final Color inputBg;
+  final Color barBg;
+  final Color shadow;
+  final Color overlayGlass;
 
   const APalette({
     required this.brightness,
@@ -110,7 +88,7 @@ class APalette {
     brightness: Brightness.dark,
     bg: Color(0xFF0B0E14),
     card: Color(0xFF141A29),
-    cardBorder: Color(0xFF1B2233), // 暗色：边框弱化，靠色阶
+    cardBorder: Color(0xFF1B2233),
     textPrimary: Color(0xFFF5F5F7),
     textSecondary: Color(0xFF9AA3BC),
     textFaint: Color(0xFF5A647E),
@@ -120,53 +98,48 @@ class APalette {
     shadow: Color(0x33000000),
     overlayGlass: Color(0xB8141A29),
   );
-}
-
-/// ===== 主题入口 =====
+}/// ===== 主题入口 =====
 class AmoreTheme {
   AmoreTheme._();
 
-  // ---- 兼容旧代码的浅色常量（页面静态引用）----
   static const bg = Color(0xFFF5F5F7);
   static const card = Colors.white;
   static const cardBorder = Color(0xFFE3E3E8);
   static const textPrimary = Color(0xFF1D1D1F);
   static const textSecondary = Color(0xFF86868B);
   static const textFaint = Color(0xFFAEAEB2);
-  static const bubbleMe = AmoreBrand.brandBlue; // 我方气泡渐变起点
-  static const bubbleMeDeep = AmoreBrand.warmOrange; // 我方气泡渐变终点
+  static const bubbleMe = AmoreBrand.accent;
+  static const bubbleMeDeep = AmoreBrand.accentDeep;
   static const bubbleOther = Color(0xFFFFFFFF);
-  static const accent = AmoreBrand.orange;
-  static const accent2 = AmoreBrand.brandBlue;
+  static const accent = AmoreBrand.accent;
+  static const accent2 = AmoreBrand.accent;
   static const danger = AmoreBrand.danger;
   static const success = AmoreBrand.success;
   static const warn = AmoreBrand.warn;
   static const tabBg = Color(0xF7FFFFFF);
 
-  /// 语义色板（build 内使用，自动亮暗）
   static APalette pal(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark
           ? APalette.dark
           : APalette.light;
 
-  // ---- 圆角 / 间距 ----
-  static const rCard = 20.0; // 普通卡片 20–24
-  static const rPanel = 28.0; // 大型面板 28–32
-  static const rButton = 16.0; // 按钮 12–16
+  static const rCard = 20.0;
+  static const rPanel = 28.0;
+  static const rButton = 16.0;
   static const rSmall = 12.0;
-  static const gapCard = 16.0; // 卡片间距 16
-  static const padH = 20.0; // 页面左右边距 20
+  static const gapCard = 12.0;
+  static const padH = 20.0;
 
   static ThemeData light() => _build(APalette.light);
   static ThemeData dark() => _build(APalette.dark);
 
   static ThemeData _build(APalette p) {
     final scheme = ColorScheme.fromSeed(
-      seedColor: AmoreBrand.orange,
+      seedColor: AmoreBrand.accent,
       brightness: p.brightness,
     ).copyWith(
-      primary: AmoreBrand.orange,
-      secondary: AmoreBrand.brandBlue,
+      primary: AmoreBrand.accent,
+      secondary: AmoreBrand.accent,
       surface: p.card,
       surfaceContainerHighest: p.inputBg,
     );
@@ -176,7 +149,6 @@ class AmoreTheme {
       useMaterial3: true,
       brightness: p.brightness,
       colorScheme: scheme,
-      // 暗色模式字重整体调细一档（HIG：深底上粗字发糊）
       textTheme: Typography.material2021(platform: TargetPlatform.iOS)
           .black
           .apply(
@@ -221,11 +193,11 @@ class AmoreTheme {
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(rSmall),
             borderSide:
-                const BorderSide(color: AmoreBrand.orange, width: 1.4)),
+                const BorderSide(color: AmoreBrand.accent, width: 1.4)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AmoreBrand.orange,
+          backgroundColor: AmoreBrand.accent,
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(rButton)),
@@ -247,21 +219,21 @@ class AmoreTheme {
             s.contains(WidgetState.selected) ? Colors.white : p.textFaint),
         trackColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected)
-                ? AmoreBrand.orange
+                ? AmoreBrand.accent
                 : p.cardBorder),
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AmoreBrand.orange,
+        activeTrackColor: AmoreBrand.accent,
         thumbColor: Colors.white,
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected) ? AmoreBrand.orange : Colors.transparent),
+            (s) => s.contains(WidgetState.selected) ? AmoreBrand.accent : Colors.transparent),
         side: BorderSide(color: p.cardBorder),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? AmoreBrand.orange : p.textFaint),
+            s.contains(WidgetState.selected) ? AmoreBrand.accent : p.textFaint),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.card,
@@ -283,42 +255,38 @@ class AmoreTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: AmoreBrand.orange),
+          const ProgressIndicatorThemeData(color: AmoreBrand.accent),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.transparent,
-        indicatorColor: AmoreBrand.orange.withOpacity(0.14),
+        indicatorColor: AmoreBrand.accent.withOpacity(0.14),
         labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
               fontSize: 11.5,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
               color: s.contains(WidgetState.selected)
-                  ? AmoreBrand.orange
+                  ? AmoreBrand.accent
                   : p.textSecondary,
             )),
         height: 62,
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AmoreBrand.orangeBg,
+        selectedColor: AmoreBrand.accentBg,
         labelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
         secondaryLabelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
         side: BorderSide(color: p.cardBorder),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
     );
-  }
-
-  /// 页面柔和渐变背景（C 组合，亮暗自适应）
-  static BoxDecoration pageGradient({Brightness? brightness}) {
+  }/// 页面纯色背景（#F5F5F7；零渐变）
+  static BoxDecoration pageBg({Brightness? brightness}) {
     final dark = brightness == Brightness.dark;
     return BoxDecoration(
-      gradient: dark
-          ? const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [const Color(0xFFF2F2F7), const Color(0xFFF5F5F7)],
-            )
-          : AmoreGradients.softPage,
+      color: dark ? APalette.dark.bg : const Color(0xFFF5F5F7),
     );
   }
+
+  /// 兼容别名：旧 pageGradient 名保留（指向纯色背景）
+  static BoxDecoration pageGradient({Brightness? brightness}) =>
+      pageBg(brightness: brightness);
 
   /// 白色圆角卡片（柔和阴影）
   static BoxDecoration cardBox(
@@ -327,7 +295,6 @@ class AmoreTheme {
     return BoxDecoration(
       color: color ?? (dark ? APalette.dark.card : Colors.white),
       borderRadius: BorderRadius.circular(radius),
-      // 色阶分层：暗色无边框（卡面比底亮 ~2%），浅色极淡边框
       border: Border.all(
           color: border ??
               (dark ? Colors.white.withOpacity(0.015) : const Color(0xFFF0F0F3)),
@@ -336,33 +303,33 @@ class AmoreTheme {
         BoxShadow(
             color: dark ? const Color(0x40000000) : const Color(0x0D1D1D1F),
             blurRadius: 16,
-            offset: const Offset(0, 4)),
+            offset: const Offset(0, 6)),
       ],
     );
   }
 
-  /// 品牌按钮/视觉焦点：蓝橙渐变（#3478F6 → #67C7FF → #FF9500）
+  /// 品牌强调块：苹果蓝纯色 + 同色系自然阴影（零渐变）
   static BoxDecoration brandBox({double radius = rButton, List<Color>? colors}) =>
       BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors ??
-              const [AmoreBrand.brandBlue, AmoreBrand.skyBlue, AmoreBrand.orange],
-          stops: const [0.0, 0.5, 1.0],
-        ),
+        color: AmoreBrand.accent,
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-              color: AmoreBrand.brandBlue.withOpacity(0.28),
-              blurRadius: 14,
+              color: AmoreBrand.accent.withOpacity(0.26),
+              blurRadius: 16,
               offset: const Offset(0, 5)),
         ],
       );
 
   static BoxDecoration accentSolid({double radius = rButton}) =>
       BoxDecoration(
-        color: AmoreBrand.brandBlue,
+        color: AmoreBrand.accent,
+        borderRadius: BorderRadius.circular(radius),
+      );
+
+  static BoxDecoration accentBlue({double radius = rButton}) =>
+      BoxDecoration(
+        color: AmoreBrand.accent,
         borderRadius: BorderRadius.circular(radius),
       );
 
@@ -373,9 +340,7 @@ class AmoreTheme {
       fontWeight: FontWeight.w500);
 
   static TextStyle title() => const TextStyle(
-      fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: Color(0xFF1D1D1F));
-
-  /// 通用列表项卡片（白卡 + 橙色图标底）
+      fontSize: 30, fontWeight: FontWeight.w700, letterSpacing: 0.4, color: Color(0xFF1D1D1F));  /// 通用列表项卡片（白卡 + 苹果蓝图标底）
   static Widget tile({
     required BuildContext context,
     required IconData icon,
@@ -386,12 +351,11 @@ class AmoreTheme {
     VoidCallback? onTap,
   }) {
     final p = pal(context);
-    final c = iconColor ?? AmoreBrand.orange;
-    final gradientIcon = iconColor == null; // 默认重点项用渐变图标底
+    final c = iconColor ?? AmoreBrand.accent;
     return PressableScale(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: cardBox(brightness: p.brightness, radius: 16),
         child: Row(
           children: [
@@ -399,11 +363,10 @@ class AmoreTheme {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                gradient: gradientIcon ? AmoreGradients.clear : null,
-                color: gradientIcon ? null : c.withOpacity(0.13),
+                color: c.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(icon, color: gradientIcon ? Colors.white : c, size: 20),
+              child: Icon(icon, color: c, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -435,20 +398,17 @@ class AmoreTheme {
     );
   }
 
-  /// 文字头像（彩色渐变圆）
+  /// 文字头像（苹果蓝纯色圆；零渐变）
   static Widget avatar(String name, {double size = 44}) {
-    final hue = (name.hashCode.abs() % 360).toDouble();
-    final c1 = HSLColor.fromAHSL(1, hue, 0.62, 0.58).toColor();
-    final c2 = HSLColor.fromAHSL(1, (hue + 40) % 360, 0.65, 0.46).toColor();
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient:
-            LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [c1, c2]),
+        color: AmoreBrand.accent,
         boxShadow: [
-          BoxShadow(color: c2.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3)),
+          BoxShadow(color: AmoreBrand.accent.withOpacity(0.22),
+              blurRadius: 8, offset: const Offset(0, 4)),
         ],
       ),
       alignment: Alignment.center,
@@ -459,11 +419,7 @@ class AmoreTheme {
       ),
     );
   }
-}
-
-/// ===== Liquid Glass 容器 =====
-/// 半透明白 + 背景模糊 + 白色高光描边 + 低强度阴影。
-/// 只用于导航栏 / 底栏 / 悬浮按钮 / 少量重点卡片。
+}/// ===== Liquid Glass 容器 =====
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double radius;
@@ -475,7 +431,7 @@ class GlassContainer extends StatelessWidget {
     required this.child,
     this.radius = AmoreTheme.rCard,
     this.padding,
-    this.blur = 18,
+    this.blur = 20,
   });
 
   @override
@@ -492,7 +448,8 @@ class GlassContainer extends StatelessWidget {
             color: p.overlayGlass,
             borderRadius: BorderRadius.circular(radius),
             border: Border.all(
-              color: light ? Colors.white.withOpacity(0.85) : Colors.white.withOpacity(0.10),
+              color: light ? Colors.white.withOpacity(0.8)
+                  : Colors.white.withOpacity(0.10),
               width: 0.9,
             ),
             boxShadow: [
@@ -506,48 +463,106 @@ class GlassContainer extends StatelessWidget {
   }
 }
 
-/// ===== 按压缩放反馈 =====
+/// ===== 按压缩放反馈（#8：0.96 弹性压缩 + 深度内阴影，释放轻微超调回弹）=====
 class PressableScale extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final double pressScale;
 
   const PressableScale(
-      {super.key, required this.child, this.onTap, this.pressScale = 0.97});
+      {super.key, required this.child, this.onTap, this.pressScale = 0.96});
 
   @override
   State<PressableScale> createState() => _PressableScaleState();
 }
 
-class _PressableScaleState extends State<PressableScale> {
-  bool _down = false;
+class _PressableScaleState extends State<PressableScale>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 460));
+  late final Animation<double> _t =
+      CurvedAnimation(parent: _ctl, curve: Curves.linear);
+
+  @override
+  void dispose() {
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  void _press() {
+    if (widget.onTap == null) return;
+    HapticFeedback.selectionClick();
+    _ctl.forward(from: 0);
+  }
+
+  /// 分段曲线：按下压缩(0-26%) → 保持(26-36%) → 反弹超调(36-70%) → 回正(70-100%)
+  double _segment(double t) {
+    final p = widget.pressScale;
+    if (t < 0.26) {
+      final k = Curves.easeOutCubic.transform(t / 0.26);
+      return 1.0 + (p - 1.0) * k;
+    }
+    if (t < 0.36) return p;
+    if (t < 0.70) {
+      final k = Curves.easeOutCubic.transform((t - 0.36) / 0.34);
+      return p + (1.06 - p) * k;
+    }
+    final k = Curves.easeOutBack.transform((t - 0.70) / 0.30);
+    return 1.06 + (1.0 - 1.06) * k;
+  }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.onTap == null ? null : (_) => setState(() => _down = true),
-      onTapCancel: () => setState(() => _down = false),
-      onTapUp: (_) => setState(() => _down = false),
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _press(),
+      onTapCancel: () => _ctl.forward(from: 0.36),
+      onTapUp: (_) => _ctl.forward(from: 0.36),
       onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _down ? widget.pressScale : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: Curves.easeOut,
+      child: AnimatedBuilder(
+        animation: _t,
+        builder: (context, child) {
+          final s = _segment(_t.value);
+          return Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // 深度内阴影层（按压时下沉压入纸面）
+              if (s < 0.985)
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.20 * (1 - s) * 8),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6)),
+                      ],
+                    ),
+                  ),
+                ),
+              Transform.scale(scale: s, child: child),
+            ],
+          );
+        },
         child: widget.child,
       ),
     );
   }
-}
-
-/// ===== 主按钮（蓝橙渐变）=====
+}/// ===== 主按钮（苹果蓝纯色）=====
 class BrandButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final IconData? icon;
   final double height;
 
-  const BrandButton(
-      {super.key, required this.label, this.onPressed, this.icon, this.height = 50});
+  const BrandButton({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.icon,
+    this.height = 48,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -578,9 +593,7 @@ class BrandButton extends StatelessWidget {
       ),
     );
   }
-}
-
-/// ===== 玻璃导航栏（半透明白 65% + 磨砂，对齐 Liquid Glass 规范）=====
+}/// ===== 玻璃导航栏 =====
 class AmoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final List<Widget> actions;
@@ -602,7 +615,7 @@ class AmoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return ClipRect(
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: AppBar(
           backgroundColor: Colors.white.withOpacity(0.65),
           surfaceTintColor: Colors.transparent,
@@ -611,7 +624,7 @@ class AmoreAppBar extends StatelessWidget implements PreferredSizeWidget {
           shadowColor: Colors.transparent,
           shape: Border(
               bottom: BorderSide(
-                  color: Colors.white.withOpacity(0.5), width: 0.8)),
+                  color: Colors.white.withOpacity(0.6), width: 0.8)),
           centerTitle: centerTitle,
           title: Text(title,
               style: const TextStyle(
@@ -626,7 +639,7 @@ class AmoreAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-/// ===== 悬浮玻璃圆钮（半透明白 + 模糊 + 柔和高光）=====
+/// ===== 悬浮玻璃圆钮 =====
 class GlassIconButton extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -648,23 +661,23 @@ class GlassIconButton extends StatelessWidget {
     final btn = ClipRRect(
       borderRadius: BorderRadius.circular(size / 2),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
         child: Container(
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.42),
+            color: Colors.white.withOpacity(0.6),
             shape: BoxShape.circle,
             border: Border.all(
-                color: Colors.white.withOpacity(0.85), width: 0.9),
+                color: Colors.white.withOpacity(0.9), width: 1),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.07),
+                  color: Colors.black.withOpacity(0.08),
                   blurRadius: 10,
-                  offset: const Offset(0, 3)),
+                  offset: const Offset(0, 4)),
             ],
           ),
-          child: Icon(icon, size: size * 0.45, color: iconColor),
+          child: Icon(icon, size: size * 0.5, color: iconColor),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../ui/effects.dart';
 import 'chat_room_page.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';
@@ -342,7 +343,9 @@ class _ChatListPageState extends State<ChatListPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 6),
       itemBuilder: (_, i) {
         final r = rows[i];
-        return Material(
+        return StaggerItem(
+          index: i,
+          child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
@@ -379,6 +382,7 @@ class _ChatListPageState extends State<ChatListPage> {
               ),
             ),
           ),
+        ),
         );
       },
     );

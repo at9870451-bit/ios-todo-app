@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -47,61 +48,67 @@ class _SlideTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final light = Theme.of(context).brightness == Brightness.light;
+    // 悬浮 Liquid Glass 导航栏：边缘留白 + 大圆角 + 磨砂 + 高光描边
     return SafeArea(
       top: false,
-      child: GlassContainer(
-        radius: 24,
-        blur: 22,
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-        child: Row(
-          children: [
-            for (var i = 0; i < items.length; i++)
-              Expanded(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => onTap(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 320),
-                    curve: Curves.easeOutCubic,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: i == selectedIndex
-                          ? AmoreBrand.orange.withOpacity(0.13)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          i == selectedIndex ? items[i].$2 : items[i].$1,
-                          size: 22,
-                          color: i == selectedIndex
-                              ? AmoreBrand.orange
-                              : const Color(0xFF86868B),
-                        ),
-                        // 选中项展开显示文字（宽度动画）
-                        AnimatedSize(
-                          duration: const Duration(milliseconds: 320),
-                          curve: Curves.easeOutCubic,
-                          child: i == selectedIndex
-                              ? Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: Text(items[i].$3,
-                                      style: const TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: AmoreBrand.orange)),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-                      ],
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+        child: GlassContainer(
+          radius: 30,
+          blur: 26,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onTap(i);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 320),
+                      curve: Curves.easeOutCubic,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: i == selectedIndex
+                            ? AmoreBrand.accent.withOpacity(0.13)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            i == selectedIndex ? items[i].$2 : items[i].$1,
+                            size: 22,
+                            color: i == selectedIndex
+                                ? AmoreBrand.accent
+                                : const Color(0xFF86868B),
+                          ),
+                          // 选中项展开显示文字（宽度动画）
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 320),
+                            curve: Curves.easeOutCubic,
+                            child: i == selectedIndex
+                                ? Padding(
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: Text(items[i].$3,
+                                        style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: AmoreBrand.accent)),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

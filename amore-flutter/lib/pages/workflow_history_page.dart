@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 import '../core/workflow_engine.dart';
+import '../ui/effects.dart';
 import '../ui/micro.dart';
 import 'workflow_page.dart';
 
@@ -54,22 +55,29 @@ class _WorkflowHistoryPageState extends State<WorkflowHistoryPage> {
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (_, i) {
                     final s = sessions[i];
-                    return AmoreTheme.tile(
-                      context: context,
-                      icon: Icons.account_tree_rounded,
-                      iconColor: AmoreBrand.orange,
-                      title: s.goal,
-                      subtitle: s.finished
-                          ? '已完成 · ${s.steps.length} 步'
-                          : '进行中',
-                      onTap: () => Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (_) => WorkflowPage(viewSession: s))),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded,
-                            size: 19, color: Color(0xFFFF3B30)),
-                        onPressed: () =>
-                            setState(() => _engine.deleteSession(s.id)),
+                    return StaggerItem(
+                      index: i,
+                      child: SharedHero(
+                        tag: 'wf-${s.id}',
+                        child: AmoreTheme.tile(
+                          context: context,
+                          icon: Icons.account_tree_rounded,
+                          iconColor: AmoreBrand.orange,
+                          title: s.goal,
+                          subtitle: s.finished
+                              ? '已完成 · ${s.steps.length} 步'
+                              : '进行中',
+                          onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) =>
+                                      WorkflowPage(viewSession: s))),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 19, color: Color(0xFFFF3B30)),
+                            onPressed: () => setState(
+                                () => _engine.deleteSession(s.id)),
+                          ),
+                        ),
                       ),
                     );
                   },

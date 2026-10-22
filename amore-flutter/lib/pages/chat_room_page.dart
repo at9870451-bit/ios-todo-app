@@ -237,8 +237,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               height: 38,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                gradient: AmoreGradients.brand,
+                color: AmoreBrand.accent,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                      color: AmoreBrand.accent.withOpacity(0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3)),
+                ],
               ),
               child: const Icon(Icons.arrow_upward_rounded,
                   color: Colors.white, size: 20),

@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
+import '../ui/effects.dart';
 
 class MembershipPage extends StatefulWidget {
   const MembershipPage({super.key});
@@ -37,13 +38,15 @@ class _MembershipPageState extends State<MembershipPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              // 等级卡
-              Container(
+              // 等级卡（#6 AuraCard：旋转渐变描边 + 呼吸弥散背光）
+              AuraCard(
+                radius: 18,
+                auraColor: AmoreBrand.accent,
+                child: Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3478F6),
+                  color: AmoreBrand.accent,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AmoreTheme.accent2.withOpacity(0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,6 +69,7 @@ class _MembershipPageState extends State<MembershipPage> {
                             fontSize: 12.5, color: Colors.white.withOpacity(0.7), height: 1.5)),
                   ],
                 ),
+              ),
               ),
 
               const SizedBox(height: 20),

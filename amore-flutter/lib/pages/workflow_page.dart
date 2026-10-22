@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../core/workflow_engine.dart';
+import '../ui/effects.dart';
 import '../ui/micro.dart';
 import '../widgets/step_detail_sheet.dart';
 
@@ -337,20 +338,24 @@ class _WorkflowPageState extends State<WorkflowPage> {
   List<Widget> _viewBody() {
     final s = _engine.current!;
     return [
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: AmoreTheme.cardBox(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(s.goal,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text('完成于 ${s.createdAt.toString().substring(0, 19)}',
-                style:
-                    const TextStyle(fontSize: 11.5, color: Color(0xFFAEAEB2))),
-          ],
+      SharedHero(
+        tag: 'wf-${s.id}',
+        isDetail: true,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: AmoreTheme.cardBox(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.goal,
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 4),
+              Text('完成于 ${s.createdAt.toString().substring(0, 19)}',
+                  style: const TextStyle(
+                      fontSize: 11.5, color: Color(0xFFAEAEB2))),
+            ],
+          ),
         ),
       ),
       const SizedBox(height: 12),

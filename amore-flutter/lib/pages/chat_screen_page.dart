@@ -1,6 +1,7 @@
 // Amore 对话 Tab — AI 对话（1:1 对齐旧 SwiftUI ChatScreen.swift：问候 header/HeroBanner/
 // 空状态建议/推理强度状态行/单行输入面板/朗读/新对话/本地会话恢复）
 import 'dart:convert';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -13,6 +14,7 @@ import '../core/chat_engine.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../ui/effects.dart';
 import '../state/app_state.dart';
 import 'conversations_page.dart';
 import '../ui/motion.dart';
@@ -36,6 +38,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   // 朗读（本地引擎，对齐 tts.engine = local）
   final FlutterTts _tts = FlutterTts();
   bool _speaking = false;
+
+  // #2 FluidMorph：推理强度胶囊 → 展开内联面板
+  bool _reasoningOpen = false;
 
   // 推理强度（off/low/medium/high，对齐 chat.reasoning）
   String _reasoning = 'medium';
@@ -176,12 +181,11 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   // MARK: 菜单
 
   void _menu() {
-    showModalBottomSheet(
-      context: context,
-      builder: (_) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    BounceSheet.show(
+      context,
+      Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
             ListTile(
               leading: const Icon(Icons.edit_note_rounded),
               title: const Text('新对话'),
@@ -241,8 +245,6 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               },
             ),
           ],
-        ),
-      ),
     );
   }
 
@@ -322,8 +324,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           const Text('开启你的精彩对话',
               style: TextStyle(fontSize: 13, color: Color(0xFF86868B))),
           const SizedBox(height: 12),
-          GestureDetector(
+          TiltReflectCard(
             onTap: configured ? _newChat : null,
+            radius: const BorderRadius.all(Radius.circular(20)),
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: AmoreTheme.brandBox(),
@@ -354,6 +357,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                 ],
               ),
             ),
+          ),
           ),
           const SizedBox(height: 10),
           Container(
@@ -571,20 +575,33 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   // 状态行 + 输入面板（对齐 statusRow / inputPanel）
 
   Widget _inputArea() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.85),
-        border: const Border(top: BorderSide(color: Color(0xFFE3E3E8))),
-      ),
-      child: Column(
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.62),
+            border: const Border(top: BorderSide(color: Color(0xFFE3E3E8))),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 18,
+                  offset: const Offset(0, -4)),
+            ],
+          ),
+          child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: _pickReasoning,
-                  child: Container(
+                FluidMorph(
+                  expanded_: _reasoningOpen,
+                  onCollapsedTap: () =>
+                      setState(() => _reasoningOpen = true),
+                  onExpandedTap: () =>
+                      setState(() => _reasoningOpen = false),
+                  collapsed: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
@@ -600,6 +617,45 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
                                 color: Color(0xFF86868B))),
+                      ],
+                    ),
+                  ),
+                  expanded: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: AmoreBrand.orange.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (final r in const [
+                          ('off', '关闭'),
+                          ('low', '低'),
+                          ('medium', '中'),
+                          ('high', '高'),
+                        ])
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                _reasoning = r.$1;
+                                _reasoningOpen = false;
+                              }),
+                              child: Text(
+                                r.$2,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: _reasoning == r.$1
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  color: _reasoning == r.$1
+                                      ? AmoreBrand.accent
+                                      : const Color(0xFF86868B),
+                                ),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -664,6 +720,8 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           ),
           const SizedBox(height: 6),
         ],
+        ),
+      ),
       ),
     );
   }
