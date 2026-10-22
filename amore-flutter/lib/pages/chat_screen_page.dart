@@ -538,7 +538,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                 ],
               ),
               child: (!isUser && m == _messages.last)
-                  ? InkRevealText(m.content,
+                  ? InkRevealText(text: m.content,
                       style: const TextStyle(
                           fontSize: 14,
                           height: 1.45,
