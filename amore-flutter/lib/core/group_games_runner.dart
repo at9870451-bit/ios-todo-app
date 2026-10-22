@@ -107,7 +107,8 @@ class GroupGamesRunner {
       roles.putIfAbsent(m.id, () => WerewolfRole.villager);
     }
     final game = WerewolfGame(
-        players: pool.map((m) => (m.name, m.id)).toList(), roles: roles);
+        players: pool.map((m) => WerewolfPlayer(m.name, m.id)).toList(),
+        roles: roles);
 
     final playersText = pool.map((m) => m.name).join('、');
     append(

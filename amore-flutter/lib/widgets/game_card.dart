@@ -10,7 +10,9 @@ class GameCard extends StatelessWidget {
   final String symbol;
   final Color tint;
 
-  const GameCard({
+  final IconData _icon;
+
+  GameCard({
     super.key,
     required this.kind,
     required this.title,
@@ -18,8 +20,6 @@ class GameCard extends StatelessWidget {
     required String symbol,
     required this.tint,
   }) : _icon = CardMark.symbolIcon(symbol);
-
-  final IconData _icon;
 
   @override
   Widget build(BuildContext context) {

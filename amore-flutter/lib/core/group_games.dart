@@ -155,8 +155,14 @@ class CardMark {
 
 // MARK: - 狼人杀一局状态（单轮体验版）
 
+class WerewolfPlayer {
+  final String name;
+  final String memberId;
+  const WerewolfPlayer(this.name, this.memberId);
+}
+
 class WerewolfGame {
-  final List<(String name, String memberId)> players;
+  final List<WerewolfPlayer> players;
   final Map<String, WerewolfRole> roles; // memberId → 角色
   String victim;
   int phase; // 0=已分配 1=天亮 2=发言完 3=结算
