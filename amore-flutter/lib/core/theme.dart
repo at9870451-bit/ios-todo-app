@@ -323,14 +323,20 @@ class AmoreTheme {
     );
   }
 
-  /// 品牌按钮/重点卡（纯色，去渐变）
+  /// 品牌按钮/视觉焦点：蓝橙渐变（#3478F6 → #67C7FF → #FF9500）
   static BoxDecoration brandBox({double radius = rButton, List<Color>? colors}) =>
       BoxDecoration(
-        color: AmoreBrand.orange,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: colors ??
+              const [AmoreBrand.brandBlue, AmoreBrand.skyBlue, AmoreBrand.orange],
+          stops: const [0.0, 0.5, 1.0],
+        ),
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-              color: AmoreBrand.orange.withOpacity(0.25),
+              color: AmoreBrand.brandBlue.withOpacity(0.28),
               blurRadius: 14,
               offset: const Offset(0, 5)),
         ],
@@ -553,5 +559,99 @@ class BrandButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// ===== 玻璃导航栏（半透明白 65% + 磨砂，对齐 Liquid Glass 规范）=====
+class AmoreAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final List<Widget> actions;
+  final Widget? leading;
+  final bool centerTitle;
+
+  const AmoreAppBar({
+    super.key,
+    required this.title,
+    this.actions = const [],
+    this.leading,
+    this.centerTitle = true,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+        child: AppBar(
+          backgroundColor: Colors.white.withOpacity(0.65),
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          shadowColor: Colors.transparent,
+          shape: Border(
+              bottom: BorderSide(
+                  color: Colors.white.withOpacity(0.5), width: 0.8)),
+          centerTitle: centerTitle,
+          title: Text(title,
+              style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1D1D1F))),
+          leading: leading,
+          actions: actions,
+        ),
+      ),
+    );
+  }
+}
+
+/// ===== 悬浮玻璃圆钮（半透明白 + 模糊 + 柔和高光）=====
+class GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final double size;
+  final VoidCallback? onTap;
+  final String? tooltip;
+
+  const GlassIconButton({
+    super.key,
+    required this.icon,
+    this.iconColor = const Color(0xFF1D1D1F),
+    this.size = 40,
+    this.onTap,
+    this.tooltip,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final btn = ClipRRect(
+      borderRadius: BorderRadius.circular(size / 2),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.42),
+            shape: BoxShape.circle,
+            border: Border.all(
+                color: Colors.white.withOpacity(0.85), width: 0.9),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Icon(icon, size: size * 0.45, color: iconColor),
+        ),
+      ),
+    );
+    return tooltip != null
+        ? Tooltip(message: tooltip!, child: GestureDetector(onTap: onTap, child: btn))
+        : GestureDetector(onTap: onTap, child: btn);
   }
 }

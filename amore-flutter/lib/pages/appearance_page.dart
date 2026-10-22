@@ -51,7 +51,7 @@ class _AppearancePageState extends State<AppearancePage> {
     };
 
     return Scaffold(
-      appBar: AppBar(title: const Text('外观', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
+      appBar: const AmoreAppBar(title: '外观'),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(

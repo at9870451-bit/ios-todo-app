@@ -86,7 +86,7 @@ class _AgentListPageState extends State<AgentListPage> {
   Widget build(BuildContext context) {
     final agents = context.watch<AppState>().agents;
     return Scaffold(
-      appBar: AppBar(title: const Text('智能体', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
+      appBar: const AmoreAppBar(title: '智能体'),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(

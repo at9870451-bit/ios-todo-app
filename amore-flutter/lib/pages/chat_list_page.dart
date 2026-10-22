@@ -309,18 +309,22 @@ class _ChatListPageState extends State<ChatListPage> {
     ]..sort((a, b) => b.ts.compareTo(a.ts));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('聊天', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+      appBar: AmoreAppBar(
+        centerTitle: false,
+        title: '聊天',
         actions: [
-          IconButton(
-              onPressed: _addFriendSheet,
-              icon: const Icon(Icons.person_add_alt_rounded),
-              tooltip: '添加好友'),
-          IconButton(
-              onPressed: _createGroupSheet,
-              icon: const Icon(Icons.group_add_rounded),
-              tooltip: '新建群聊'),
-          const SizedBox(width: 4),
+          GlassIconButton(
+              icon: Icons.person_add_alt_rounded,
+              iconColor: AmoreBrand.orange,
+              tooltip: '添加好友',
+              onTap: _addFriendSheet),
+          const SizedBox(width: 8),
+          GlassIconButton(
+              icon: Icons.group_add_rounded,
+              iconColor: AmoreBrand.orange,
+              tooltip: '新建群聊',
+              onTap: _createGroupSheet),
+          const SizedBox(width: 8),
         ],
       ),
       body: Container(

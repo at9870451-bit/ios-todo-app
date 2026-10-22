@@ -30,7 +30,7 @@ class _MembershipPageState extends State<MembershipPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('会员中心', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700))),
+      appBar: const AmoreAppBar(title: '会员中心'),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(

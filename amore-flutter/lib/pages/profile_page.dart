@@ -32,7 +32,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     return Scaffold(
-      appBar: AppBar(title: const Text('我的', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700))),
+      appBar: const AmoreAppBar(centerTitle: false, title: '我的'),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(

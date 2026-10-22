@@ -520,9 +520,9 @@ class _ExpandableFABState extends State<ExpandableFAB> {
   void _onScroll() {
     final off = widget.scrollController.offset;
     if (off > _lastOffset + 4 && _expanded) {
-      setState(() => _expanded = false); // 下滑收缩
+      setState(() => _expanded = false);
     } else if (off < _lastOffset - 4 && !_expanded) {
-      setState(() => _expanded = true); // 上滑展开
+      setState(() => _expanded = true);
     }
     _lastOffset = off;
   }
@@ -537,43 +537,48 @@ class _ExpandableFABState extends State<ExpandableFAB> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
-        curve: Curves.easeOutCubic,
-        height: 52,
-        padding: EdgeInsets.symmetric(horizontal: _expanded ? 18 : 0),
-        decoration: BoxDecoration(
-          color: AmoreBrand.orange,
-          borderRadius: BorderRadius.circular(26),
-          boxShadow: [
-            BoxShadow(
-                color: AmoreBrand.orange.withOpacity(0.35),
-                blurRadius: 14,
-                offset: const Offset(0, 5)),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(width: 4),
-            Icon(widget.icon, color: Colors.white, size: 22),
-            // 文字宽度动画展开/收起
-            AnimatedSize(
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOutCubic,
-              child: _expanded
-                  ? Padding(
-                      padding: const EdgeInsets.only(left: 8),
-                      child: Text(widget.label,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14.5,
-                              fontWeight: FontWeight.w600)),
-                    )
-                  : const SizedBox.shrink(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            height: 52,
+            padding: EdgeInsets.symmetric(horizontal: _expanded ? 18 : 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.55),
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                  color: Colors.white.withOpacity(0.6), width: 0.8),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5)),
+              ],
             ),
-            const SizedBox(width: 4),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, color: AmoreBrand.orange, size: 22),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  child: _expanded
+                      ? Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: Text(widget.label,
+                              style: const TextStyle(
+                                  color: Color(0xFF1D1D1F),
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w600)),
+                        )
+                      : const SizedBox(width: 0, height: 0),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -250,13 +250,14 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: const Text('AI 对话', style: TextStyle(fontSize: 17)),
+      appBar: AmoreAppBar(
+        title: 'AI 对话',
         actions: [
-          IconButton(
-              onPressed: _menu,
-              icon: const Icon(Icons.question_answer_rounded, size: 20)),
+          GlassIconButton(
+              icon: Icons.question_answer_rounded,
+              iconColor: AmoreBrand.brandBlue,
+              onTap: _menu),
+          const SizedBox(width: 8),
         ],
       ),
       body: Container(
