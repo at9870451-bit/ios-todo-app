@@ -424,12 +424,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           height: 84,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: LinearGradient(colors: [
-              AmoreGradients.brand.colors.first.withOpacity(0.12),
-              AmoreGradients.brand.colors.last.withOpacity(0.06),
-            ]),
+            color: AmoreBrand.orangeBg,
             border: Border.all(
-                color: AmoreBrand.brandBlue.withOpacity(0.28), width: 1),
+                color: AmoreBrand.orange.withOpacity(0.4), width: 1),
           ),
           child: const Icon(Icons.question_answer_rounded,
               size: 32, color: AmoreBrand.brandBlue),

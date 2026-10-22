@@ -238,7 +238,7 @@ class _WorkflowPageState extends State<WorkflowPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        gradient: AmoreGradients.brand,
+        color: AmoreBrand.orange,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(

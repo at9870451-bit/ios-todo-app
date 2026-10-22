@@ -118,7 +118,7 @@ class MessageBubble extends StatelessWidget {
                         maxWidth: MediaQuery.of(context).size.width * 0.72),
                     decoration: mine
                         ? BoxDecoration(
-                            gradient: AmoreTheme.accentGradient(),
+                            color: AmoreBrand.brandBlue,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(16),
                               topRight: const Radius.circular(16),

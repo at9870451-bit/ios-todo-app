@@ -63,10 +63,9 @@ class _CallViewState extends State<CallView>
                   padding: EdgeInsets.all(10 + phase * 8),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: RadialGradient(colors: [
-                      AmoreTheme.accent.withOpacity(0.22 * phase + 0.05),
-                      Colors.transparent,
-                    ]),
+                    border: Border.all(
+                        color: AmoreBrand.orange.withOpacity(0.22 * phase + 0.05),
+                        width: 6),
                   ),
                   child: AmoreTheme.avatar(widget.friend.name, size: 96),
                 );
@@ -100,12 +99,8 @@ class _CallViewState extends State<CallView>
                   height: 84,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: _pressing
-                        ? AmoreTheme.accentGradient()
-                        : const LinearGradient(colors: [
-                            Color(0xFFFFF4E8),
-                            Color(0xFFFFE2C2),
-                          ]),
+                    color: _pressing ? AmoreBrand.orange : null,
+                        : const Color(0xFFFFF4E8),
                     border: Border.all(
                         color: _pressing
                             ? AmoreBrand.orange

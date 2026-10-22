@@ -124,7 +124,7 @@ class _AppearancePageState extends State<AppearancePage> {
                               Container(
                                 height: 62,
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(colors: e.value.$2),
+                                  color: (e.value.$2 as List<Color>).first,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                       color: selected ? AmoreTheme.accent : Colors.transparent,
@@ -171,7 +171,7 @@ class _AppearancePageState extends State<AppearancePage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            gradient: AmoreTheme.accentGradient(),
+                            color: AmoreBrand.brandBlue,
                             borderRadius: BorderRadius.circular(_bubbleRadius),
                           ),
                           child: const Text('这是我的气泡',

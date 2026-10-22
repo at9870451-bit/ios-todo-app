@@ -361,7 +361,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
               width: 38,
               height: 38,
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [AmoreTheme.bubbleMe, AmoreTheme.accent2]),
+                color: AmoreBrand.orange,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send_rounded, color: Colors.white, size: 19),

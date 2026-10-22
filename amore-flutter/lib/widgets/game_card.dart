@@ -25,15 +25,7 @@ class GameCard extends StatelessWidget {
       width: 136,
       padding: const EdgeInsets.all(6),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            tint.withOpacity(0.92),
-            tint.withOpacity(0.55),
-            Colors.black.withOpacity(0.55),
-          ],
-        ),
+        color: tint,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: const Color(0xFFF5D487), width: 1.6),
         boxShadow: [

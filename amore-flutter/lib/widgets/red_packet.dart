@@ -77,12 +77,8 @@ class RedPacketCard extends StatelessWidget {
       child: Container(
         width: 200,
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF9500), Color(0xFFFF6A00)],
-          ),
+        decoration: const BoxDecoration(
+          color: Color(0xFFFF9500),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -152,11 +148,7 @@ class _RedPacketOpenedView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 30, 24, 40),
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFFF7A00), Color(0xFFE87500)],
-        ),
+        color: Color(0xFFE87500),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(

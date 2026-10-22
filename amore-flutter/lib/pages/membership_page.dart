@@ -41,11 +41,7 @@ class _MembershipPageState extends State<MembershipPage> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF3478F6), Color(0xFF6CA8FF), Color(0xFFFF9500)],
-                  ),
+                  color: const Color(0xFF3478F6),
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: AmoreTheme.accent2.withOpacity(0.3)),
                 ),

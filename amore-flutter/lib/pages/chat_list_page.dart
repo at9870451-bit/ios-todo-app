@@ -5,11 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../core/models.dart';
 import '../core/store.dart';
-import '../core/workflow_engine.dart';
 import '../core/theme.dart';
-import 'workflow_page.dart';
 import 'chat_room_page.dart';
-import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';
 
@@ -21,8 +18,6 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
-  bool _workflowMode = false;
-  final WorkflowEngine _workflowEngine = WorkflowEngine();
 
   @override
   void initState() {
@@ -299,8 +294,8 @@ class _ChatListPageState extends State<ChatListPage> {
             avatar: Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(
-                gradient: AmoreTheme.accentGradient(),
+              decoration: const BoxDecoration(
+                color: AmoreBrand.brandBlue,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.group_rounded, color: Colors.white, size: 22),
@@ -314,58 +309,24 @@ class _ChatListPageState extends State<ChatListPage> {
     ]..sort((a, b) => b.ts.compareTo(a.ts));
 
     return Scaffold(
-      floatingActionButton: _workflowMode
-          ? FloatingActionButton.extended(
-              backgroundColor: AmoreTheme.accent,
-              onPressed: () {
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const WorkflowPage()));
-              },
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('新建工作流', style: TextStyle(color: Colors.white)),
-            )
-          : null,
       appBar: AppBar(
         title: const Text('聊天', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
         actions: [
-          if (!_workflowMode) ...[
-            IconButton(
-                onPressed: _addFriendSheet,
-                icon: const Icon(Icons.person_add_alt_rounded),
-                tooltip: '添加好友'),
-            IconButton(
-                onPressed: _createGroupSheet,
-                icon: const Icon(Icons.group_add_rounded),
-                tooltip: '新建群聊'),
-          ],
+          IconButton(
+              onPressed: _addFriendSheet,
+              icon: const Icon(Icons.person_add_alt_rounded),
+              tooltip: '添加好友'),
+          IconButton(
+              onPressed: _createGroupSheet,
+              icon: const Icon(Icons.group_add_rounded),
+              tooltip: '新建群聊'),
           const SizedBox(width: 4),
         ],
       ),
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(
-          child: Column(
-            children: [
-              // 会话类型分段：聊天 / 工作流
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SegmentedButton<bool>(
-                    segments: const [
-                      ButtonSegment(value: false, label: Text('聊天'), icon: Icon(Icons.forum_outlined, size: 16)),
-                      ButtonSegment(value: true, label: Text('工作流'), icon: Icon(Icons.account_tree_outlined, size: 16)),
-                    ],
-                    selected: {_workflowMode},
-                    onSelectionChanged: (s) => setState(() => _workflowMode = s.first),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: _workflowMode ? _workflowList() : _chatList(rows),
-              ),
-            ],
-          ),
+          child: _chatList(rows),
         ),
       ),
     );
@@ -422,57 +383,6 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 
   // 工作流会话列表（与聊天分开）
-  Widget _workflowList() {
-    final sessions = _workflowEngine.sessions;
-    if (sessions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.account_tree_outlined, size: 60, color: Colors.grey.withOpacity(0.5)),
-            const SizedBox(height: 14),
-            const Text('还没有工作流对话',
-                style: TextStyle(color: AmoreTheme.textSecondary, fontSize: 15)),
-            const SizedBox(height: 6),
-            const Text('工作流会把目标拆解为多个步骤逐步执行，与聊天分开',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AmoreTheme.textFaint, fontSize: 12)),
-          ],
-        ),
-      );
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
-      itemCount: sessions.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
-      itemBuilder: (_, i) {
-        final s = sessions[i];
-        return AmoreTheme.tile(
-          context: context,
-          icon: Icons.account_tree_rounded,
-          iconColor: AmoreBrand.orange,
-          title: s.goal,
-          subtitle: s.finished
-              ? '已完成 · ${s.steps.length} 步 · ${_timeText(s.createdAt.millisecondsSinceEpoch / 1000)}'
-              : '进行中',
-          onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => WorkflowPage(viewSession: s)));
-          },
-          trailing: PopupMenuButton<String>(
-            onSelected: (v) {
-              if (v == 'delete') {
-                setState(() => _workflowEngine.deleteSession(s.id));
-              }
-            },
-            itemBuilder: (_) => const [
-              PopupMenuItem(value: 'delete', child: Text('删除', style: TextStyle(color: Color(0xFFFF3B30)))),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   Widget _empty() {
     return Center(

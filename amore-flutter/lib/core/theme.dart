@@ -323,27 +323,24 @@ class AmoreTheme {
     );
   }
 
-  /// 品牌渐变装饰（主按钮 / 重点卡）
+  /// 品牌按钮/重点卡（纯色，去渐变）
   static BoxDecoration brandBox({double radius = rButton, List<Color>? colors}) =>
       BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: colors ?? const [AmoreBrand.brandBlue, AmoreBrand.brandBlueLight, AmoreBrand.orange],
-          stops: const [0.0, 0.55, 1.0],
-        ),
+        color: AmoreBrand.orange,
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-              color: AmoreBrand.brandBlue.withOpacity(0.25),
+              color: AmoreBrand.orange.withOpacity(0.25),
               blurRadius: 14,
               offset: const Offset(0, 5)),
         ],
       );
 
-  static LinearGradient accentGradient(
-          {Alignment begin = Alignment.topLeft, Alignment end = Alignment.bottomRight}) =>
-      AmoreGradients.brand;
+  static BoxDecoration accentSolid({double radius = rButton}) =>
+      BoxDecoration(
+        color: AmoreBrand.brandBlue,
+        borderRadius: BorderRadius.circular(radius),
+      );
 
   static TextStyle sectionLabel() => const TextStyle(
       color: Color(0xFF86868B),
