@@ -24,7 +24,20 @@ final class DollSceneController3D: NSObject, ObservableObject {
     override init() {
         super.init()
         setupScene()
+        // 默认场景内容：不依赖 Flutter 侧调用时序，view 一创建就有模型
+        setCharacter(gender: "female", skin: "#F3C6A5", heightScale: 1.0)
+        updateSlots([
+            "top": ["kind": "tee", "color": "#F5F5F7"],
+            "bottom": ["kind": "pants", "color": "#4A6B9A"],
+            "shoes": ["kind": "sneakers", "color": "#F0F0F2"],
+        ])
+        // 人物必需有 3D 骨骼模型：bundle 里有 CesiumMan 时默认加载
+        if loadSkinned(named: "CesiumMan") {
+            defaultSkinned = true
+        }
     }
+
+    private(set) var defaultSkinned = false
 
     private func setupScene() {
         scene.background.contents = UIColor(red: 0.97, green: 0.97, blue: 0.98, alpha: 1)

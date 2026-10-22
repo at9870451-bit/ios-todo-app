@@ -84,6 +84,8 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
         case "loadSkinned":
             let name = args["name"] as? String ?? "CesiumMan"
             result(controller.loadSkinned(named: name))
+        case "defaultSkinned":
+            result(controller.defaultSkinned)
         case "unloadSkinned":
             controller.unloadSkinned()
             result(true)

@@ -273,6 +273,10 @@ class _DollStudioPageState extends State<DollStudioPage> {
             skin: _skin,
             heightScale: _heightScale,
             slots: _slots,
+            onViewReady: () async {
+              final def = await DollSceneChannel.defaultSkinned();
+              if (mounted && def) setState(() => _skinned = true);
+            },
           ),
         ),
         Positioned(

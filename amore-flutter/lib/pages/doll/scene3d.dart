@@ -13,6 +13,7 @@ class DollScene3D extends StatefulWidget {
   final String skin;
   final double heightScale;
   final Map<String, Map<String, String>> slots; // category → {kind, color}
+  final VoidCallback? onViewReady;
 
   const DollScene3D({
     super.key,
@@ -20,6 +21,7 @@ class DollScene3D extends StatefulWidget {
     required this.skin,
     required this.heightScale,
     required this.slots,
+    this.onViewReady,
   });
 
   @override
@@ -29,10 +31,26 @@ class DollScene3D extends StatefulWidget {
 class _DollScene3DState extends State<DollScene3D> {
   static const _channel = MethodChannel('amore/doll_scene');
 
+  bool _viewCreated = false;
+  int _pushAttempts = 0;
+  Timer? _retryTimer;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _pushCharacter());
+    // PlatformView 创建完成后再推送（时序兜底）
+    _retryTimer = Timer.periodic(const Duration(milliseconds: 600), (t) async {
+      if (_viewCreated || t.tick > 8) {
+        t.cancel();
+        if (!_viewCreated) return;
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -58,7 +76,13 @@ class _DollScene3DState extends State<DollScene3D> {
       });
       await _pushSlots();
     } on PlatformException {
-      // 原生侧未注册（非 iOS 构建）时静默
+      // view 尚未就绪：延迟重试
+      if (_pushAttempts < 5) {
+        _pushAttempts++;
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _pushCharacter();
+        });
+      }
     }
   }
 
@@ -81,6 +105,11 @@ class _DollScene3DState extends State<DollScene3D> {
     }
     return UiKitView(
       viewType: 'doll_scene',
+      onPlatformViewCreated: (_) async {
+        _viewCreated = true;
+        await _pushCharacter();
+        widget.onViewReady?.call();
+      },
       gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
         Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
       },
@@ -113,6 +142,15 @@ class DollSceneChannel {
       await _channel.invokeMethod('resetView');
     } on PlatformException {
       // ignore
+    }
+  }
+
+  /// 原生是否已默认加载骨骼模型
+  static Future<bool> defaultSkinned() async {
+    try {
+      return await _channel.invokeMethod<bool>('defaultSkinned') ?? false;
+    } on PlatformException {
+      return false;
     }
   }
 
