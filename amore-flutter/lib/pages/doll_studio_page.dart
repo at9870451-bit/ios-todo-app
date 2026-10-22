@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import '../state/app_state.dart';
 import '../core/theme.dart';
 import 'doll/catalog.dart';
 
