@@ -9,7 +9,6 @@ import '../state/app_state.dart';
 import 'agent_list_page.dart';
 import 'appearance_page.dart';
 import 'console_page.dart';
-import 'conversations_page.dart';
 import 'membership_page.dart';
 import 'providers_page.dart';
 import 'settings_page.dart';
@@ -55,8 +54,8 @@ class ProfilePage extends StatelessWidget {
                           const Text('QuantOKX 用户',
                               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 4),
-                          Text(state.serverUrl(),
-                              style: const TextStyle(fontSize: 11.5, color: AmoreTheme.textSecondary)),
+                          const Text('本地模式 · 数据存储在本机',
+                              style: TextStyle(fontSize: 11.5, color: AmoreTheme.textSecondary)),
                         ],
                       ),
                     ),
@@ -95,14 +94,6 @@ class ProfilePage extends StatelessWidget {
 
               const SizedBox(height: 20),
               section('数据与工具'),
-              AmoreTheme.tile(
-                context: context,
-                icon: Icons.history_rounded,
-                title: '历史会话',
-                subtitle: '服务端同步的会话列表',
-                onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ConversationsPage())),
-              ),
               gap(),
               AmoreTheme.tile(
                 context: context,

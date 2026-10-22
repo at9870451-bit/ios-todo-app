@@ -88,8 +88,6 @@ class AppState extends ChangeNotifier {
 
   // ---- 常用配置便捷读写 ----
 
-  String serverUrl() => config['server_url'] ?? 'http://154.12.16.204:8080';
-
   /// 夜间免打扰（23:00-08:00，build 83 打扰分寸）
   bool dndEnabled() => config['dnd_enabled'] == '1';
 

@@ -14,7 +14,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  late final TextEditingController _serverCtl;
   String _voiceEngine = 'server';
   String _ttsVoice = '';
 
@@ -22,14 +21,12 @@ class _SettingsPageState extends State<SettingsPage> {
   void initState() {
     super.initState();
     final state = context.read<AppState>();
-    _serverCtl = TextEditingController(text: state.serverUrl());
     _voiceEngine = state.globalVoiceEngine();
     _ttsVoice = AmoreStore.getConfig('tts_voice') ?? '';
   }
 
   @override
   void dispose() {
-    _serverCtl.dispose();
     super.dispose();
   }
 
@@ -44,33 +41,6 @@ class _SettingsPageState extends State<SettingsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              section('服务端'),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: AmoreTheme.cardBox(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('服务器地址', style: TextStyle(fontSize: 13.5)),
-                    const SizedBox(height: 8),
-                    TextField(controller: _serverCtl, style: const TextStyle(fontSize: 13)),
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton(
-                        onPressed: () {
-                          AmoreStore.setConfig('server_url', _serverCtl.text.trim());
-                          state.refreshAll();
-                          ScaffoldMessenger.of(context)
-                              .showSnackBar(const SnackBar(content: Text('已保存')));
-                        },
-                        child: const Text('保存'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 20),
               section('打扰分寸（Orbit butler 移植）'),
               Container(
