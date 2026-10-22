@@ -1,25 +1,23 @@
 // Amore — 金边卡面（程序化绘制，移植自 GameCardView：渐变+金边+四角装饰）
 import 'package:flutter/material.dart';
 
-import 'group_games.dart';
+import '../core/group_games.dart';
 
 class GameCard extends StatelessWidget {
   final String kind; // 塔罗 / 角色 / 结算
   final String title;
   final String sub;
-  final String symbol;
+  final IconData icon;
   final Color tint;
 
-  final IconData _icon;
-
-  GameCard({
+  const GameCard({
     super.key,
     required this.kind,
     required this.title,
     required this.sub,
-    required String symbol,
+    required this.icon,
     required this.tint,
-  }) : _icon = CardMark.symbolIcon(symbol);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +69,7 @@ class GameCard extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(_icon, size: 38, color: const Color(0xFFFAE19E)),
+              Icon(icon, size: 38, color: const Color(0xFFFAE19E)),
               const SizedBox(height: 10),
               Text(title,
                   textAlign: TextAlign.center,

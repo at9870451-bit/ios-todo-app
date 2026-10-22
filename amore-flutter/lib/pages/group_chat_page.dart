@@ -299,7 +299,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
                           kind: mark.kind,
                           title: mark.title,
                           sub: mark.sub,
-                          symbol: mark.symbol,
+                          icon: CardMark.symbolIcon(mark.symbol),
                           tint: mark.color,
                         )),
                       );

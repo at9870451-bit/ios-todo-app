@@ -9,7 +9,6 @@ import '../core/chat_engine.dart';
 import '../core/group_games.dart';
 import '../core/models.dart';
 import '../core/store.dart';
-import 'game_card.dart';
 
 /// 群游戏运行器：把卡牌消息写进群聊历史，成员 AI 依次回应
 class GroupGamesRunner {
@@ -56,7 +55,7 @@ class GroupGamesRunner {
       final system = _tarotPrompt(responder, card, upright);
       final reply = await ChatEngine.request(
           ChatEngine.providerFor(responder) ??
-              ChatEngine.providerForGlobalOrThrow(),
+              providerForGlobalOrThrow(),
           history.cast<Map<String, String>>(),
           system);
       append('assistant', reply, senderId: responder.id);
@@ -99,7 +98,7 @@ class GroupGamesRunner {
     final pool = members.take(4).toList();
     final roles = <String, WerewolfRole>{};
     final shuffled = pool.toList()..shuffle();
-    roles[shuffled.removeFirst().id] = WerewolfRole.wolf;
+    roles[shuffled.removeAt(0).id] = WerewolfRole.wolf;
     if (pool.length >= 3) {
       roles[shuffled.first.id] = WerewolfRole.seer;
     }
@@ -150,7 +149,7 @@ class GroupGamesRunner {
           'content': '（白天讨论）昨晚 ${game.victim} 出局了，来说说你的看法。'
         });
         final reply = await ChatEngine.request(
-            ChatEngine.providerFor(m) ?? ChatEngine.providerForGlobalOrThrow(),
+            ChatEngine.providerFor(m) ?? providerForGlobalOrThrow(),
             history.cast<Map<String, String>>(),
             system);
         append('assistant', reply, senderId: m.id);
