@@ -1,8 +1,12 @@
-// 对应 Swift：ChatScreen.swift —— Tab1 当前好友聊天（核心页）
-import 'dart:async';
+// Amore 对话 Tab — AI 对话（1:1 对齐旧 SwiftUI ChatScreen.swift：问候 header/HeroBanner/
+// 空状态建议/推理强度状态行/单行输入面板/朗读/新对话/本地会话恢复）
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../core/chat_engine.dart';
@@ -10,9 +14,7 @@ import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
-import '../widgets/bubble.dart';
-import '../widgets/call_view.dart';
-import '../widgets/red_packet.dart';
+import 'conversations_page.dart';
 
 class ChatScreenPage extends StatefulWidget {
   const ChatScreenPage({super.key});
@@ -24,165 +26,153 @@ class ChatScreenPage extends StatefulWidget {
 class _ChatScreenPageState extends State<ChatScreenPage> {
   final _inputCtl = TextEditingController();
   final _scrollCtl = ScrollController();
+  final _focus = FocusNode();
   List<ChatMessage> _messages = [];
   bool _sending = false;
-  String _toolHint = '';
-  Timer? _pendingTimer;
-  String _messagesKey = '';
 
-  ChatFriend? get _friend => context.watch<AppState>().activeFriend.value;
+  // 朗读（本地引擎，对齐 tts.engine = local）
+  final FlutterTts _tts = FlutterTts();
+  bool _speaking = false;
+
+  // 推理强度（off/low/medium/high，对齐 chat.reasoning）
+  String _reasoning = 'medium';
+
+  // 附件（图片/文件，气泡内渲染）
+  List<_Attachment> _pendingAtts = [];
+
+  static const _suggestions = [
+    '帮我写一封请假邮件',
+    '用通俗语言解释量子纠缠',
+    '制定一周健身计划',
+  ];
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _restore());
+    _inputCtl.addListener(() => setState(() {}));
   }
 
-  void _reload() {
-    final f = _friend;
-    setState(() {
-      _messages = f == null ? [] : AmoreStore.loadHistory('friend.${f.id}');
-    });
-    _scrollToBottom();
+  Future<void> _restore() async {
+    final local = AmoreStore.loadHistory('single');
+    if (!mounted) return;
+    setState(() => _messages = local);
+    _scrollBottom();
   }
 
-  void _scrollToBottom() {
+  void _scrollBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtl.hasClients) {
-        _scrollCtl.animateTo(
-          _scrollCtl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-        );
+        _scrollCtl.animateTo(_scrollCtl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOut);
       }
     });
   }
 
-  Future<void> _send(String text) async {
-    final f = _friend;
-    if (f == null || _sending) return;
-    final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+  String get _greetTitle {
+    final h = DateTime.now().hour;
+    if (h >= 5 && h < 11) return '早上好';
+    if (h >= 11 && h < 13) return '中午好';
+    if (h >= 13 && h < 18) return '下午好';
+    return '晚上好';
+  }
+
+  // MARK: 发送（对齐 send()：本地历史 + 直连模型 + 附件说明拼接）
+
+  Future<void> _send() async {
+    final text = _inputCtl.text.trim();
+    if ((text.isEmpty && _pendingAtts.isEmpty) || _sending) return;
+    HapticFeedback.light();
     _inputCtl.clear();
+    _focus.unfocus();
+    final atts = _pendingAtts;
+    setState(() {
+      _pendingAtts = [];
+      _messages.add(ChatMessage(content: text));
+      _sending = true;
+    });
+    _scrollBottom();
 
-    setState(() => _sending = true);
     try {
-      final result = await ChatEngine.send(
-        friend: f,
-        userText: trimmed,
-        onToolCall: (tool) {
-            setState(() => _toolHint = tool);
-          },
-      );
-      if (result.error != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              backgroundColor: AmoreTheme.danger.withOpacity(0.85),
-              content: Text(result.error!)));
-        }
-      } else if (result.tools.isNotEmpty && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            duration: const Duration(milliseconds: 1200),
-            content: Text('🔧 调用了工具：${result.tools.map((t) => t.name).join('、')}')));
+      final provider = ChatEngine.providerForGlobal();
+      if (provider == null) {
+        throw Exception('AI 未配置 · 点击前往「我的」页设置');
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          _toolHint = '';
-        });
-        context.read<AppState>().refreshSocial();
-        _reload();
+      final history = _messages
+          .take(_messages.length - 1)
+          .toList()
+          .reversed
+          .take(19)
+          .toList()
+          .reversed
+          .map((m) => {'role': m.role, 'content': m.content})
+          .toList();
+      var last = text;
+      if (atts.isNotEmpty) {
+        last += '\n（我另外发了 ${atts.length} 个附件：${atts.map((a) => a.name).join('、')}）';
       }
+      history.add({'role': 'user', 'content': last});
+      final system = AmoreStore.getConfig('persona.prompt') ?? '';
+      final reply = await ChatEngine.request(
+          provider, history.cast<Map<String, String>>().toList(), system,
+          extraSystem: _reasoning != 'off'
+              ? '回复推理强度：${_reasoningLabel(_reasoning)}。'
+              : null);
+      setState(() =>
+          _messages.add(ChatMessage(content: reply, role: 'assistant')));
+    } catch (e) {
+      setState(() =>
+          _messages.add(ChatMessage(content: '⚠️ $e', role: 'assistant')));
     }
+    AmoreStore.appendHistory('single', 'user', text);
+    for (final m in _messages.skip(_messages.length - 2)) {
+      AmoreStore.appendHistory('single', m.role, m.content);
+    }
+    setState(() => _sending = false);
+    _scrollBottom();
   }
 
-  /// 发红包（本地消息：[红包:金额|祝福]）
-  void _sendRedPacket(double amount, String blessing) {
-    final f = _friend;
-    if (f == null) return;
-    final amt = amount % 1 == 0 ? amount.toInt().toString() : amount.toString();
-    final content = '[红包:$amt|$blessing]';
-    AmoreStore.appendHistory('friend.${f.id}', 'user', content);
-    f.lastMessage = content;
-    f.lastAt = DateTime.now().millisecondsSinceEpoch / 1000;
-    AmoreStore.saveFriend(f);
-    _reload();
-    context.read<AppState>().refreshSocial();
+  String _reasoningLabel(String r) => switch (r) {
+        'off' => '关闭',
+        'low' => '低',
+        'high' => '高',
+        _ => '中',
+      };
+
+  // MARK: 朗读（本地引擎对应 flutter_tts）
+
+  Future<void> _readAloud() async {
+    if (_speaking) {
+      await _tts.stop();
+      setState(() => _speaking = false);
+      return;
+    }
+    final last = _messages.lastWhere((m) => m.role == 'assistant',
+        orElse: () => ChatMessage(content: ''));
+    if (last.content.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('暂无可朗读的回复')));
+      return;
+    }
+    await _tts.setLanguage('zh-CN');
+    await _tts.setSpeechRate(0.5);
+    await _tts.speak(
+        last.content.substring(0, last.content.length.clamp(0, 600)));
+    setState(() => _speaking = true);
+    _tts.setCompletionHandler(() {
+      if (mounted) setState(() => _speaking = false);
+    });
   }
 
-  /// 定时消息：分钟后发送（夜间免打扰则顺延到 08:00，对齐 build 83 打扰分寸）
-  void _scheduleMessage() {
-    final f = _friend;
-    if (f == null) return;
-    final ctl = TextEditingController(text: '在吗？');
-    int minutes = 5;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + MediaQuery.of(sheetCtx).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('定时消息', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 14),
-            TextField(controller: ctl, maxLines: 2, decoration: const InputDecoration(hintText: '要说的话')),
-            const SizedBox(height: 12),
-            StatefulBuilder(
-              builder: (context, setSheet) => Wrap(
-                spacing: 8,
-                children: [1, 5, 15, 30, 60].map((m) => ChoiceChip(
-                      label: Text('$m 分钟'),
-                      selected: minutes == m,
-                      onSelected: (_) => setSheet(() => minutes = m),
-                    )).toList(),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  final text = ctl.text.trim();
-                  if (text.isEmpty) return;
-                  Navigator.pop(sheetCtx);
-                  var delay = Duration(minutes: minutes);
-                  final now = DateTime.now();
-                  final fireAt = now.add(delay);
-                  // 夜间免打扰：23:00-08:00 跨午夜判断
-                  if (context.read<AppState>().dndEnabled()) {
-                    final hour = fireAt.hour;
-                    final inDnd = hour >= 23 || hour < 8;
-                    if (inDnd) {
-                      final morning = DateTime(fireAt.year, fireAt.month, fireAt.day, 8, 0);
-                      delay = morning.difference(now);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                          content: Text('已开启夜间免打扰：消息将顺延至早上 8:00 发送')));
-                    }
-                  }
-                  final target = text;
-                  _pendingTimer?.cancel();
-                  _pendingTimer = Timer(delay, () async {
-                    if (!mounted) return;
-                    await _send(target);
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content: Text('将在 ${delay.inMinutes} 分钟后发送')));
-                },
-                child: const Text('设定'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  Future<void> _newChat() async {
+    AmoreStore.clearHistory('single');
+    setState(() => _messages = []);
   }
+
+  // MARK: 菜单
 
   void _menu() {
-    final f = _friend;
-    if (f == null) return;
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
@@ -190,51 +180,42 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.card_giftcard_rounded, color: Color(0xFFFF9500)),
-              title: const Text('发红包'),
-              onTap: () {
-                Navigator.pop(context);
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (_) => RedPacketComposeSheet(onSend: _sendRedPacket),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.schedule_rounded),
-              title: const Text('定时消息'),
-              subtitle: const Text('到点自动发送（夜间免打扰生效）'),
-              onTap: () {
-                Navigator.pop(context);
-                _scheduleMessage();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.call_rounded, color: AmoreTheme.success),
-              title: const Text('语音通话'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => CallView(friend: f)));
-              },
-            ),
-            ListTile(
               leading: const Icon(Icons.edit_note_rounded),
-              title: const Text('编辑好友资料'),
+              title: const Text('新对话'),
               onTap: () {
                 Navigator.pop(context);
-                _editFriend(f);
+                _newChat();
               },
             ),
             ListTile(
-              leading: const Icon(Icons.delete_sweep_rounded, color: AmoreTheme.danger),
-              title: const Text('清空聊天记录', style: TextStyle(color: AmoreTheme.danger)),
+              leading: const Icon(Icons.history_rounded),
+              title: const Text('历史会话'),
               onTap: () {
                 Navigator.pop(context);
-                AmoreStore.clearHistory('friend.${f.id}');
-                _reload();
-                context.read<AppState>().refreshSocial();
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const ConversationsPage()));
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Icon(_speaking
+                  ? Icons.stop_rounded
+                  : Icons.speaker_wave_rounded),
+              title: Text(_speaking ? '停止朗读' : '朗读回复'),
+              onTap: () {
+                Navigator.pop(context);
+                _readAloud();
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading:
+                  const Icon(Icons.delete_rounded, color: Color(0xFFFF3B30)),
+              title: const Text('清空对话',
+                  style: TextStyle(color: Color(0xFFFF3B30))),
+              onTap: () {
+                Navigator.pop(context);
+                _newChat();
               },
             ),
           ],
@@ -243,50 +224,46 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
     );
   }
 
-  void _editFriend(ChatFriend f) {
-    final personaCtl = TextEditingController(text: f.persona);
-    final memoryCtl = TextEditingController(text: f.memory.join('\n'));
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetCtx) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + MediaQuery.of(sheetCtx).viewInsets.bottom),
-        child: SingleChildScrollView(
+  // MARK: UI
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        centerTitle: true,
+        title: const Text('AI 对话', style: TextStyle(fontSize: 17)),
+        actions: [
+          IconButton(
+              onPressed: _menu,
+              icon: const Icon(Icons.question_answer_rounded, size: 20)),
+        ],
+      ),
+      body: Container(
+        decoration: AmoreTheme.pageGradient(),
+        child: SafeArea(
           child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('编辑 ${f.name}',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 14),
-              const Text('人设提示词', style: TextStyle(color: AmoreTheme.textSecondary, fontSize: 12.5)),
-              const SizedBox(height: 6),
-              TextField(controller: personaCtl, maxLines: 4),
-              const SizedBox(height: 12),
-              const Text('TA 记住的关于我的事（长期记忆，每行一条）',
-                  style: TextStyle(color: AmoreTheme.textSecondary, fontSize: 12.5)),
-              const SizedBox(height: 6),
-              TextField(controller: memoryCtl, maxLines: 4),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    f.persona = personaCtl.text.trim();
-                    f.memory = memoryCtl.text
-                        .split('\n')
-                        .map((e) => e.trim())
-                        .where((e) => e.isNotEmpty)
-                        .toList();
-                    AmoreStore.saveFriend(f);
-                    context.read<AppState>().refreshSocial();
-                    Navigator.pop(sheetCtx);
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(const SnackBar(content: Text('已保存')));
-                  },
-                  child: const Text('保存'),
+              Expanded(
+                child: ListView(
+                  controller: _scrollCtl,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  children: [
+                    _headerCard(),
+                    if (_messages.isEmpty) _emptyState(),
+                    for (final m in _messages) _bubble(m),
+                    if (_sending)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16, top: 8),
+                          child: _typingIndicator(),
+                        ),
+                      ),
+                    const SizedBox(height: 80),
+                  ],
                 ),
               ),
+              _inputArea(),
             ],
           ),
         ),
@@ -294,206 +271,467 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
     );
   }
 
-  @override
-  void dispose() {
-    _pendingTimer?.cancel();
-    _inputCtl.dispose();
-    _scrollCtl.dispose();
-    super.dispose();
+  // 顶部：问候 + HeroBanner + 摘要/模型（对齐 headerCard）
+
+  Widget _headerCard() {
+    final state = context.watch<AppState>();
+    final providers = state.providers;
+    final configured = providers.isNotEmpty;
+    final model = configured
+        ? (state.providers
+                .where((p) => p.id == AmoreStore.activeProviderId())
+                .firstOrNull ??
+            providers.first)
+        : null;
+    final firstUser = _messages.firstWhere((m) => m.role == 'user',
+        orElse: () => ChatMessage(content: ''));
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$_greetTitle，${state.config['username'] ?? '朋友'}',
+              style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1D1D1F))),
+          const Text('开启你的精彩对话',
+              style: TextStyle(fontSize: 13, color: Color(0xFF86868B))),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: configured ? _newChat : null,
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: AmoreTheme.brandBox(),
+              child: Row(
+                children: [
+                  Icon(configured ? Icons.add : Icons.chevron_right,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_messages.isEmpty ? '开始全新对话' : '继续当前对话',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700)),
+                        Text(
+                            configured
+                                ? '模型 · ${model!.model.isEmpty ? model.label : model.model}'
+                                : 'AI 未配置 · 点击前往「我的」页设置',
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.85),
+                                fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.72),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: Colors.white.withOpacity(0.35), width: 0.8),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (firstUser.content.isNotEmpty)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.format_quote_rounded,
+                          size: 14, color: Color(0xFF86868B)),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                            firstUser.content.isEmpty
+                                ? '[附件消息]'
+                                : firstUser.content,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12.5, color: Color(0xFF86868B))),
+                      ),
+                    ],
+                  )
+                else
+                  const Row(children: [
+                    Icon(Icons.auto_awesome_rounded,
+                        size: 13, color: Color(0xFFAEAEB2)),
+                    SizedBox(width: 6),
+                    Text('发送第一条消息开始',
+                        style: TextStyle(
+                            fontSize: 12.5, color: Color(0xFFAEAEB2))),
+                  ]),
+                const Divider(height: 18),
+                Row(
+                  children: [
+                    Icon(Icons.memory_rounded,
+                        size: 14,
+                        color:
+                            configured ? AmoreBrand.orange : AmoreBrand.danger),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                          configured
+                              ? '模型：${model!.model.isEmpty ? model.label : model.model}'
+                              : 'AI 模型未添加',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12.5, color: Color(0xFF1D1D1F))),
+                    ),
+                    Text(configured ? '已配置' : '去添加 ›',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: configured
+                                ? const Color(0xFF34C759)
+                                : AmoreBrand.orange)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final f = _friend;
-    // 切换好友时刷新
-    if (f != null && _messagesKey != 'friend.${f.id}') {
-      _messagesKey = 'friend.${f.id}';
-      WidgetsBinding.instance.addPostFrameCallback((_) => _reload());
-    }
+  // 空状态 + 建议（对齐 emptyState）
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _emptyState() {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Container(
+          width: 84,
+          height: 84,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(colors: [
+              AmoreGradients.brand.colors.first.withOpacity(0.12),
+              AmoreGradients.brand.colors.last.withOpacity(0.06),
+            ]),
+            border: Border.all(
+                color: AmoreBrand.brandBlue.withOpacity(0.28), width: 1),
+          ),
+          child: const Icon(Icons.question_answer_rounded,
+              size: 32, color: AmoreBrand.brandBlue),
+        ),
+        const SizedBox(height: 14),
+        const Text('开始新对话',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 4),
+        const Text('发送消息、图片或文件，AI 为你解答',
+            style: TextStyle(fontSize: 12, color: Color(0xFFAEAEB2))),
+        const SizedBox(height: 14),
+        for (final s in _suggestions)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+            child: GestureDetector(
+              onTap: () {
+                _inputCtl.text = s;
+                _focus.requestFocus();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: AmoreTheme.cardBox(radius: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                          color: AmoreBrand.orangeBg,
+                          borderRadius: BorderRadius.circular(11)),
+                      child: const Icon(Icons.auto_fix_high_rounded,
+                          size: 18, color: AmoreBrand.orange),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text(s,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF1D1D1F)))),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 15, color: Color(0xFFAEAEB2)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // 消息气泡（不对称圆角，对齐 MessageBubble）
+
+  Widget _bubble(ChatMessage m) {
+    final isUser = m.role == 'user';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          if (isUser) const Spacer(minLength: 60),
+          Flexible(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isUser ? AmoreBrand.brandBlue : Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(isUser ? 20 : 6),
+                  bottomLeft: Radius.circular(isUser ? 20 : 20),
+                  bottomRight: Radius.circular(isUser ? 20 : 20),
+                  topRight: Radius.circular(isUser ? 6 : 20),
+                ),
+                border: isUser
+                    ? null
+                    : Border.all(
+                        color: const Color(0xFFE3E3E8).withOpacity(0.5),
+                        width: 0.6),
+                boxShadow: [
+                  BoxShadow(
+                      color:
+                          Colors.black.withOpacity(isUser ? 0.12 : 0.05),
+                      blurRadius: 7,
+                      offset: const Offset(0, 2)),
+                ],
+              ),
+              child: SelectableText(m.content,
+                  style: TextStyle(
+                      fontSize: 14,
+                      height: 1.45,
+                      color:
+                          isUser ? Colors.white : const Color(0xFF1D1D1F))),
+            ),
+          ),
+          if (!isUser) const Spacer(minLength: 60),
+        ],
+      ),
+    );
+  }
+
+  Widget _typingIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F7),
+          borderRadius: BorderRadius.circular(16)),
+      child: const Text('•  •  •',
+          style: TextStyle(fontSize: 14, color: Color(0xFF86868B))),
+    );
+  }
+
+  // 状态行 + 输入面板（对齐 statusRow / inputPanel）
+
+  Widget _inputArea() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.85),
+        border: const Border(top: BorderSide(color: Color(0xFFE3E3E8))),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: _pickReasoning,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 9, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: AmoreBrand.orange.withOpacity(0.10),
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.psychology_alt_rounded,
+                            size: 12, color: Color(0xFF86868B)),
+                        const SizedBox(width: 4),
+                        Text('推理 · ${_reasoningLabel(_reasoning)}',
+                            style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF86868B))),
+                      ],
+                    ),
+                  ),
+                ),
+                const Spacer(),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 6),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.72),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                    color: Colors.white.withOpacity(0.5), width: 0.8),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _attachMenu,
+                    child: const Icon(Icons.add_circle_outline_rounded,
+                        size: 24, color: Color(0xFF86868B)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: TextField(
+                      controller: _inputCtl,
+                      focusNode: _focus,
+                      minLines: 1,
+                      maxLines: 5,
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                      style: const TextStyle(fontSize: 14),
+                      decoration:
+                          const InputDecoration.collapsed(hintText: '输入消息...'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _send,
+                    child: Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 22,
+                      color: (_inputCtl.text.trim().isEmpty &&
+                                  _pendingAtts.isEmpty) ||
+                              _sending
+                          ? const Color(0xFFD1D1D6)
+                          : AmoreBrand.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickReasoning() async {
+    final v = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(f?.name ?? '对话',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            Text(
-              f == null
-                  ? '从「聊天」选择好友'
-                  : (_sending
-                      ? '对方正在输入…'
-                      : '${f.genderText}${f.age.isEmpty ? '' : ' · ${f.age}岁'}'),
-              style: const TextStyle(fontSize: 11.5, color: AmoreTheme.textSecondary),
+            for (final r in const [
+              ('off', '关闭'),
+              ('low', '低'),
+              ('medium', '中'),
+              ('high', '高'),
+            ])
+              ListTile(
+                title: Text(r.$2),
+                trailing:
+                    _reasoning == r.$1 ? const Icon(Icons.check_rounded) : null,
+                onTap: () => Navigator.pop(ctx, r.$1),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (v != null) setState(() => _reasoning = v);
+  }
+
+  Future<void> _attachMenu() async {
+    final v = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.description_rounded),
+              title: const Text('添加文件'),
+              onTap: () => Navigator.pop(ctx, 'file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_on_rectangle_rounded),
+              title: const Text('选择照片和视频'),
+              onTap: () => Navigator.pop(ctx, 'photo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('拍照'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
             ),
           ],
         ),
-        actions: [
-          if (f != null)
-            IconButton(onPressed: _menu, icon: const Icon(Icons.more_horiz_rounded)),
-        ],
-      ),
-      body: Container(
-        decoration: AmoreTheme.pageGradient(),
-        child: SafeArea(
-          child: f == null
-              ? _noFriend()
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        controller: _scrollCtl,
-                        padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                        itemCount: _messages.length + (_sending ? 1 : 0),
-                        itemBuilder: (_, i) {
-                          if (i == _messages.length) {
-                            return _typingBubble();
-                          }
-                          final m = _messages[i];
-                          return MessageBubble(
-                            msg: m,
-                            mine: m.role == 'user',
-                            friend: f,
-                            onChanged: _reload,
-                          );
-                        },
-                      ),
-                    ),
-                    if (_toolHint.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16, bottom: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.handyman_rounded,
-                                size: 13, color: AmoreTheme.warn),
-                            const SizedBox(width: 5),
-                            Text('🔧 调用工具：$_toolHint',
-                                style: const TextStyle(
-                                    fontSize: 11.5, color: AmoreTheme.warn)),
-                          ],
-                        ),
-                      ),
-                    _inputBar(),
-                  ],
-                ),
-        ),
       ),
     );
+    if (v == null) return;
+    // 附件真实选取（image_picker / file_picker）
+    if (v == 'photo') {
+      final XFile? img =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (img != null) {
+        setState(() => _pendingAtts = [
+              ..._pendingAtts,
+              _Attachment(name: img.name, kind: 'image')
+            ]);
+      }
+    } else if (v == 'camera') {
+      final XFile? img =
+          await ImagePicker().pickImage(source: ImageSource.camera);
+      if (img != null) {
+        setState(() => _pendingAtts = [
+              ..._pendingAtts,
+              _Attachment(name: img.name, kind: 'image')
+            ]);
+      }
+    } else {
+      final res = await FilePicker.platform.pickFiles();
+      if (res != null && res.files.single.name.isNotEmpty) {
+        setState(() => _pendingAtts = [
+              ..._pendingAtts,
+              _Attachment(name: res.files.single.name, kind: 'file')
+            ]);
+      }
+    }
   }
+}
 
-  Widget _typingBubble() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          AmoreTheme.avatar(_friend?.name ?? '?', size: 34),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE3E3E8)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(3, (i) {
-                return Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
-                  decoration: BoxDecoration(
-                    color: AmoreTheme.accent.withOpacity(0.4 + 0.3 * (i % 2)),
-                    shape: BoxShape.circle,
-                  ),
-                );
-              }),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+class _Attachment {
+  final String name;
+  final String kind; // image / file
+  const _Attachment({required this.name, required this.kind});
+}
 
-  Widget _inputBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
-      decoration: BoxDecoration(
-        color: AmoreTheme.tabBg,
-        border: Border(top: BorderSide(color: Color(0xFFE3E3E8))),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _menu,
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AmoreTheme.accent.withOpacity(0.14),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.add_rounded, color: AmoreTheme.accent),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _inputCtl,
-              minLines: 1,
-              maxLines: 4,
-              textInputAction: TextInputAction.send,
-              onSubmitted: _send,
-              style: const TextStyle(fontSize: 14.5),
-              decoration: InputDecoration(
-                hintText: '说点什么…',
-                fillColor: const Color(0xFFF2F2F7),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide.none),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide(color: Colors.white.withOpacity(0.08))),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    borderSide: BorderSide(color: AmoreTheme.accent.withOpacity(0.5))),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => _send(_inputCtl.text),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [AmoreTheme.bubbleMe, AmoreTheme.accent2]),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.send_rounded, color: Colors.white, size: 19),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _noFriend() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.chat_rounded, size: 60, color: AmoreTheme.textFaint.withOpacity(0.5)),
-          const SizedBox(height: 14),
-          const Text('还没有选择好友',
-              style: TextStyle(color: AmoreTheme.textSecondary, fontSize: 15)),
-          const SizedBox(height: 6),
-          const Text('去「聊天」页选择或添加一位好友',
-              style: TextStyle(color: AmoreTheme.textFaint, fontSize: 12.5)),
-        ],
-      ),
-    );
-  }
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

@@ -42,9 +42,8 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 
   void _openFriend(ChatFriend f) {
-    final state = context.read<AppState>();
-    state.setActiveFriend(f);
-    state.requestTab(1);
+    Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ChatRoomPage(friend: f)));
   }
 
   void _openGroup(ChatGroup g) {

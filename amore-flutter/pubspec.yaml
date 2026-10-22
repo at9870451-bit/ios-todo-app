@@ -14,7 +14,7 @@ dependencies:
   ffi: ^2.1.0
   # 状态管理
   provider: ^6.1.2
-  # HTTP（聊天直连 / 服务端 / TTS）
+  # HTTP（AI 直连 / TTS）
   dio: ^5.4.3
   # 语音播放
   audioplayers: ^6.1.0
@@ -22,6 +22,11 @@ dependencies:
   path_provider: ^2.1.3
   # 日期格式化
   intl: ^0.19.0
+  # 本地朗读（对齐旧版 PersonaVoice 本地引擎）
+  flutter_tts: ^4.0.2
+  # 附件：照片 / 任意文件（对齐旧版 PhotosPicker / DocumentPicker / Camera）
+  image_picker: ^1.1.2
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:
