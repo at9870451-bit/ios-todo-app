@@ -3,6 +3,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// 水墨晕染渐进文本：字符按距离淡入+微模糊消散（非单字硬蹦）
 /// 每个字符有自己的延迟与透明度曲线，从中心向外「晕开」

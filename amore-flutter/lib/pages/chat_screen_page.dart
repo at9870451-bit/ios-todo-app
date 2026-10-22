@@ -537,8 +537,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                       offset: const Offset(0, 2)),
                 ],
               ),
-              // AI 回复：水墨晕染渐进（最后一条且非用户侧）；其余普通渲染
-              (!isUser && m == _messages.last)
+              child: (!isUser && m == _messages.last)
                   ? InkRevealText(m.content,
                       style: const TextStyle(
                           fontSize: 14,
