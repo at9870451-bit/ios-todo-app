@@ -107,7 +107,7 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
                 "body": bodyInfo,
                 "skinnedLoaded": controller.isSkinnedLoaded,
                 "bundleDae": dae,
-                "scnViewFrame": NSStringFromRect(scnView.frame),
+                "scnViewFrame": "\(scnView.frame)"
                 "sceneRoots": controller.scene.rootNode.childNodes.count,
             ])
         case "unloadSkinned":
