@@ -358,7 +358,6 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               ),
             ),
           ),
-          ),
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(12),

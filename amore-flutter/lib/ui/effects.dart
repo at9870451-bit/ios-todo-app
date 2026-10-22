@@ -57,7 +57,7 @@ class _StaggerItemState extends State<StaggerItem>
       builder: (context, child) {
         final t = Curves.easeOutBack.transform(_ctl.value);
         return Opacity(
-          opacity: _ctl.value.clamp(0.0, 1.0),
+          opacity: _ctl.value,
           child: Transform.translate(
               offset: Offset(0, 26 * (1 - t)), child: child),
         );
@@ -353,7 +353,7 @@ class _AuraCardState extends State<AuraCard>
                 borderRadius: BorderRadius.circular(r),
                 child: Stack(
                   children: [
-                    child,
+                    child!,
                     Positioned.fill(
                       child: IgnorePointer(
                         child: CustomPaint(
@@ -487,8 +487,9 @@ class _BounceSheetState extends State<BounceSheet>
           animation: _spring,
           builder: (context, child) {
             final oy = _drag * (1 - _settle.value);
+            final clamped = oy.clamp(-400.0, 900.0).toDouble();
             return Transform.translate(
-                offset: Offset(0, oy.clamp(-400.0, 900.0)), child: child);
+                offset: Offset(0, clamped), child: child);
           },
           child: Material(
             color: Colors.transparent,
@@ -589,7 +590,7 @@ class SnapLineChart extends StatefulWidget {
       return Column(
         children: [
           _CounterText(
-              value: _data[_index.clamp(0, n - 1).round()],
+              value: _data[_index.clamp(0, n - 1).round()].round(),
               color: widget.lineColor),
           const SizedBox(height: 6),
           Expanded(
@@ -597,7 +598,8 @@ class SnapLineChart extends StatefulWidget {
               behavior: HitTestBehavior.opaque,
               onHorizontalDragUpdate: (d) {
                 final dx = d.localPosition.dx;
-                setState(() => _index = (dx / stepX).clamp(0, n - 1));
+                setState(() =>
+                    _index = (dx / stepX).clamp(0, n - 1).toDouble());
               },
               onHorizontalDragEnd: (_) => _snapTo(_index.round()),
               onTapDown: (d) => _snapTo(
@@ -638,8 +640,8 @@ class SnapLineChart extends StatefulWidget {
 class _ChartPainter extends CustomPainter {
   final List<double> data;
   final double idx;
-  final double Function(double) px;
-  final double Function(double) py;
+  final double Function(num) px;
+  final double Function(num) py;
   final Color lineColor;
   final Color dotColor;
 
@@ -739,7 +741,6 @@ class SharedHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Hero(
       tag: tag,
-      createOverlayTween: (_, __) => _RectTween(),
       flightShuttleBuilder: (
         flightContext,
         animation,
@@ -760,13 +761,5 @@ class SharedHero extends StatelessWidget {
       },
       child: child,
     );
-  }
-}
-
-class _RectTween extends RectTween {
-  _RectTween({super.begin, super.end});
-  @override
-  Rect? lerp(double t) {
-    return Rect.lerp(begin, end, Curves.easeInOutCubic.transform(t));
   }
 }
