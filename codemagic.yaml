@@ -52,8 +52,6 @@ workflows:
           set -e
           cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
           ruby tools/fix_xcodeproj.rb
-          # 玩偶 3D：把自定义 Swift（DollScene*）加入 Runner target
-          ruby tools/add_native_files.rb
 
       - name: pod install（同步 sandbox）
         script: |
