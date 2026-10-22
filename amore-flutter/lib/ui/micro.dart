@@ -204,7 +204,7 @@ class ErrorTextField extends StatefulWidget {
   });
 
   @override
-  State<ErrorTextField> createState() => _ErrorTextFieldState();
+  State<ErrorTextField> createState() => ErrorTextFieldState();
 }
 
 class ErrorTextFieldState extends State<ErrorTextField>

@@ -82,7 +82,7 @@ class RedPacketCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-                color: const Color(0xFFFF6A00).withOpacity(0.3),
+                color: Color(0xFFFF6A00).withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4)),
           ],

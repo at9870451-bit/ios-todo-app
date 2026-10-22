@@ -16,7 +16,7 @@ class StepDetailSheet extends StatefulWidget {
 class _StepDetailSheetState extends State<StepDetailSheet> {
   late final PageController _page =
       PageController(initialPage: widget.initialIndex);
-  int _index = widget.initialIndex;
+  late int _index = widget.initialIndex;
 
   @override
   void dispose() {
