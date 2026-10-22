@@ -55,24 +55,6 @@ workflows:
           # 玩偶 3D：把自定义 Swift（DollScene*）加入 Runner target
           ruby tools/add_native_files.rb
 
-      - name: 真 3D 骨骼模型（CesiumMan GLB → assimp → DAE，SceneKit 原生支持）
-        script: |
-          brew install assimp 2>&1 | tail -2
-          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter/ios/Runner"
-          mkdir -p Resources
-          curl -sL --max-time 120 -o /tmp/CesiumMan.glb https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/main/2.0/CesiumMan/glTF-Binary/CesiumMan.glb
-          echo "GLB size: $(wc -c < /tmp/CesiumMan.glb 2>/dev/null || echo 0)"
-          if [ -s /tmp/CesiumMan.glb ]; then
-            assimp export /tmp/CesiumMan.glb Resources/CesiumMan.dae 2>&1 | tail -3 || true
-            ls -lh Resources/CesiumMan.dae 2>/dev/null || echo "DAE 转换失败 - 骨骼模型不可用（App 内回退程序化玩偶）"
-          fi
-
-      - name: 资源注入（骨骼模型 dae → bundle）
-        script: |
-          set -e
-          cd "${CM_REPO_DIR:-$HOME/clone}/amore-flutter"
-          ruby tools/add_resources.rb
-
       - name: pod install（同步 sandbox）
         script: |
           set -e

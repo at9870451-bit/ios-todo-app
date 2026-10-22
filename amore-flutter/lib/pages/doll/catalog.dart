@@ -87,4 +87,15 @@ class DollCatalog {
     }
     return null;
   }
+
+  static String genderDefaultName(String gender) {
+    switch (gender) {
+      case 'male':
+        return '小辰';
+      case 'neutral':
+        return '小七';
+      default:
+        return '小雅';
+    }
+  }
 }
