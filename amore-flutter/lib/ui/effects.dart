@@ -410,7 +410,7 @@ class _AuraBorderPainter extends CustomPainter {
         stops: const [0.0, 0.14, 0.34, 1.0],
       ).createShader(rect)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
+      ..strokeWidth = 4.0;
     canvas.drawRRect(rr.deflate(1.5), paint);
     canvas.restore();
   }
@@ -584,8 +584,9 @@ class SnapLineChart extends StatefulWidget {
       final maxV = _data.reduce(math.max);
       final range = (maxV - minV).abs() < 0.001 ? 1.0 : (maxV - minV);
       final stepX = w / (n - 1);
-      double px(double i) => i * stepX;
-      double py(double v) => h - 24 - ((v - minV) / range) * (h - 44);
+      double px(num i) => i * stepX;
+      double py(num v) =>
+          (h - 24 - ((v - minV) / range) * (h - 44)).toDouble();
 
       return Column(
         children: [
@@ -684,11 +685,11 @@ class _ChartPainter extends CustomPainter {
     final dot = Paint()..color = dotColor;
     for (var i = 0; i < data.length; i++) {
       canvas.drawCircle(
-          Offset(px(i), py(data[i])), i == idx.round() ? 6 : 3.5, dot);
+          Offset(px(i), py(data[i])), i == idx.round() ? 6.0 : 3.5, dot);
     }
     final ci = idx.clamp(0, data.length - 1).round();
     final cur = Offset(px(ci), py(data[ci]));
-    canvas.drawCircle(cur, 9, Paint()..color = dotColor.withOpacity(0.18));
+    canvas.drawCircle(cur, 9.0, Paint()..color = dotColor.withOpacity(0.18));
     canvas.drawCircle(cur, 5.5, Paint()..color = Colors.white);
     canvas.drawCircle(cur, 3.5, dot);
   }
