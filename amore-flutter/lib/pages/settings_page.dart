@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import 'package:provider/provider.dart' as pv;
+import '../state/app_state.dart';
+import '../ui/dark_mode_transition.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 
@@ -23,6 +26,32 @@ class _SettingsPageState extends State<SettingsPage> {
     final state = context.read<AppState>();
     _voiceEngine = state.globalVoiceEngine();
     _ttsVoice = AmoreStore.getConfig('tts_voice') ?? '';
+  }
+
+  /// 深色模式圆形扩散切换：先插遮罩动画，动画完成时应用主题
+  void _animateDarkMode(bool toDark) {
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null && box.hasSize
+        ? box.localToGlobal(const Offset(0, 80))
+        : Offset(MediaQuery.of(context).size.width - 60, 80);
+    final overlay = Overlay.of(context);
+    late final OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (_) => CircularRevealOverlay(
+        origin: origin,
+        revealColor: toDark ? const Color(0xFF0B0E14) : const Color(0xFFF5F5F7),
+        forward: toDark,
+        onDone: () {
+          entry.remove();
+        },
+      ),
+    );
+    overlay.insert(entry);
+    // 动画中段应用主题（视觉连续性最佳：扩散到 ~60% 时切）
+    Future.delayed(const Duration(milliseconds: 290), () {
+      context.read<AppState>().setDarkMode(toDark);
+    });
+    HapticFeedback.selectionClick();
   }
 
   @override
@@ -75,6 +104,21 @@ class _SettingsPageState extends State<SettingsPage> {
                           )).toList(),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              section('外观'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: AmoreTheme.cardBox(),
+                child: SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('深色模式', style: TextStyle(fontSize: 14.5)),
+                  subtitle:
+                      const Text('切换时从开关位置圆形扩散', style: TextStyle(fontSize: 12)),
+                  value: state.darkMode,
+                  onChanged: (v) => _animateDarkMode(v),
                 ),
               ),
 

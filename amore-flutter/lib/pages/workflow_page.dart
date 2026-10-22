@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../core/workflow_engine.dart';
+import '../ui/micro.dart';
+import '../widgets/step_detail_sheet.dart';
 
 class WorkflowPage extends StatefulWidget {
   final WorkflowSession? viewSession; // null = 新建运行模式
@@ -16,6 +18,8 @@ class WorkflowPage extends StatefulWidget {
 class _WorkflowPageState extends State<WorkflowPage> {
   final _goalCtl = TextEditingController(text: '帮我做一次本地数据体检');
   late final WorkflowEngine _engine;
+  Timer? _tickTimer;
+  Duration _remaining = const Duration(minutes: 5);
 
   static const _presets = [
     '本地数据体检',
@@ -32,6 +36,33 @@ class _WorkflowPageState extends State<WorkflowPage> {
       // 回看模式：展示历史
       _engine.current = widget.viewSession;
     }
+    _engine.addListener(_onEngineChange);
+  }
+
+  void _onEngineChange() {
+    if (_engine.running && _tickTimer == null) {
+      _remaining = const Duration(minutes: 5);
+      _tickTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+        if (!_engine.running) {
+          t.cancel();
+          _tickTimer = null;
+          if (mounted) setState(() {});
+          return;
+        }
+        setState(() {
+          _remaining -= const Duration(seconds: 1);
+          if (_remaining.inSeconds <= 0) _remaining = const Duration(minutes: 5);
+        });
+      });
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _tickTimer?.cancel();
+    _engine.removeListener(_onEngineChange);
+    super.dispose();
   }
 
   bool get _viewOnly => widget.viewSession != null;
@@ -46,12 +77,31 @@ class _WorkflowPageState extends State<WorkflowPage> {
       body: Container(
         decoration: AmoreTheme.pageGradient(),
         child: SafeArea(
-          child: AnimatedBuilder(
-            animation: _engine,
-            builder: (context, _) => ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              children: _viewOnly ? _viewBody() : _runBody(),
-            ),
+          child: Column(
+            children: [
+              // 顶部计时小条（运行中显示；点击展开操作卡片；离开此页自动收起）
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 4),
+                  child: TimerBar(
+                    running: _engine.running,
+                    remaining: _remaining,
+                    onCancel: () => _engine.cancel(),
+                    onOpen: () => _showStepSheet(),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: AnimatedBuilder(
+                  animation: _engine,
+                  builder: (context, _) => ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: _viewOnly ? _viewBody() : _runBody(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -167,6 +217,16 @@ class _WorkflowPageState extends State<WorkflowPage> {
     ];
   }
 
+  void _showStepSheet() {
+    final session = _engine.current;
+    if (session == null || session.steps.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      builder: (_) => StepDetailSheet(session: session),
+    );
+  }
+
   Widget _stepCard(WorkflowStep step, WorkflowSession session) {
     final (icon, color) = switch (step.status) {
       WorkflowStepStatus.pending => (
@@ -191,7 +251,13 @@ class _WorkflowPageState extends State<WorkflowPage> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(13),
       decoration: AmoreTheme.cardBox(radius: 14),
-      child: Column(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => showModalBottomSheet(
+            context: context,
+            builder: (_) => StepDetailSheet(
+                session: session, initialIndex: idx - 1)),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -231,6 +297,7 @@ class _WorkflowPageState extends State<WorkflowPage> {
             ),
         ],
       ),
+      ),
     );
   }
 
@@ -244,14 +311,16 @@ class _WorkflowPageState extends State<WorkflowPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(children: [
-            Icon(Icons.summarize_rounded, color: Colors.white, size: 18),
-            SizedBox(width: 8),
-            Text('最终报告',
+          Row(children: [
+            const Icon(Icons.summarize_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            const Text('最终报告',
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700)),
+            const Spacer(),
+            CopyButton(text: summary, color: Colors.white),
           ]),
           const SizedBox(height: 8),
           SelectableText(summary,

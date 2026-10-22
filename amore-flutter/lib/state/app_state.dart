@@ -115,6 +115,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// 深色模式（CM8 后本地持久化；themeMode 由 main 响应）
+  bool get darkMode => AmoreStore.getConfig('ui.dark') == '1';
+
+  void setDarkMode(bool v) {
+    AmoreStore.setConfig('ui.dark', v ? '1' : '0');
+    config['ui.dark'] = v ? '1' : '0';
+    notifyListeners();
+  }
+
   /// 页面请求切换底部 Tab（-1 = 无请求；MainShell 消费后重置）
   int pendingTab = -1;
 

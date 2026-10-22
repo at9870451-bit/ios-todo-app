@@ -15,6 +15,8 @@ import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'conversations_page.dart';
+import 'workflow_history_page.dart';
+import 'workflow_page.dart';
 
 class ChatScreenPage extends StatefulWidget {
   const ChatScreenPage({super.key});
@@ -194,6 +196,25 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                 Navigator.pop(context);
                 Navigator.of(context).push(MaterialPageRoute(
                     builder: (_) => const ConversationsPage()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_tree_rounded,
+                  color: AmoreBrand.orange),
+              title: const Text('工作流对话'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const WorkflowPage()));
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.account_tree_outlined),
+              title: const Text('工作流历史'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => const WorkflowHistoryPage()));
               },
             ),
             const Divider(height: 1),

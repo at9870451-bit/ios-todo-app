@@ -45,7 +45,7 @@ class LinkPreviewCard extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              gradient: AmoreGradients.clear,
+              color: AmoreBrand.brandBlue,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.public_rounded, color: Colors.white, size: 19),

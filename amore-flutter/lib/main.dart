@@ -22,14 +22,87 @@ class AmoreApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AppState()..bootstrap(),
-      child: MaterialApp(
-        title: 'Amore',
-        debugShowCheckedModeBanner: false,
-        // Apple 白为主视觉（浅色先行）；darkTheme 已就绪，全页面 palette 化后开启 system
-        theme: AmoreTheme.light(),
-        darkTheme: AmoreTheme.dark(),
-        themeMode: ThemeMode.light,
-        home: const RootGate(),
+      child: Consumer<AppState>(
+        builder: (context, state, _) => MaterialApp(
+          title: 'Amore',
+          debugShowCheckedModeBanner: false,
+          theme: AmoreTheme.light(),
+          darkTheme: AmoreTheme.dark(),
+          themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
+          home: const RootGate(),
+        ),
+      ),
+    );
+  }
+}
+
+/// 底部导航栏：选中项展开显示文字标签，背景块滑到选中位置，其余项只保留图标
+class _SlideTabBar extends StatelessWidget {
+  final List<(IconData, IconData, String)> items;
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _SlideTabBar(
+      {required this.items, required this.selectedIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
+    return SafeArea(
+      top: false,
+      child: GlassContainer(
+        radius: 24,
+        blur: 22,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: i == selectedIndex
+                          ? AmoreBrand.orange.withOpacity(0.13)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          i == selectedIndex ? items[i].$2 : items[i].$1,
+                          size: 22,
+                          color: i == selectedIndex
+                              ? AmoreBrand.orange
+                              : const Color(0xFF86868B),
+                        ),
+                        // 选中项展开显示文字（宽度动画）
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutCubic,
+                          child: i == selectedIndex
+                              ? Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Text(items[i].$3,
+                                      style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AmoreBrand.orange)),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -110,6 +183,78 @@ class _RootGateState extends State<RootGate> {
   }
 }
 
+/// 底部导航栏：选中项展开显示文字标签，背景块滑到选中位置，其余项只保留图标
+class _SlideTabBar extends StatelessWidget {
+  final List<(IconData, IconData, String)> items;
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _SlideTabBar(
+      {required this.items, required this.selectedIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
+    return SafeArea(
+      top: false,
+      child: GlassContainer(
+        radius: 24,
+        blur: 22,
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: i == selectedIndex
+                          ? AmoreBrand.orange.withOpacity(0.13)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          i == selectedIndex ? items[i].$2 : items[i].$1,
+                          size: 22,
+                          color: i == selectedIndex
+                              ? AmoreBrand.orange
+                              : const Color(0xFF86868B),
+                        ),
+                        // 选中项展开显示文字（宽度动画）
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutCubic,
+                          child: i == selectedIndex
+                              ? Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Text(items[i].$3,
+                                      style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AmoreBrand.orange)),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// 主框架：3 Tab —— 聊天 / 对话 / 我的
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -147,45 +292,90 @@ class _MainShellState extends State<MainShell> {
     }
     return Scaffold(
       body: IndexedStack(index: _tab, children: _pages),
-      bottomNavigationBar: GlassContainer(
+      bottomNavigationBar: _SlideTabBar(
+        items: _items,
+        selectedIndex: _tab,
+        onTap: (i) {
+          final st = context.read<AppState>();
+          if (i == 1 &&
+              st.activeFriend.value == null &&
+              st.friends.isNotEmpty) {
+            st.setActiveFriend(st.friends.first);
+          }
+          st.pendingTab = -1;
+          setState(() => _tab = i);
+        },
+      ),
+    );
+  }
+}
+
+/// 底部导航栏：选中项展开显示文字标签，背景块滑到选中位置，其余项只保留图标
+class _SlideTabBar extends StatelessWidget {
+  final List<(IconData, IconData, String)> items;
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _SlideTabBar(
+      {required this.items, required this.selectedIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final light = Theme.of(context).brightness == Brightness.light;
+    return SafeArea(
+      top: false,
+      child: GlassContainer(
         radius: 24,
         blur: 22,
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            indicatorColor: AmoreBrand.orange.withOpacity(0.14),
-            labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
-                  fontSize: 11.5,
-                  fontWeight:
-                      s.contains(WidgetState.selected) ? FontWeight.w600 : FontWeight.w400,
-                  color: s.contains(WidgetState.selected)
-                      ? AmoreBrand.orange
-                      : const Color(0xFF86868B),
-                )),
-            height: 60,
-          ),
-          child: NavigationBar(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) {
-              final st = context.read<AppState>();
-              if (i == 1 &&
-                  st.activeFriend.value == null &&
-                  st.friends.isNotEmpty) {
-                st.setActiveFriend(st.friends.first);
-              }
-              st.pendingTab = -1;
-              setState(() => _tab = i);
-            },
-            destinations: _items
-                .map((e) => NavigationDestination(
-                      icon: Icon(e.$1,
-                          color: const Color(0xFF86868B), size: 24),
-                      selectedIcon: Icon(e.$2, color: AmoreBrand.orange, size: 24),
-                      label: e.$3,
-                    ))
-                .toList(),
-          ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+        child: Row(
+          children: [
+            for (var i = 0; i < items.length; i++)
+              Expanded(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onTap(i),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 320),
+                    curve: Curves.easeOutCubic,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: i == selectedIndex
+                          ? AmoreBrand.orange.withOpacity(0.13)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          i == selectedIndex ? items[i].$2 : items[i].$1,
+                          size: 22,
+                          color: i == selectedIndex
+                              ? AmoreBrand.orange
+                              : const Color(0xFF86868B),
+                        ),
+                        // 选中项展开显示文字（宽度动画）
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 320),
+                          curve: Curves.easeOutCubic,
+                          child: i == selectedIndex
+                              ? Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Text(items[i].$3,
+                                      style: const TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AmoreBrand.orange)),
+                                )
+                              : const SizedBox.shrink(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
