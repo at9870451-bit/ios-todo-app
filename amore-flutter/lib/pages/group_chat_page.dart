@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/chat_engine.dart';
+import '../core/group_games.dart';
+import '../core/group_games_runner.dart';
+import '../widgets/game_card.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
@@ -23,6 +26,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   List<ChatMessage> _messages = [];
   bool _sending = false;
   String _typingName = '';
+  bool _gameRunning = false;
 
   List<ChatFriend> get _members {
     final state = context.read<AppState>();
@@ -102,6 +106,72 @@ class _GroupChatPageState extends State<GroupChatPage> {
     }
   }
 
+  // MARK: 群游戏（塔罗 / 狼人杀，移植自 SwiftUI build 89）
+
+  GroupGamesRunner? _runner;
+
+  GroupGamesRunner get _gamesRunner => _runner ??= GroupGamesRunner(
+        groupId: widget.group.id,
+        groupName: widget.group.name,
+        members: _members,
+        loadMessages: () => _messages,
+        append: (role, content, {String? senderId}) {
+          AmoreStore.appendHistory('group.${widget.group.id}', role, content);
+          if (role == 'assistant') {
+            widget.group.lastMessage = content;
+            widget.group.lastAt = DateTime.now().millisecondsSinceEpoch / 1000;
+            AmoreStore.saveGroup(widget.group);
+          }
+          if (mounted) _reload();
+        },
+        typing: (name) {
+          if (mounted) setState(() => _typingName = name);
+        },
+      );
+
+  Future<void> _sendTarot() async {
+    if (_gameRunning) return;
+    if (_members.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('群聊还没有成员')));
+      return;
+    }
+    setState(() => _gameRunning = true);
+    try {
+      await _gamesRunner.sendTarot();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _gameRunning = false;
+          _typingName = '';
+        });
+        context.read<AppState>().refreshSocial();
+      }
+    }
+  }
+
+  Future<void> _startWerewolf() async {
+    if (_gameRunning) return;
+    final game = _gamesRunner.startWerewolf();
+    if (game == null) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('狼人杀需要至少 2 位成员')));
+      return;
+    }
+    setState(() => _gameRunning = true);
+    try {
+      await _gamesRunner.runWerewolf(game);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _gameRunning = false;
+          _typingName = '';
+        });
+        context.read<AppState>().refreshSocial();
+      }
+    }
+  }
+
   void _groupMenu() {
     showModalBottomSheet(
       context: context,
@@ -115,6 +185,23 @@ class _GroupChatPageState extends State<GroupChatPage> {
               onTap: () {
                 Navigator.pop(context);
                 _showMembers();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_rounded, color: Color(0xFFC79A2E)),
+              title: const Text('塔罗占卜'),
+              onTap: () {
+                Navigator.pop(context);
+                _sendTarot();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.pets_rounded, color: Color(0xFFFF3B30)),
+              title: const Text('狼人杀'),
+              subtitle: const Text('成员至少 2 人 · 单轮体验'),
+              onTap: () {
+                Navigator.pop(context);
+                _startWerewolf();
               },
             ),
             ListTile(
@@ -203,6 +290,20 @@ class _GroupChatPageState extends State<GroupChatPage> {
                       );
                     }
                     final m = _messages[i];
+                    // 卡牌消息（塔罗/狼人杀）→ 金边卡面
+                    final mark = CardMark.parse(m.content);
+                    if (mark != null) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Center(child: GameCard(
+                          kind: mark.kind,
+                          title: mark.title,
+                          sub: mark.sub,
+                          symbol: mark.symbol,
+                          tint: mark.color,
+                        )),
+                      );
+                    }
                     // 群聊：AI 回复没有单人气泡颜色区分，语音条 plain
                     return MessageBubble(
                       msg: m,

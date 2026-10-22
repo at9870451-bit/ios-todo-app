@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import 'game_card.dart';
+import '../core/group_games.dart';
 import 'link_card.dart';
 import 'red_packet.dart';
 import 'voice_bubble.dart';
@@ -157,6 +159,17 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _renderContent() {
+    // 卡牌消息（塔罗/狼人杀文本协议）
+    final mark = CardMark.parse(msg.content);
+    if (mark != null) {
+      return Center(child: GameCard(
+        kind: mark.kind,
+        title: mark.title,
+        sub: mark.sub,
+        symbol: mark.symbol,
+        tint: mark.color,
+      ));
+    }
     final segs = MessageSegment.parse(msg.content);
 
     // 纯文本：直接富文本渲染（URL 高亮）
