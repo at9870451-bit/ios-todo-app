@@ -8,6 +8,7 @@ import '../core/store.dart';
 import '../core/workflow_engine.dart';
 import '../core/theme.dart';
 import 'workflow_page.dart';
+import 'chat_room_page.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';

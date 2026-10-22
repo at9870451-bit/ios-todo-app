@@ -83,7 +83,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   Future<void> _send() async {
     final text = _inputCtl.text.trim();
     if ((text.isEmpty && _pendingAtts.isEmpty) || _sending) return;
-    HapticFeedback.light();
+    HapticFeedback.selectionClick();
     _inputCtl.clear();
     _focus.unfocus();
     final atts = _pendingAtts;
