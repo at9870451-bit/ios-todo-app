@@ -110,7 +110,7 @@ class APalette {
     brightness: Brightness.dark,
     bg: Color(0xFF0B0E14),
     card: Color(0xFF141A29),
-    cardBorder: Color(0xFF232B40),
+    cardBorder: Color(0xFF1B2233), // 暗色：边框弱化，靠色阶
     textPrimary: Color(0xFFF5F5F7),
     textSecondary: Color(0xFF9AA3BC),
     textFaint: Color(0xFF5A647E),
@@ -171,10 +171,26 @@ class AmoreTheme {
       surfaceContainerHighest: p.inputBg,
     );
 
+    final isDark = p.brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
       brightness: p.brightness,
       colorScheme: scheme,
+      // 暗色模式字重整体调细一档（HIG：深底上粗字发糊）
+      textTheme: Typography.material2021(platform: TargetPlatform.iOS)
+          .black
+          .apply(
+            bodyColor: p.textPrimary,
+            displayColor: p.textPrimary,
+            fontFamilyFallback: const ['.SF Pro', 'SF Pro'],
+          )
+          .merge(TextTheme(
+            bodyLarge: TextStyle(fontWeight: isDark ? FontWeight.w300 : FontWeight.w400),
+            bodyMedium: TextStyle(
+                fontWeight: isDark ? FontWeight.w300 : FontWeight.w400,
+                fontFeatures: const [FontFeature.tabularFigures()]),
+            bodySmall: TextStyle(fontWeight: isDark ? FontWeight.w300 : FontWeight.w400),
+          )),
       scaffoldBackgroundColor: p.bg,
       splashFactory: InkSparkle.splashFactory,
       appBarTheme: AppBarTheme(
@@ -311,12 +327,14 @@ class AmoreTheme {
     return BoxDecoration(
       color: color ?? (dark ? APalette.dark.card : Colors.white),
       borderRadius: BorderRadius.circular(radius),
+      // 色阶分层：暗色无边框（卡面比底亮 ~2%），浅色极淡边框
       border: Border.all(
-          color: border ?? (dark ? APalette.dark.cardBorder : const Color(0xFFECECF0)),
-          width: 0.8),
+          color: border ??
+              (dark ? Colors.white.withOpacity(0.015) : const Color(0xFFF0F0F3)),
+          width: dark ? 0 : 0.8),
       boxShadow: [
         BoxShadow(
-            color: dark ? const Color(0x33000000) : const Color(0x0F1D1D1F),
+            color: dark ? const Color(0x40000000) : const Color(0x0D1D1D1F),
             blurRadius: 16,
             offset: const Offset(0, 4)),
       ],

@@ -15,6 +15,7 @@ import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'conversations_page.dart';
+import '../ui/motion.dart';
 import 'workflow_history_page.dart';
 import 'workflow_page.dart';
 
@@ -536,12 +537,19 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                       offset: const Offset(0, 2)),
                 ],
               ),
-              child: SelectableText(m.content,
-                  style: TextStyle(
-                      fontSize: 14,
-                      height: 1.45,
-                      color:
-                          isUser ? Colors.white : const Color(0xFF1D1D1F))),
+              // AI 回复：水墨晕染渐进（最后一条且非用户侧）；其余普通渲染
+              (!isUser && m == _messages.last)
+                  ? InkRevealText(m.content,
+                      style: const TextStyle(
+                          fontSize: 14,
+                          height: 1.45,
+                          color: Color(0xFF1D1D1F)))
+                  : SelectableText(m.content,
+                      style: TextStyle(
+                          fontSize: 14,
+                          height: 1.45,
+                          color:
+                              isUser ? Colors.white : const Color(0xFF1D1D1F))),
             ),
           ),
           if (!isUser) const Spacer(),
