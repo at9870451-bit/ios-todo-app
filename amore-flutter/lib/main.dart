@@ -8,7 +8,6 @@ import 'core/theme.dart';
 import 'state/app_state.dart';
 import 'pages/chat_list_page.dart';
 import 'pages/chat_screen_page.dart';
-import 'pages/doll_studio_page.dart';
 import 'pages/profile_page.dart';
 
 void main() {
@@ -111,7 +110,7 @@ class _RootGateState extends State<RootGate> {
   }
 }
 
-/// 主框架：4 Tab —— 聊天 / 对话 / 玩偶 / 我的
+/// 主框架：3 Tab —— 聊天 / 对话 / 我的
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
 
@@ -125,14 +124,12 @@ class _MainShellState extends State<MainShell> {
   static const _pages = [
     ChatListPage(),
     ChatScreenPage(),
-    DollStudioPage(),
     ProfilePage(),
   ];
 
   static const _items = [
     (Icons.forum_outlined, Icons.forum_rounded, '聊天'),
     (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, '对话'),
-    (Icons.pets_outlined, Icons.pets_rounded, '玩偶'),
     (Icons.person_outline_rounded, Icons.person_rounded, '我的'),
   ];
 

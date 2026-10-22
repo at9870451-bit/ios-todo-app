@@ -135,14 +135,6 @@ class ProfilePage extends StatelessWidget {
                 onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const AppearancePage())),
               ),
-              gap(),
-              AmoreTheme.tile(
-                context: context,
-                icon: Icons.pets_rounded,
-                title: '玩偶工作室',
-                subtitle: '3D 换装 · Tab「玩偶」',
-                onTap: () => state.requestTab(2),
-              ),
 
               const SizedBox(height: 20),
               section('服务'),
