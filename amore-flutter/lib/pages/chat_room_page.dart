@@ -9,6 +9,7 @@ import '../core/chat_engine.dart';
 import '../core/group_games.dart';
 import '../core/models.dart';
 import '../core/store.dart';
+import '../state/app_state.dart';
 import '../core/theme.dart';
 import '../widgets/bubble.dart';
 import '../widgets/game_card.dart';

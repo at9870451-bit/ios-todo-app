@@ -78,7 +78,7 @@ class ChatEngine {
   /// 单次请求（非流式）→ assistant 文本
   static Future<String> request(
       AIProvider p, List<Map<String, String>> messages, String systemPrompt,
-      {String? overrideUrl}) async {
+      {String? overrideUrl, String? extraSystem}) async {
     var url = overrideUrl ?? completionsUrl(p);
     if (p.apiFormat == 'responses' && !isDirect(p) && p.baseURL.trim().isNotEmpty) {
       // Responses API（OpenAI 新格式）：/v1/responses
@@ -90,6 +90,8 @@ class ChatEngine {
     };
     final msgs = <Map<String, String>>[
       if (systemPrompt.isNotEmpty) {'role': 'system', 'content': systemPrompt},
+      if (extraSystem != null && extraSystem.isNotEmpty)
+        {'role': 'system', 'content': extraSystem},
       ...messages,
     ];
     if (p.apiFormat == 'responses') {

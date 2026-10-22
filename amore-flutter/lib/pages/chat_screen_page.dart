@@ -200,7 +200,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
             ListTile(
               leading: Icon(_speaking
                   ? Icons.stop_rounded
-                  : Icons.speaker_wave_rounded),
+                  : Icons.volume_up_rounded),
               title: Text(_speaking ? '停止朗读' : '朗读回复'),
               onTap: () {
                 Navigator.pop(context);
@@ -491,7 +491,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          if (isUser) const Spacer(minLength: 60),
+          if (isUser) const Spacer(),
           Flexible(
             child: Container(
               padding:
@@ -525,7 +525,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                           isUser ? Colors.white : const Color(0xFF1D1D1F))),
             ),
           ),
-          if (!isUser) const Spacer(minLength: 60),
+          if (!isUser) const Spacer(),
         ],
       ),
     );
@@ -681,7 +681,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               onTap: () => Navigator.pop(ctx, 'file'),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_on_rectangle_rounded),
+              leading: const Icon(Icons.photo_library_rounded),
               title: const Text('选择照片和视频'),
               onTap: () => Navigator.pop(ctx, 'photo'),
             ),
