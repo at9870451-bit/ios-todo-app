@@ -145,6 +145,18 @@ class DollSceneChannel {
     }
   }
 
+  /// 诊断：原生层状态
+  static Future<Map<String, dynamic>> diagnostics() async {
+    try {
+      final r = await _channel.invokeMethod<Map>('diagnostics');
+      return r?.cast<String, dynamic>() ?? {};
+    } on PlatformException catch (e) {
+      return {'channelError': e.message ?? e.code};
+    } on MissingPluginException {
+      return {'channelError': 'MissingPluginException'};
+    }
+  }
+
   /// 原生是否已默认加载骨骼模型
   static Future<bool> defaultSkinned() async {
     try {

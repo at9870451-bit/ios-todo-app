@@ -167,6 +167,31 @@ class _DollStudioPageState extends State<DollStudioPage> {
         content: Text(msg), duration: const Duration(milliseconds: 1400)));
   }
 
+  // MARK: 3D 诊断
+
+  Future<void> _showDiagnostics() async {
+    final d = await DollSceneChannel.diagnostics();
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('3D 诊断'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: d.entries
+              .map((e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('${e.key}: ${e.value}',
+                        style: const TextStyle(fontSize: 12.5, fontFamily: 'monospace')),
+                  ))
+              .toList(),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('好'))],
+      ),
+    );
+  }
+
   // MARK: 截图分享（原生 snapshot → PNG bytes → 存剪贴板提示 + 预览）
 
   Future<void> _shareSnapshot() async {
@@ -240,6 +265,11 @@ class _DollStudioPageState extends State<DollStudioPage> {
                 color: _skinned ? const Color(0xFFFF9500) : const Color(0xFF1D1D1F),
               ),
             ),
+          ),
+          IconButton(
+            tooltip: '3D 诊断',
+            onPressed: _showDiagnostics,
+            icon: const Icon(Icons.bug_report_outlined),
           ),
           IconButton(
             tooltip: '保存截图',

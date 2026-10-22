@@ -7,16 +7,23 @@ import UIKit
 final class DollSceneFactory: NSObject, FlutterPlatformViewFactory {
     private let messenger: FlutterBinaryMessenger
     private let controller = DollSceneController3D()   // 共享一个场景（单玩偶页实例）
+    private(set) var createCalls = 0
+    var registeredAt = Date()
 
     init(messenger: FlutterBinaryMessenger) {
         self.messenger = messenger
         super.init()
+        NSLog("[DollScene] factory init ok")
     }
 
     func create(withFrame frame: CGRect, viewIdentifier viewId: Int64,
                 arguments args: Any?) -> FlutterPlatformView {
-        DollScenePlatformView(frame: frame, viewId: viewId,
-                              args: args, messenger: messenger, controller: controller)
+        createCalls += 1
+        NSLog("[DollScene] factory create #\(createCalls) frame=\(frame)")
+        let v = DollScenePlatformView(frame: frame, viewId: viewId,
+                                      args: args, messenger: messenger, controller: controller)
+        v.factory = self
+        return v
     }
 
     func createArgs(for viewId: Int64) -> Any? { nil }
@@ -26,9 +33,12 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
     private let scnView: SCNView
     private let controller: DollSceneController3D
     private let channel: FlutterMethodChannel
+    weak var factory: DollSceneFactory?
 
     init(frame: CGRect, viewId: Int64, args: Any?,
-         messenger: FlutterBinaryMessenger, controller: DollSceneController3D) {
+         messenger: FlutterBinaryMessenger, controller: DollSceneController3D,
+         factory: DollSceneFactory? = nil) {
+        self.factory = factory
         self.controller = controller
         scnView = SCNView()
         scnView.scene = controller.scene
@@ -86,6 +96,20 @@ final class DollScenePlatformView: NSObject, FlutterPlatformView {
             result(controller.loadSkinned(named: name))
         case "defaultSkinned":
             result(controller.defaultSkinned)
+        case "diagnostics":
+            let dae = Bundle.main.url(forResource: "CesiumMan", withExtension: "dae") != nil
+            var bodyInfo = "none"
+            if let body = controller.dollRoot.childNode(withName: "body", recursively: false) {
+                bodyInfo = "children=\(body.childNodes.count)"
+            }
+            result([
+                "createCalls": factory?.createCalls ?? -1,
+                "body": bodyInfo,
+                "skinnedLoaded": controller.isSkinnedLoaded,
+                "bundleDae": dae,
+                "scnViewFrame": NSStringFromRect(scnView.frame),
+                "sceneRoots": controller.scene.rootNode.childNodes.count,
+            ])
         case "unloadSkinned":
             controller.unloadSkinned()
             result(true)
