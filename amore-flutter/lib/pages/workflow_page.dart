@@ -1,3 +1,4 @@
+import 'dart:async';
 // Amore — 工作流对话页（与聊天界面分开：目标输入 → 分步执行 → 总结 → 历史回看）
 import 'package:flutter/material.dart';
 

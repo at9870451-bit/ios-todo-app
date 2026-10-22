@@ -541,7 +541,7 @@ class _ExpandableFABState extends State<ExpandableFAB> {
         duration: const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
         height: 52,
-        padding: const EdgeInsets.symmetric(horizontal: _expanded ? 18 : 0),
+        padding: EdgeInsets.symmetric(horizontal: _expanded ? 18 : 0),
         decoration: BoxDecoration(
           color: AmoreBrand.orange,
           borderRadius: BorderRadius.circular(26),

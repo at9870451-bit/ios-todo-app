@@ -77,8 +77,8 @@ class RedPacketCard extends StatelessWidget {
       child: Container(
         width: 200,
         padding: const EdgeInsets.all(14),
-        decoration: const BoxDecoration(
-          color: Color(0xFFFF9500),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFF9500),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
@@ -147,8 +147,8 @@ class _RedPacketOpenedView extends StatelessWidget {
     final amt = amount % 1 == 0 ? amount.toInt().toString() : amount.toStringAsFixed(2);
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 30, 24, 40),
-      decoration: const BoxDecoration(
-        color: Color(0xFFE87500),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE87500),
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
