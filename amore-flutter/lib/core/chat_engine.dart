@@ -17,6 +17,18 @@ class ChatEngine {
     validateStatus: (s) => s != null && s < 500,
   ));
 
+  /// 全局激活的 Provider（工作流等非好友场景）
+  static AIProvider? providerForGlobal() {
+    final all = AmoreStore.listProviders();
+    if (all.isEmpty) return null;
+    final activeId = AmoreStore.activeProviderId();
+    if (activeId.isNotEmpty) {
+      final hit = all.where((p) => p.id == activeId).toList();
+      if (hit.isNotEmpty) return hit.first;
+    }
+    return all.first;
+  }
+
   /// 解析某好友生效的 Provider（好友专属 > 全局激活；无任何配置返回 null）
   static AIProvider? providerFor(ChatFriend f) {
     final all = AmoreStore.listProviders();
