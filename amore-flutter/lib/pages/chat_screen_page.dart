@@ -521,10 +521,13 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          if (isUser) const Spacer(),
           Flexible(
             child: Container(
+              constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.72),
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
@@ -562,7 +565,6 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                               isUser ? Colors.white : const Color(0xFF1D1D1F))),
             ),
           ),
-          if (!isUser) const Spacer(),
         ],
       ),
     );
