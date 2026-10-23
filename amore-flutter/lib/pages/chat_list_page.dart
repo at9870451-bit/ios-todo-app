@@ -7,6 +7,7 @@ import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../ui/effects.dart';
+import '../ui/micro.dart';
 import 'chat_room_page.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';
