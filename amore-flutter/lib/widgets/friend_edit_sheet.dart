@@ -14,18 +14,27 @@ import 'friend_avatar.dart';
 
 class FriendEditSheet extends StatefulWidget {
   final ChatFriend friend;
+  final bool create;
 
-  const FriendEditSheet({super.key, required this.friend});
+  const FriendEditSheet({super.key, required this.friend, this.create = false});
 
-  /// 弹出设置面板；保存成功返回 true
-  static Future<bool> show(BuildContext context, ChatFriend friend) async {
+  /// 编辑已有好友；保存成功返回 true
+  static Future<bool> show(BuildContext context, ChatFriend friend) =>
+      _open(context, friend, create: false);
+
+  /// 新建好友（与「好友设置」同一套表单）
+  static Future<bool> showCreate(BuildContext context, ChatFriend draft) =>
+      _open(context, draft, create: true);
+
+  static Future<bool> _open(BuildContext context, ChatFriend friend,
+      {required bool create}) async {
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (_) => FriendEditSheet(friend: friend),
+      builder: (_) => FriendEditSheet(friend: friend, create: create),
     );
     return saved ?? false;
   }
@@ -45,6 +54,17 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
   late final TextEditingController _voiceIdCtl =
       TextEditingController(text: _f.voiceId);
   final TextEditingController _memoryCtl = TextEditingController();
+
+  // 新建好友时先分配稳定 id（头像文件与保存都依赖它）
+  @override
+  void initState() {
+    super.initState();
+    if (_f.id.isEmpty) {
+      final now = DateTime.now();
+      _f.id = '${now.microsecondsSinceEpoch.toRadixString(36)}'
+          '${(now.microsecond % 997).toRadixString(36)}';
+    }
+  }
 
   late String _gender = _f.gender;
   late String _avatarFile = _f.avatarFile;
@@ -177,11 +197,15 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('好友设置',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(widget.create ? '添加好友' : '好友设置',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            const Text('智能体信息与头像只保存在本机',
-                style: TextStyle(fontSize: 11.5, color: AmoreTheme.textFaint)),
+            Text(
+                widget.create
+                    ? '与「好友设置」同一套信息：头像 / 人设 / 语音 / 模型'
+                    : '智能体信息与头像只保存在本机',
+                style:
+                    const TextStyle(fontSize: 11.5, color: AmoreTheme.textFaint)),
             const SizedBox(height: 14),
             // 头像
             Center(
@@ -395,7 +419,7 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
                   flex: 2,
                   child: FilledButton(
                     onPressed: _save,
-                    child: const Text('保存'),
+                    child: Text(widget.create ? '创建并保存' : '保存'),
                   ),
                 ),
               ],

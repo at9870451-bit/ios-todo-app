@@ -217,6 +217,13 @@ class _AgentEditorSheetState extends State<AgentEditorSheet> {
     super.dispose();
   }
 
+  /// 绑定值失效时回落「跟随全局」，避免下拉断言
+  String _modelValue(BuildContext context) {
+    final providers = context.watch<AppState>().providers;
+    if (_a.modelId.isEmpty) return '';
+    return providers.any((p) => p.id == _a.modelId) ? _a.modelId : '';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -286,6 +293,25 @@ class _AgentEditorSheetState extends State<AgentEditorSheet> {
                 controller: _voiceIdCtl,
                 onChanged: (v) => _a.voiceId = v,
                 decoration: const InputDecoration(hintText: '音色 ID（如 female-yujie）')),
+            const SizedBox(height: 10),
+            // 使用模型（与好友设置一致；导入好友时带入）
+            DropdownButtonFormField<String>(
+              initialValue: _modelValue(context),
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: '使用模型'),
+              items: [
+                const DropdownMenuItem(value: '', child: Text('跟随全局模型')),
+                ...context.watch<AppState>().providers.map((p) => DropdownMenuItem(
+                      value: p.id,
+                      child: Text(
+                        '${p.label}${p.model.isEmpty ? '' : ' · ${p.model}'}',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    )),
+              ],
+              onChanged: (v) => setState(() => _a.modelId = v ?? ''),
+            ),
             const SizedBox(height: 18),
             SizedBox(
               width: double.infinity,

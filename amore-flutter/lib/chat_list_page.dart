@@ -159,76 +159,15 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-  // ---- 添加好友 ----
+  // ---- 添加好友（与聊天室「好友设置」共用同一套表单）----
   void _addFriendSheet() {
-    final nameCtl = TextEditingController();
-    final ageCtl = TextEditingController();
-    final personaCtl = TextEditingController();
-    String gender = 'female';
-    String? nameError;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('添加好友', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 14),
-            _FriendNameField(controller: nameCtl),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                StatefulBuilder(builder: (context, setSheet) => SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'female', label: Text('女')),
-                    ButtonSegment(value: 'male', label: Text('男')),
-                    ButtonSegment(value: '', label: Text('保密')),
-                  ],
-                  selected: {gender},
-                  onSelectionChanged: (s) => setSheet(() => gender = s.first),
-                )),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                      controller: ageCtl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '年龄')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-                controller: personaCtl,
-                maxLines: 3,
-                decoration: const InputDecoration(hintText: '人设提示词（TA 是什么样的人）')),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  if (nameCtl.text.trim().isEmpty) {
-                    nameFieldKey.currentState?.triggerError();
-                    return;
-                  }
-                  final f = ChatFriend(
-                    name: nameCtl.text.trim(),
-                    gender: gender,
-                    age: ageCtl.text.trim(),
-                    persona: personaCtl.text.trim(),
-                    sort: context.read<AppState>().friends.length,
-                  );
-                  AmoreStore.saveFriend(f);
-                  context.read<AppState>().refreshSocial();
-                  Navigator.pop(context);
-                },
-                child: const Text('添加'),
-              ),
-            ),
-          ],
-        ),
+    final state = context.read<AppState>();
+    FriendEditSheet.showCreate(
+      context,
+      ChatFriend(
+        name: '',
+        gender: 'female',
+        sort: state.friends.length,
       ),
     );
   }
