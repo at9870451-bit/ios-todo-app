@@ -25,33 +25,47 @@ class AmoreApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AppState()..bootstrap(),
-      child: Consumer<AppState>(
-        builder: (context, state, _) {
-          // Appearance theme color (default Apple Blue)
-          const themeColors = {
-            'purple': Color(0xFFAF52DE),
-            'pink': Color(0xFFF472B6),
-            'green': Color(0xFF34C759),
-            'orange': Color(0xFFFB923C),
-            'mono': Color(0xFF86868B),
-          };
-          final acc = themeColors[state.themeColor] ?? AmoreBrand.accent;
-          return MaterialApp(
-            title: 'Amore',
-            debugShowCheckedModeBanner: false,
-            theme: AmoreTheme.lightWith(acc),
-            darkTheme: AmoreTheme.darkWith(acc),
-            themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
-            // 点击屏幕空白处自动收起键盘
-            builder: (context, child) => GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-              child: child,
-            ),
-            home: const RootGate(),
-          );
-        },
-      ),
+      // 只订阅外观字段：toast / 列表刷新等其它通知不再重建整棵 MaterialApp
+      child: const _AppMaterial(),
+    );
+  }
+}
+
+/// 外观选择器：themeColor / darkMode 变化才重建 MaterialApp
+class _AppMaterial extends StatelessWidget {
+  const _AppMaterial({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<AppState, String>(
+      selector: (_, s) => '${s.themeColor}|${s.darkMode}',
+      builder: (context, key, _) {
+        // Appearance theme color (default Apple Blue)
+        const themeColors = {
+          'purple': Color(0xFFAF52DE),
+          'pink': Color(0xFFF472B6),
+          'green': Color(0xFF34C759),
+          'orange': Color(0xFFFB923C),
+          'mono': Color(0xFF86868B),
+        };
+        final parts = key.split('|');
+        final acc = themeColors[parts[0]] ?? AmoreBrand.accent;
+        final dark = parts.length > 1 && parts[1] == 'true';
+        return MaterialApp(
+          title: 'Amore',
+          debugShowCheckedModeBanner: false,
+          theme: AmoreTheme.lightWith(acc),
+          darkTheme: AmoreTheme.darkWith(acc),
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          // 点击屏幕空白处自动收起键盘
+          builder: (context, child) => GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+            child: child,
+          ),
+          home: const RootGate(),
+        );
+      },
     );
   }
 }
@@ -228,7 +242,33 @@ class _RootGateState extends State<RootGate> {
   }
 }
 
-/// 底部导航栏：选中项展开显示文字标签，背景块滑到选中位置，其余项只保留图标
+/// 懒加载 Tab 栈：只有访问过的 tab 才构建；一旦构建则保留状态。
+/// 相比 IndexedStack 全量常驻，动画组件（TiltReflectCard/StaggerItem 等）
+/// 不会在未访问的 tab 上持续运行 —— 流畅性与启动速度都有提升。
+class _LazyTabStack extends StatefulWidget {
+  final int index;
+  final List<Widget> children;
+  const _LazyTabStack({required this.index, required this.children});
+
+  @override
+  State<_LazyTabStack> createState() => _LazyTabStackState();
+}
+
+class _LazyTabStackState extends State<_LazyTabStack> {
+  final Set<int> _built = {0};
+
+  @override
+  Widget build(BuildContext context) {
+    _built.add(widget.index);
+    return IndexedStack(
+      index: widget.index,
+      children: [
+        for (var i = 0; i < widget.children.length; i++)
+          _built.contains(i) ? widget.children[i] : const SizedBox.shrink(),
+      ],
+    );
+  }
+}
 
 /// 主框架：3 Tab —— 聊天 / 对话 / 我的
 class MainShell extends StatefulWidget {
@@ -266,7 +306,7 @@ class _MainShellState extends State<MainShell> {
       });
     }
     return Scaffold(
-      body: IndexedStack(index: _tab, children: _pages),
+      body: _LazyTabStack(index: _tab, children: _pages),
       bottomNavigationBar: _SlideTabBar(
         items: _items,
         selectedIndex: _tab,

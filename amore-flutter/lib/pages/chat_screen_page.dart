@@ -267,38 +267,61 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
       ),
       body: Container(
         decoration: BoxDecoration(
-          color: AmoreTheme.chatBgColor(
-              context.watch<AppState>().chatBgKey),
+          color: AmoreTheme.chatBgColor(context
+              .select<AppState, String>((s) => s.chatBgKey)),
         ),
         child: SafeArea(
           child: Column(
             children: [
               Expanded(
-                child: ListView(
+                child: ListView.builder(
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollCtl,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
-                  children: [
-                    _headerCard(),
-                    if (_messages.isEmpty) _emptyState(),
-                    for (final m in _messages) _bubble(m),
-                    if (_sending)
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 16, top: 8),
-                          child: _typingIndicator(),
-                        ),
-                      ),
-                    const SizedBox(height: 80),
-                  ],
+                  // 懒构建：仅渲染可见行，长会话滚动不掉帧（视觉等价）
+                  itemCount: 1 +
+                      (_messages.isEmpty ? 1 : 0) +
+                      _messages.length +
+                      (_sending ? 1 : 0) +
+                      1,
+                  itemBuilder: (_, i) {
+                    if (i == 0) return _headerCard();
+                    var k = i - 1;
+                    if (_messages.isEmpty) {
+                      if (k == 0) return _emptyState();
+                      k--;
+                      if (_sending) {
+                        if (k == 0) return _typingRow();
+                        k--;
+                      }
+                      return k == 0 ? const SizedBox(height: 80) : const SizedBox.shrink();
+                    }
+                    if (k < _messages.length) return _bubble(_messages[k]);
+                    k -= _messages.length;
+                    if (_sending) {
+                      if (k == 0) return _typingRow();
+                      k--;
+                    }
+                    return k == 0 ? const SizedBox(height: 80) : const SizedBox.shrink();
+                  },
                 ),
               ),
               _inputArea(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // 发送中的打字指示行（列表懒构建抽出的 helper）
+  Widget _typingRow() {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 16, top: 8),
+        child: _typingIndicator(),
       ),
     );
   }
@@ -517,9 +540,10 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
 
   Widget _bubble(ChatMessage m) {
     final isUser = m.role == 'user';
-    final ap = context.watch<AppState>();
-    final r = ap.bubbleRadius.clamp(8.0, 24.0).toDouble();
-    final fs = ap.chatFontScale.clamp(13.0, 20.0).toDouble();
+    final r =
+        context.select<AppState, double>((s) => s.bubbleRadius.clamp(8.0, 24.0));
+    final fs =
+        context.select<AppState, double>((s) => s.chatFontScale.clamp(13.0, 20.0));
     final tail = r * 0.3;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),

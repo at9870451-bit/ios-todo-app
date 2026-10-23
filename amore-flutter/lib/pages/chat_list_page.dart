@@ -234,11 +234,15 @@ class _ChatListPageState extends State<ChatListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final state = context.watch<AppState>();
+    // 精确订阅：toast / 外观等无关通知不再重建整个列表页
+    final friends =
+        context.select<AppState, List<ChatFriend>>((s) => s.friends);
+    final groups =
+        context.select<AppState, List<ChatGroup>>((s) => s.groups);
 
     // 合并会话（好友 + 群），按 lastAt 排序
     final rows = <_SessionRow>[
-      ...state.friends.map((f) => _SessionRow(
+      ...friends.map((f) => _SessionRow(
             avatar: FriendAvatar(name: f.name, avatarFile: f.avatarFile),
             name: f.name,
             last: f.lastMessage,
@@ -246,7 +250,7 @@ class _ChatListPageState extends State<ChatListPage> {
             onTap: () => _openFriend(f),
             onLongPress: () => _longPressFriend(f),
           )),
-      ...state.groups.map((g) => _SessionRow(
+      ...groups.map((g) => _SessionRow(
             avatar: Container(
               width: 46,
               height: 46,

@@ -286,7 +286,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
       body: Container(
         decoration: BoxDecoration(
           color: AmoreTheme.chatBgColor(
-              context.watch<AppState>().chatBgKey),
+              context.select<AppState, String>((s) => s.chatBgKey)),
         ),
         child: SafeArea(
           child: Column(

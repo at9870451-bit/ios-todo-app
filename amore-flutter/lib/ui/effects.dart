@@ -51,6 +51,8 @@ class _StaggerItemState extends State<StaggerItem>
 
   @override
   Widget build(BuildContext context) {
+    // 动画完成后直接返回 child：列表滚动回收重建时零动画开销
+    if (_ctl.isCompleted) return widget.child;
     return AnimatedBuilder(
       animation: _ctl,
       child: widget.child,

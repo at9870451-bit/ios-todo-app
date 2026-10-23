@@ -93,10 +93,11 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 外观实时值（仅气泡圆角/字号，不影响其他页面布局比例）
-    final ap = context.watch<AppState>();
-    final r = ap.bubbleRadius.clamp(4.0, 24.0).toDouble();
-    final fs = ap.chatFontScale.clamp(13.0, 20.0).toDouble();
+    // 外观实时值（精确订阅：仅圆角/字号变化才重建，toast/列表刷新不再触发）
+    final r = context
+        .select<AppState, double>((s) => s.bubbleRadius.clamp(4.0, 24.0));
+    final fs = context
+        .select<AppState, double>((s) => s.chatFontScale.clamp(13.0, 20.0));
     final bubbleColor =
         mine ? null : AmoreTheme.bubbleOther; // 我方用品牌蓝
     final contentWidget = _renderContent(fs);
