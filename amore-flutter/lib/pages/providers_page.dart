@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/chat_engine.dart';
 import '../core/model_fetch.dart';
 import '../core/models.dart';
 import '../core/store.dart';
@@ -235,6 +236,42 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
     return set.toList()..sort();
   }
 
+  bool _testing = false;
+
+  /// 发送一条最小请求验证配置是否可用（错误原因直接显示）
+  Future<void> _testModel() async {
+    if (_testing) return;
+    setState(() => _testing = true);
+    try {
+      final p = _p;
+      if (_modelCtl.text.trim().isNotEmpty) {
+        p.model = _modelCtl.text.trim();
+      }
+      final reply = await ChatEngine.request(
+        p,
+        [
+          {'role': 'user', 'content': 'ping'}
+        ],
+        '你是连通性测试助手，只回复 OK 两个字母。',
+      );
+      if (!mounted) return;
+      final preview = reply.length > 60 ? reply.substring(0, 60) : reply;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFF34C759),
+          duration: const Duration(seconds: 4),
+          content: Text('✓ 连接成功：$preview')));
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFFFF3B30),
+          duration: const Duration(seconds: 7),
+          content: Text('✗ 测试失败：$msg')));
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
+
   /// 从配置的 API 接口读取模型列表（OpenAI /v1/models 等）
   Future<void> _fetchApi() async {
     if (_fetching) return;
@@ -409,6 +446,16 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                           child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.cloud_download_outlined, size: 17),
                   label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
+                ),
+                TextButton.icon(
+                  onPressed: _testing ? null : _testModel,
+                  icon: _testing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.wifi_tethering_rounded, size: 17),
+                  label: Text(_testing ? '测试中…' : '测试模型'),
                 ),
                 const Spacer(),
                 if (_modelCandidates.isNotEmpty)

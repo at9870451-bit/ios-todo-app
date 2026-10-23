@@ -64,6 +64,9 @@ class ChatEngine {
   /// 组装 /chat/completions 端点（对齐 BackendStore.directChat 的补全规则）
   static String completionsUrl(AIProvider p) {
     var url = _effectiveBase(p).trim();
+    if (url.isEmpty) {
+      throw Exception('「${p.label}」缺少 Base URL：请到「我的 → 模型配置」填写接口地址');
+    }
     if (url.endsWith('/')) url = url.substring(0, url.length - 1);
     if (url.contains('/chat/completions')) {
       // 原样
@@ -84,8 +87,12 @@ class ChatEngine {
       // Responses API（OpenAI 新格式）：/v1/responses
       url = url.replaceAll('/chat/completions', '/responses');
     }
+    final modelName = p.model.trim().isEmpty ? p.label.trim() : p.model.trim();
+    if (modelName.isEmpty) {
+      throw Exception('「${p.label}」还没有模型名：请在模型配置里选择或手动填写');
+    }
     final body = <String, dynamic>{
-      'model': p.model.isEmpty ? p.label : p.model,
+      'model': modelName,
       'stream': false,
     };
     final msgs = <Map<String, String>>[
@@ -107,7 +114,19 @@ class ChatEngine {
     final resp = await _dio.post(url,
         data: body, options: Options(headers: headers));
     if (resp.statusCode != 200) {
-      throw Exception('服务返回 HTTP ${resp.statusCode}');
+      final data = resp.data;
+      var detail = '';
+      if (data is Map) {
+        final err = data['error'];
+        detail = err is Map
+            ? (err['message'] ?? '').toString()
+            : (data['message'] ?? err ?? '').toString();
+      } else if (data != null) {
+        detail = data.toString();
+      }
+      if (detail.length > 220) detail = detail.substring(0, 220);
+      throw Exception(
+          'HTTP ${resp.statusCode}${detail.trim().isEmpty ? '' : ' · ${detail.trim()}'}');
     }
     final data = resp.data;
     if (data is Map<String, dynamic>) {
@@ -143,6 +162,10 @@ class ChatEngine {
     if (provider == null) {
       return ChatTurnResult.error('尚未配置 AI 模型：请到「我的 → 模型配置」添加并激活一个供应商。');
     }
+    if (provider.model.trim().isEmpty) {
+      return ChatTurnResult.error(
+          '「${provider.label}」还没有选择模型：请到「我的 → 模型配置」选择模型，或点「从 API 接口读取模型」。');
+    }
 
     final key = 'friend.${friend.id}';
     AmoreStore.appendHistory(key, 'user', userText);
@@ -163,7 +186,8 @@ class ChatEngine {
     final allTools = <ToolCallInfo>[];
     int rounds = 0;
 
-    for (rounds = 0; rounds < 3; rounds++) {
+    try {
+      for (rounds = 0; rounds < 3; rounds++) {
       final reply = await request(provider, msgs, system);
       final parsed = AmoreStore.parseAssistant(reply);
       lastClean = parsed.clean;
@@ -192,9 +216,51 @@ class ChatEngine {
       // 继续下一轮（feedback 已进 msgs）
     }
 
-    AmoreStore.appendHistory(key, 'assistant', lastClean);
-    _touchFriend(friend, lastClean);
-    return ChatTurnResult(text: lastClean, tools: allTools);
+      AmoreStore.appendHistory(key, 'assistant', lastClean);
+      _touchFriend(friend, lastClean);
+      return ChatTurnResult(text: lastClean, tools: allTools);
+    } catch (e) {
+      return ChatTurnResult.error(_friendlyError(e));
+    }
+  }
+
+  /// 把底层异常翻译成用户可读的原因
+  static String _friendlyError(Object e) {
+    if (e is DioException) {
+      final code = e.response?.statusCode;
+      final data = e.response?.data;
+      var detail = '';
+      if (data is Map) {
+        final err = data['error'];
+        detail = err is Map
+            ? (err['message'] ?? '').toString()
+            : (data['message'] ?? err ?? '').toString();
+      } else if (data != null) {
+        detail = data.toString();
+      }
+      if (detail.length > 200) detail = detail.substring(0, 200);
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return '请求超时：请检查网络与 Base URL';
+        case DioExceptionType.connectionError:
+          return '无法连接服务器：请检查 Base URL（需要含 https://）与网络';
+        case DioExceptionType.badCertificate:
+          return 'TLS 证书校验失败：请确认接口地址可信';
+        case DioExceptionType.cancel:
+          return '请求已取消';
+        default:
+          break;
+      }
+      if (code != null) {
+        return 'HTTP $code${detail.trim().isEmpty ? '' : ' · ${detail.trim()}'}';
+      }
+      return detail.trim().isEmpty
+          ? '请求失败：${e.message ?? e.type.name}'
+          : detail.trim();
+    }
+    return e.toString().replaceFirst('Exception: ', '');
   }
 
   static void _touchFriend(ChatFriend f, String msg) {

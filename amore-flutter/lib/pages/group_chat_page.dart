@@ -91,10 +91,27 @@ class _GroupChatPageState extends State<GroupChatPage> {
               '以 ${member.name} 的身份自然回应，不要重复他人刚说过的话，保持简短、有个性。'
               '偶尔可以用 [语音:内容] 发一条语音（中文），别每句都发。',
         );
+        if (result.error != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                backgroundColor: const Color(0xFFFF3B30).withOpacity(0.9),
+                duration: const Duration(seconds: 6),
+                content: Text(result.error!)));
+          }
+          break;
+        }
         if (result.text != null && result.text!.isNotEmpty) {
           AmoreStore.appendHistory(key, 'assistant', result.text!);
           if (mounted) _reload();
         }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: const Color(0xFFFF3B30).withOpacity(0.9),
+            duration: const Duration(seconds: 6),
+            content:
+                Text('发送失败：${e.toString().replaceFirst('Exception: ', '')}')));
       }
     } finally {
       if (mounted) {

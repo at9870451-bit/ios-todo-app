@@ -130,8 +130,9 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
       setState(() =>
           _messages.add(ChatMessage(content: reply, role: 'assistant')));
     } catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
       setState(() =>
-          _messages.add(ChatMessage(content: '⚠️ $e', role: 'assistant')));
+          _messages.add(ChatMessage(content: '⚠️ $msg', role: 'assistant')));
     }
     AmoreStore.appendHistory('single', 'user', text);
     for (final m in _messages.skip(_messages.length - 2)) {

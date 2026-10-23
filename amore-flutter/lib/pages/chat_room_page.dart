@@ -67,13 +67,22 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           });
       if (result.error != null && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            backgroundColor: const Color(0xFFFF3B30).withOpacity(0.85),
+            backgroundColor: const Color(0xFFFF3B30).withOpacity(0.9),
+            duration: const Duration(seconds: 6),
             content: Text(result.error!)));
       } else if (result.tools.isNotEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             duration: const Duration(milliseconds: 1200),
             content:
                 Text('🔧 调用了工具：${result.tools.map((t) => t.name).join('、')}')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: const Color(0xFFFF3B30).withOpacity(0.9),
+            duration: const Duration(seconds: 6),
+            content: Text(
+                '发送失败：${e.toString().replaceFirst('Exception: ', '')}')));
       }
     } finally {
       if (mounted) {
