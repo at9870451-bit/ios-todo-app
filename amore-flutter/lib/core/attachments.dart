@@ -53,6 +53,9 @@ class Attachments {
     final d = await getApplicationSupportDirectory();
     final dir = '${d.path}/attachments';
     // 目录不存在时自动创建（尽力而为）
+    try {
+      Directory(dir).createSync(recursive: true);
+    } catch (_) {}
     AmoreStore.dataDir = d.path;
     return dir;
   }
@@ -61,10 +64,9 @@ class Attachments {
     final cleaned = name.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
     return cleaned.isEmpty ? 'file' : cleaned;
   }
-}
 
   /// 把选取的临时文件复制进沙盒 attachments/（持久化），返回附件描述
-  /// srcPath 为空（如模拟器权限问题）时返回仅 name 的占位描述
+  /// srcPath 为空（如权限问题）时返回仅 name 的占位描述
   static Future<Map<String, String>> importFile(
       String srcPath, String name, String kind) async {
     final safeName = _safeName(name);
@@ -83,3 +85,4 @@ class Attachments {
     } catch (_) {}
     return {'name': safeName, 'path': '', 'kind': kind};
   }
+}
