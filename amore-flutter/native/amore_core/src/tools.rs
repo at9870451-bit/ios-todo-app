@@ -36,9 +36,10 @@ struct Patterns {
 fn patterns() -> &'static Patterns {
     static P: OnceLock<Patterns> = OnceLock::new();
     P.get_or_init(|| Patterns {
-        call: Regex::new(r#"(?is)<(tool[_a-z0-9]*)\s+name="([^"]+)"[^>]*>(.*?)</\1>"#).unwrap(),
+        // 注意：Rust regex 不支持反向引用 \1，这里用同形态的闭合标签匹配
+        call: Regex::new(r#"(?is)<(tool[_a-z0-9]*)\s+name="([^"]+)"[^>]*>(.*?)</tool[_a-z0-9]*>"#).unwrap(),
         param: Regex::new(r#"(?is)<param\s+name="([^"]+)"[^>]*>(.*?)</param>"#).unwrap(),
-        strip: Regex::new(r#"(?is)<(tool[_a-z0-9]*|tool_result_[a-z0-9]+)\s[^>]*>.*?</\1>"#).unwrap(),
+        strip: Regex::new(r#"(?is)<tool[_a-z0-9]*\s[^>]*>.*?</tool[_a-z0-9]*>"#).unwrap(),
         memory: Regex::new(r#"[记忆[:：]([^\]]+)]"#).unwrap(),
     })
 }
