@@ -33,7 +33,9 @@ flutter_ios_podfile_setup
 
 target 'Runner' do
   # 插件均已走 SPM；Rust 库链接由 tools/fix_xcodeproj.rb 注入 -force_load，不经 pods
-  use_modular_headers!
+  # image_picker_ios 等插件在新 Flutter 下需要 framework 模式（static lib + custom
+  # module map 不被 CocoaPods 支持）；静态链接避免动态库嵌入问题
+  use_frameworks! :linkage => :static
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
