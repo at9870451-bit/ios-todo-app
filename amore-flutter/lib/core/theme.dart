@@ -138,8 +138,8 @@ class AmoreTheme {
   static ThemeData darkWith(Color accent) => _build(APalette.dark, accent: accent);
 
   static ThemeData _build(APalette p, {Color? accent}) {
-    final acc = accent ?? acc;
-    final accBg = accent == null ? accBg : accent.withOpacity(0.10);
+    final acc = accent ?? AmoreBrand.accent;
+    final accBg = accent == null ? AmoreBrand.accentBg : accent.withOpacity(0.10);
     final scheme = ColorScheme.fromSeed(
       seedColor: acc,
       brightness: p.brightness,
