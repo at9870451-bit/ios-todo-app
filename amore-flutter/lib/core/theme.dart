@@ -199,7 +199,7 @@ class AmoreTheme {
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(rSmall),
             borderSide:
-                const BorderSide(color: acc, width: 1.4)),
+                BorderSide(color: acc, width: 1.4)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -228,7 +228,7 @@ class AmoreTheme {
                 ? acc
                 : p.cardBorder),
       ),
-      sliderTheme: const SliderThemeData(
+      sliderTheme: SliderThemeData(
         activeTrackColor: acc,
         thumbColor: Colors.white,
       ),
@@ -261,7 +261,7 @@ class AmoreTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: acc),
+          ProgressIndicatorThemeData(color: acc),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.transparent,
         indicatorColor: acc.withOpacity(0.14),
