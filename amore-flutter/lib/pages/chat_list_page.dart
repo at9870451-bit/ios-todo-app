@@ -6,9 +6,12 @@ import 'package:intl/intl.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../ui/effects.dart';
 import 'chat_room_page.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';
+import '../widgets/friend_avatar.dart';
+import '../widgets/friend_edit_sheet.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -18,6 +21,7 @@ class ChatListPage extends StatefulWidget {
 }
 
 class _ChatListPageState extends State<ChatListPage> {
+  final _nameFieldKey = GlobalKey<_FriendNameFieldState>();
 
   @override
   void initState() {
@@ -56,6 +60,15 @@ class _ChatListPageState extends State<ChatListPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.edit_note_rounded),
+              title: const Text('好友设置'),
+              subtitle: const Text('头像 / 人设 / 模型 / 语音 / 长期记忆'),
+              onTap: () {
+                Navigator.pop(context);
+                FriendEditSheet.show(context, f);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded, color: AmoreTheme.danger),
               title: const Text('删除好友', style: TextStyle(color: AmoreTheme.danger)),
@@ -135,7 +148,8 @@ class _ChatListPageState extends State<ChatListPage> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             ...members.map((m) => ListTile(
-                  leading: AmoreTheme.avatar(m.name, size: 38),
+                  leading: FriendAvatar(
+                      name: m.name, avatarFile: m.avatarFile, size: 38),
                   title: Text(m.name),
                   subtitle: Text('${m.genderText}${m.age.isEmpty ? '' : ' · ${m.age}岁'}'),
                 )),
@@ -145,75 +159,15 @@ class _ChatListPageState extends State<ChatListPage> {
     );
   }
 
-  // ---- 添加好友 ----
+  // ---- 添加好友（与聊天室「好友设置」共用同一套表单）----
   void _addFriendSheet() {
-    final nameCtl = TextEditingController();
-    final ageCtl = TextEditingController();
-    final personaCtl = TextEditingController();
-    String gender = 'female';
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('添加好友', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 14),
-            TextField(controller: nameCtl, decoration: const InputDecoration(hintText: '昵称')),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                StatefulBuilder(builder: (context, setSheet) => SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'female', label: Text('女')),
-                    ButtonSegment(value: 'male', label: Text('男')),
-                    ButtonSegment(value: '', label: Text('保密')),
-                  ],
-                  selected: {gender},
-                  onSelectionChanged: (s) => setSheet(() => gender = s.first),
-                )),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextField(
-                      controller: ageCtl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '年龄')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            TextField(
-                controller: personaCtl,
-                maxLines: 3,
-                decoration: const InputDecoration(hintText: '人设提示词（TA 是什么样的人）')),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  if (nameCtl.text.trim().isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('请输入昵称')));
-                    return;
-                  }
-                  final f = ChatFriend(
-                    name: nameCtl.text.trim(),
-                    gender: gender,
-                    age: ageCtl.text.trim(),
-                    persona: personaCtl.text.trim(),
-                    sort: context.read<AppState>().friends.length,
-                  );
-                  AmoreStore.saveFriend(f);
-                  context.read<AppState>().refreshSocial();
-                  Navigator.pop(context);
-                },
-                child: const Text('添加'),
-              ),
-            ),
-          ],
-        ),
+    final state = context.read<AppState>();
+    FriendEditSheet.showCreate(
+      context,
+      ChatFriend(
+        name: '',
+        gender: 'female',
+        sort: state.friends.length,
       ),
     );
   }
@@ -245,7 +199,8 @@ class _ChatListPageState extends State<ChatListPage> {
                     onChanged: (v) => setSheet(() =>
                         v == true ? selected.add(f.id) : selected.remove(f.id)),
                     title: Text(f.name),
-                    secondary: AmoreTheme.avatar(f.name, size: 32),
+                    secondary: FriendAvatar(
+                        name: f.name, avatarFile: f.avatarFile, size: 32),
                   )),
               const SizedBox(height: 12),
               SizedBox(
@@ -283,7 +238,7 @@ class _ChatListPageState extends State<ChatListPage> {
     // 合并会话（好友 + 群），按 lastAt 排序
     final rows = <_SessionRow>[
       ...state.friends.map((f) => _SessionRow(
-            avatar: AmoreTheme.avatar(f.name),
+            avatar: FriendAvatar(name: f.name, avatarFile: f.avatarFile),
             name: f.name,
             last: f.lastMessage,
             ts: f.lastAt,
@@ -309,22 +264,18 @@ class _ChatListPageState extends State<ChatListPage> {
     ]..sort((a, b) => b.ts.compareTo(a.ts));
 
     return Scaffold(
-      appBar: AmoreAppBar(
-        centerTitle: false,
-        title: '聊天',
+      appBar: AppBar(
+        title: const Text('聊天', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
         actions: [
-          GlassIconButton(
-              icon: Icons.person_add_alt_rounded,
-              iconColor: AmoreBrand.orange,
-              tooltip: '添加好友',
-              onTap: _addFriendSheet),
-          const SizedBox(width: 8),
-          GlassIconButton(
-              icon: Icons.group_add_rounded,
-              iconColor: AmoreBrand.orange,
-              tooltip: '新建群聊',
-              onTap: _createGroupSheet),
-          const SizedBox(width: 8),
+          IconButton(
+              onPressed: _addFriendSheet,
+              icon: const Icon(Icons.person_add_alt_rounded),
+              tooltip: '添加好友'),
+          IconButton(
+              onPressed: _createGroupSheet,
+              icon: const Icon(Icons.group_add_rounded),
+              tooltip: '新建群聊'),
+          const SizedBox(width: 4),
         ],
       ),
       body: Container(
@@ -344,7 +295,9 @@ class _ChatListPageState extends State<ChatListPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 6),
       itemBuilder: (_, i) {
         final r = rows[i];
-        return Material(
+        return StaggerItem(
+          index: i,
+          child: Material(
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
@@ -381,6 +334,7 @@ class _ChatListPageState extends State<ChatListPage> {
               ),
             ),
           ),
+        ),
         );
       },
     );
@@ -425,4 +379,32 @@ class _SessionRow {
     required this.onTap,
     required this.onLongPress,
   });
+}
+
+/// 昵称输入（ErrorTextField 包装，暴露 triggerError 供表单校验调用）
+class _FriendNameField extends StatefulWidget {
+  final TextEditingController controller;
+  const _FriendNameField({required this.controller});
+  @override
+  State<_FriendNameField> createState() => _FriendNameFieldState();
+}
+
+class _FriendNameFieldState extends State<_FriendNameField> {
+  final GlobalKey<ErrorTextFieldState> _inner = GlobalKey();
+  String? _error;
+
+  void triggerError() => _inner.currentState?.triggerError();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ErrorTextField(
+        key: _inner,
+        controller: widget.controller,
+        hint: '昵称',
+        errorText: _error,
+        onChanged: (_) => setState(() => _error = null),
+      ),
+    ]);
+  }
 }
