@@ -47,6 +47,27 @@ jobs:
         working-directory: amore-flutter
         run: flutter create --org com.quantokx --project-name amore .
 
+      - name: Info.plist 权限声明（照片/相机/麦克风/文件）
+        working-directory: amore-flutter
+        run: |
+          python3 - <<'PYEOF2'
+import plistlib
+p = 'ios/Runner/Info.plist'
+with open(p, 'rb') as f:
+    d = plistlib.load(f)
+perms = {
+    'NSPhotoLibraryUsageDescription': '发送照片和视频需要访问你的相册',
+    'NSCameraUsageDescription': '拍照并发送需要访问相机',
+    'NSMicrophoneUsageDescription': '录制视频需要访问麦克风',
+    'NSDocumentsFolderUsageDescription': '添加文件需要访问文件',
+}
+for k, v in perms.items():
+    d[k] = v
+with open(p, 'wb') as f:
+    plistlib.dump(d, f)
+print('permissions injected')
+PYEOF2
+
       - name: xcconfig 补丁（禁 strip / dead-strip，保住 FFI 符号）
         working-directory: amore-flutter
         run: |

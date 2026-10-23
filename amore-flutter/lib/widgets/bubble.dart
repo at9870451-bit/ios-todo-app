@@ -9,6 +9,7 @@ import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'game_card.dart';
+import 'attachment_card.dart';
 import '../core/group_games.dart';
 import 'friend_avatar.dart';
 import 'link_card.dart';
@@ -165,6 +166,7 @@ class MessageBubble extends StatelessWidget {
   }
 
   bool get _hasRichContent {
+    if (msg.attachments.isNotEmpty) return true;
     final segs = MessageSegment.parse(msg.content);
     return segs.length > 1 ||
         segs.any((s) => s.kind != SegmentKind.text);
@@ -182,6 +184,36 @@ class MessageBubble extends StatelessWidget {
         tint: mark.color,
       ));
     }
+    // 附件消息：附件卡片列表 + 剩余文本
+    final atts = msg.attachments;
+    if (atts.isNotEmpty) {
+      final rest = msg.textContent.trim();
+      final cards = <Widget>[
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final a in atts) AttachmentCard(att: a, mine: mine),
+          ],
+        ),
+      ];
+      if (rest.isNotEmpty) {
+        cards.add(Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: messageTextWithLinks(
+              rest,
+              TextStyle(
+                  fontSize: fs,
+                  height: 1.45,
+                  color: mine ? Colors.white : AmoreTheme.textPrimary)),
+        ));
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: cards,
+      );
+    }
+
     final segs = MessageSegment.parse(msg.content);
 
     // 纯文本：直接富文本渲染（URL 高亮）

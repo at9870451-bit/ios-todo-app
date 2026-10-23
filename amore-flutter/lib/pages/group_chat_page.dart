@@ -1,11 +1,16 @@
 // 对应 Swift：GroupChat.swift —— 群聊页（全员回复，build 88 行为）
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../core/chat_engine.dart';
+import '../core/attachments.dart';
 import '../core/group_games.dart';
 import '../core/group_games_runner.dart';
 import '../widgets/game_card.dart';
+import '../widgets/attachment_card.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
@@ -25,6 +30,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
   final _inputCtl = TextEditingController();
   final _scrollCtl = ScrollController();
   List<ChatMessage> _messages = [];
+  List<_Attachment> _pendingAtts = [];
   bool _sending = false;
   String _typingName = '';
   bool _gameRunning = false;
@@ -66,14 +72,21 @@ class _GroupChatPageState extends State<GroupChatPage> {
   }
 
   /// 发送 → 全员依次回复（对齐 build 88：所有 AI 成员一起回，各自人设/模型）
-  Future<void> _send(String text) async {
+  Future<void> _send(String text, [List<_Attachment>? atts]) async {
     if (_sending) return;
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    final attList = atts ?? const <_Attachment>[];
+    if (trimmed.isEmpty && attList.isEmpty) return;
     _inputCtl.clear();
 
+    final attMaps = attList
+        .map((a) => {'name': a.name, 'path': a.path, 'kind': a.kind})
+        .toList();
+    final content = Attachments.encode(attMaps, trimmed);
+    setState(() => _pendingAtts = []);
+
     final key = 'group.${widget.group.id}';
-    AmoreStore.appendHistory(key, 'user', trimmed);
+    AmoreStore.appendHistory(key, 'user', content);
     widget.group.lastMessage = trimmed;
     widget.group.lastAt = DateTime.now().millisecondsSinceEpoch / 1000;
     AmoreStore.saveGroup(widget.group);
@@ -93,6 +106,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
         final result = await ChatEngine.send(
           friend: member,
           userText: trimmed,
+          attachments: attMaps,
           extraSystem: '当前是群聊「${widget.group.name}」，群成员：$nameList。'
               '以 ${member.name} 的身份自然回应，不要重复他人刚说过的话，保持简短、有个性。'
               '偶尔可以用 [语音:内容] 发一条语音（中文），别每句都发。',
@@ -359,8 +373,181 @@ class _GroupChatPageState extends State<GroupChatPage> {
     );
   }
 
-  Widget _inputBar() {
+  Future<void> _attachMenu() async {
+    final v = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.description_rounded),
+              title: const Text('添加文件'),
+              onTap: () => Navigator.pop(ctx, 'file'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('选择照片'),
+              onTap: () => Navigator.pop(ctx, 'photo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_rounded),
+              title: const Text('选择视频'),
+              onTap: () => Navigator.pop(ctx, 'video'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('拍照'),
+              onTap: () => Navigator.pop(ctx, 'camera'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (v == null) return;
+    if (v == 'photo') {
+      final XFile? img =
+          await ImagePicker().pickImage(source: ImageSource.gallery);
+      if (img != null) {
+        final att =
+            await Attachments.importFile(img.path, img.name, 'image');
+        if (mounted) {
+          setState(() => _pendingAtts = [
+                ..._pendingAtts,
+                _Attachment(
+                    name: att['name'] ?? img.name,
+                    path: att['path'] ?? '',
+                    kind: 'image')
+              ]);
+        }
+      }
+    } else if (v == 'video') {
+      final XFile? vid =
+          await ImagePicker().pickVideo(source: ImageSource.gallery);
+      if (vid != null) {
+        final att =
+            await Attachments.importFile(vid.path, vid.name, 'video');
+        if (mounted) {
+          setState(() => _pendingAtts = [
+                ..._pendingAtts,
+                _Attachment(
+                    name: att['name'] ?? vid.name,
+                    path: att['path'] ?? '',
+                    kind: 'video')
+              ]);
+        }
+      }
+    } else if (v == 'camera') {
+      final XFile? img =
+          await ImagePicker().pickImage(source: ImageSource.camera);
+      if (img != null) {
+        final att =
+            await Attachments.importFile(img.path, img.name, 'image');
+        if (mounted) {
+          setState(() => _pendingAtts = [
+                ..._pendingAtts,
+                _Attachment(
+                    name: att['name'] ?? img.name,
+                    path: att['path'] ?? '',
+                    kind: 'image')
+              ]);
+        }
+      }
+    } else {
+      final res = await FilePicker.platform.pickFiles();
+      if (res != null && res.files.single.name.isNotEmpty) {
+        final f = res.files.single;
+        final att =
+            await Attachments.importFile(f.path ?? '', f.name, 'file');
+        if (mounted) {
+          setState(() => _pendingAtts = [
+                ..._pendingAtts,
+                _Attachment(
+                    name: att['name'] ?? f.name,
+                    path: att['path'] ?? '',
+                    kind: 'file')
+              ]);
+        }
+      }
+    }
+  }
+
+  // 输入栏上方的附件预览（可删除）
+  Widget _attachPreview() {
+    if (_pendingAtts.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 64,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        itemCount: _pendingAtts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (_, i) {
+          final a = _pendingAtts[i];
+          return Stack(
+            children: [
+              if (a.kind == 'image' && a.path.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.file(
+                    File(a.path),
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _previewFallback(a),
+                  ),
+                )
+              else
+                _previewFallback(a),
+              Positioned(
+                right: -4,
+                top: -4,
+                child: GestureDetector(
+                  onTap: () => setState(() => _pendingAtts.removeAt(i)),
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF3A3A3C),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.close_rounded,
+                        size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _previewFallback(_Attachment a) {
     return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Icon(
+        a.kind == 'video'
+            ? Icons.play_circle_fill_rounded
+            : a.kind == 'file'
+                ? Icons.insert_drive_file_rounded
+                : Icons.image_rounded,
+        size: 24,
+        color: const Color(0xFF86868B),
+      ),
+    );
+  }
+
+  Widget _inputBar() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _attachPreview(),
+        Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
       decoration: BoxDecoration(
         color: AmoreTheme.tabBg,
@@ -368,13 +555,22 @@ class _GroupChatPageState extends State<GroupChatPage> {
       ),
       child: Row(
         children: [
+          GestureDetector(
+            onTap: _attachMenu,
+            child: const Padding(
+              padding: EdgeInsets.only(right: 4),
+              child: Icon(Icons.add_circle_outline_rounded,
+                  size: 24, color: Color(0xFF86868B)),
+            ),
+          ),
+          const SizedBox(width: 4),
           Expanded(
             child: TextField(
               controller: _inputCtl,
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.send,
-              onSubmitted: _send,
+              onSubmitted: (t) => _send(t, _pendingAtts),
               style: const TextStyle(fontSize: 14.5),
               decoration: InputDecoration(
                 hintText: '发到群里…',
@@ -393,7 +589,7 @@ class _GroupChatPageState extends State<GroupChatPage> {
           ),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () => _send(_inputCtl.text),
+            onTap: () => _send(_inputCtl.text, _pendingAtts),
             child: Container(
               width: 38,
               height: 38,
@@ -406,6 +602,16 @@ class _GroupChatPageState extends State<GroupChatPage> {
           ),
         ],
       ),
+        ),
+      ],
     );
   }
+}
+
+// ---- 附件（文件/照片/视频）----
+class _Attachment {
+  final String name;
+  final String path; // 沙盒内路径（空=占位）
+  final String kind; // image / video / file
+  const _Attachment({required this.name, this.path = '', required this.kind});
 }

@@ -2,6 +2,7 @@
 /// 所有模型与 Rust Core 之间以 JSON 交换，字段名保持 snake_case。
 library;
 
+import 'attachments.dart';
 import 'dart:convert';
 
 /// 从 Rust 信封 data 里安全取 Map
@@ -136,6 +137,12 @@ class ChatGroup {
 }
 
 class ChatMessage {
+  /// 附件列表（解析 content 中的 [atts] 块；空 = 无附件）
+  List<Map<String, String>> get attachments => Attachments.parse(content);
+
+  /// 剥离附件块后的纯文本
+  String get textContent => Attachments.text(content);
+
   int id;
   String role; // user / assistant / system / tool
   String content;

@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 
 import 'models.dart';
 import 'store.dart';
+import 'attachments.dart';
 
 class ChatEngine {
   ChatEngine._();
@@ -155,6 +156,7 @@ class ChatEngine {
   static Future<ChatTurnResult> send({
     required ChatFriend friend,
     required String userText,
+    List<Map<String, String>>? attachments,
     void Function(String toolName)? onToolCall,
     String? extraSystem,
   }) async {
@@ -168,7 +170,9 @@ class ChatEngine {
     }
 
     final key = 'friend.${friend.id}';
-    AmoreStore.appendHistory(key, 'user', userText);
+    final stored =
+        Attachments.encode(attachments ?? const [], userText);
+    AmoreStore.appendHistory(key, 'user', stored);
     final history = AmoreStore.loadHistory(key);
 
     final system = [
@@ -177,9 +181,23 @@ class ChatEngine {
     ].join('\n\n');
 
     // 组装消息（历史最近 24 条）
-    final msgs = history.length <= 24
+    var msgs = history.length <= 24
         ? history.map((m) => {'role': m.role, 'content': m.content}).toList()
         : history.sublist(history.length - 24).map((m) => {'role': m.role, 'content': m.content}).toList();
+    // 刚发送的附件消息：AI 只看文件名说明，不暴露本地路径
+    if (attachments != null && attachments.isNotEmpty && msgs.isNotEmpty) {
+      final names =
+          attachments.map((a) => a['name'] ?? '').where((n) => n.isNotEmpty);
+      final last = msgs.removeLast();
+      if (last['role'] == 'user') {
+        msgs.add({
+          'role': 'user',
+          'content': '$userText\n（我发送了 ${attachments.length} 个附件：${names.join('、')}）'
+        });
+      } else {
+        msgs.add(last);
+      }
+    }
 
     String feedback; // 工具结果回注（追加为 tool 消息）
     String lastClean = '';
