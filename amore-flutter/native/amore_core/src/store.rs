@@ -48,6 +48,14 @@ pub struct Store {
 
 static STORE: Mutex<Option<Store>> = Mutex::new(None);
 
+/// 取锁：即使此前有 panic 让互斥量中毒，也恢复继续使用（避免一次 panic 后全盘不可用）
+fn store_lock() -> std::sync::MutexGuard<'static, Option<Store>> {
+    match STORE.lock() {
+        Ok(g) => g,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
 fn history_dir(root: &Path) -> PathBuf {
     root.join("history")
 }
@@ -86,7 +94,7 @@ pub fn init(data_dir: &str) {
         .and_then(|j| serde_json::from_value(j).ok())
         .unwrap_or_default();
     let active_provider = config.get("active_provider").cloned().unwrap_or_default();
-    *STORE.lock().unwrap() = Some(Store {
+    *store_lock() = Some(Store {
         dir,
         active_provider,
         config,
@@ -94,7 +102,7 @@ pub fn init(data_dir: &str) {
 }
 
 fn with<R>(f: impl FnOnce(&Store) -> R, fallback: R) -> R {
-    let guard = STORE.lock().unwrap();
+    let guard = store_lock();
     match guard.as_ref() {
         Some(s2) => f(s2),
         None => fallback,
@@ -103,7 +111,7 @@ fn with<R>(f: impl FnOnce(&Store) -> R, fallback: R) -> R {
 
 /// 可变访问（写操作用）
 fn with_mut<R>(f: impl FnOnce(&mut Store) -> R, fallback: R) -> R {
-    let mut guard = STORE.lock().unwrap();
+    let mut guard = store_lock();
     match guard.as_mut() {
         Some(s2) => f(s2),
         None => fallback,
@@ -124,6 +132,10 @@ fn save_array(root: &Path, name: &str, items: &[Value]) {
 
 /// 按 id upsert
 fn upsert(items: &mut Vec<Value>, item: Value) {
+    // 非对象（null/字符串等）直接忽略，避免索引赋值 panic
+    if !item.is_object() {
+        return;
+    }
     let id = item.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let id = if id.is_empty() { new_id() } else { id };
     let mut item = item;

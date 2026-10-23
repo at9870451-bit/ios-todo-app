@@ -58,6 +58,46 @@ fn dispatch(method: &str, payload: &str) -> String {
             ])),
             ("milestone", s("M1-storage")),
         ])),
+        "core.selftest" => {
+            let cases: Vec<(&str, &str)> = vec![
+                ("core.version", "{}"),
+                ("store.list_friends", "{}"),
+                ("store.list_groups", "{}"),
+                ("store.list_agents", "{}"),
+                ("store.list_providers", "{}"),
+                ("store.get_all_config", "{}"),
+                ("store.get_active_provider", "{}"),
+                ("catalog.vendors", "{}"),
+                ("catalog.models", "{\"vendor\":\"deepseek\"}"),
+                ("chat.tools_guide", "{}"),
+                ("tts.request", "{\"engine\":\"local\"}"),
+            ];
+            let mut results: Vec<Value> = Vec::new();
+            for (m, payload) in cases {
+                let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    dispatch(m, payload)
+                }));
+                let (ok_flag, detail) = match r {
+                    Ok(_) => (true, String::new()),
+                    Err(p) => {
+                        let d = if let Some(s) = p.downcast_ref::<&str>() {
+                            (*s).to_string()
+                        } else if let Some(s) = p.downcast_ref::<String>() {
+                            s.clone()
+                        } else {
+                            "unknown".to_string()
+                        };
+                        (false, d)
+                    }
+                };
+                results.push(obj([
+                    ("method", s(m)),
+                    ("ok", Value::Bool(ok_flag)),
+                    ("detail", s(&detail)),
+                ]));
+            }
+            Some(obj([("results", arr(results))]))
+        }
         "core.init" => {
             let dir = p.get("data_dir").and_then(|v| v.as_str()).unwrap_or("");
             if dir.is_empty() {
@@ -87,9 +127,25 @@ fn dispatch(method: &str, payload: &str) -> String {
 }
 
 fn dispatch_safe(method: &str, payload: &str) -> String {
-    match std::panic::catch_unwind(|| dispatch(method, payload)) {
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        dispatch(method, payload)
+    }));
+    match result {
         Ok(s) => s,
-        Err(_) => err("core_panic", "Rust Core 内部错误（panic 已捕获）"),
+        Err(p) => {
+            // 提取 panic 详情（&str / String），带上方法名便于定位
+            let detail = if let Some(s) = p.downcast_ref::<&str>() {
+                (*s).to_string()
+            } else if let Some(s) = p.downcast_ref::<String>() {
+                s.clone()
+            } else {
+                "未知 panic".to_string()
+            };
+            err(
+                "core_panic",
+                &format!("Rust Core 内部错误（{method}）：{detail}"),
+            )
+        }
     }
 }
 

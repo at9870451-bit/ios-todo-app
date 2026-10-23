@@ -15,6 +15,7 @@ class AmoreStore {
   /// 初始化 Core（传入沙盒数据目录），App 启动时调用一次
   static void init(String dir) {
     dataDir = dir;
+    AmoreBridge.dataDir = dir;
     AmoreBridge.call('core.init', {'data_dir': dir});
   }
 

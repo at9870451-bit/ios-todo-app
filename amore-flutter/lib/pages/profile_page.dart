@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../core/bridge.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../ui/effects.dart';
@@ -27,6 +28,37 @@ class ProfilePage extends StatelessWidget {
       'config': state.config,
     };
     return obj.toString().replaceAllMapped(RegExp(r'([,{])(\s*)([A-Za-z_][A-Za-z0-9_]*):'), (m) => '${m[1]}${m[2]}"${m[3]}":');
+  }
+
+  Future<void> _coreSelfTest(BuildContext context) async {
+    String text;
+    try {
+      final data = AmoreBridge.call('core.selftest');
+      final results = (data['results'] as List?) ?? const [];
+      text = results.map((r) {
+        final m = (r as Map)['method']?.toString() ?? '?';
+        final ok = r['ok'] == true;
+        final d = r['detail']?.toString() ?? '';
+        return '${ok ? '✓' : '✗'} $m${ok || d.isEmpty ? '' : '\n   $d'}';
+      }).join('\n');
+      if (text.isEmpty) text = '没有返回结果';
+    } catch (e) {
+      text = '自检调用失败：${e.toString().replaceFirst('Exception: ', '')}';
+    }
+    if (!context.mounted) return;
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rust Core 自检'),
+        content: SingleChildScrollView(
+            child: Text(text, style: const TextStyle(fontSize: 12, height: 1.5))),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('好')),
+        ],
+      ),
+    );
   }
 
   @override
@@ -126,6 +158,17 @@ const SizedBox(height: 20),
               gap(),
               StaggerItem(
                 index: 3,
+                child: AmoreTheme.tile(
+                  context: context,
+                  icon: Icons.health_and_safety_rounded,
+                  title: '核心自检',
+                  subtitle: '逐项检测 Rust Core 方法是否正常',
+                  onTap: () => _coreSelfTest(context),
+                ),
+              ),
+              gap(),
+              StaggerItem(
+                index: 4,
                 child: AmoreTheme.tile(
                   context: context,
                   icon: Icons.ios_share_rounded,

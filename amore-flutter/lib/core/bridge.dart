@@ -12,6 +12,9 @@ import 'package:ffi/ffi.dart';
 class AmoreBridge {
   AmoreBridge._();
 
+  /// 数据目录（core_panic 自愈时用于重新 init）
+  static String dataDir = '';
+
   static bool _ready = false;
   static late final Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>) _call;
   static late final void Function(Pointer<Utf8>) _free;
@@ -31,7 +34,25 @@ class AmoreBridge {
 
   /// 同步调用 Rust Core。payload 可省略（默认 {}）。
   /// 返回 data 部分；失败抛 [AmoreCoreError]。
+  /// 遇到 core_panic 时自动重新初始化 Core 并重试一次（防止一次性失败锁死 App）。
   static Map<String, dynamic> call(String method,
+      [Map<String, dynamic>? payload]) {
+    try {
+      return _callRaw(method, payload);
+    } on AmoreCoreError catch (e) {
+      if (e.code == 'core_panic' &&
+          method != 'core.init' &&
+          dataDir.isNotEmpty) {
+        try {
+          _callRaw('core.init', {'data_dir': dataDir});
+        } catch (_) {}
+        return _callRaw(method, payload);
+      }
+      rethrow;
+    }
+  }
+
+  static Map<String, dynamic> _callRaw(String method,
       [Map<String, dynamic>? payload]) {
     ensure();
 

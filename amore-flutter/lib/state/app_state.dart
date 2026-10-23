@@ -56,12 +56,32 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  /// 最近一次 Core 错误的文字（UI 可展示；单次失败不再拖垮整个 App）
+  String lastCoreError = '';
+
+  T _safeLoad<T>(T Function() load, T fallback) {
+    try {
+      return load();
+    } catch (e) {
+      lastCoreError = e.toString().replaceFirst('AmoreCoreError(', 'Core(');
+      return fallback;
+    }
+  }
+
   void refreshAll() {
-    friends = AmoreStore.listFriends()..sort((a, b) => a.sort.compareTo(b.sort));
-    groups = AmoreStore.listGroups()..sort((a, b) => a.sort.compareTo(b.sort));
-    agents = AmoreStore.listAgents()..sort((a, b) => a.sort.compareTo(b.sort));
-    providers = AmoreStore.listProviders();
-    config = AmoreStore.allConfig();
+    lastCoreError = '';
+    friends = _safeLoad(
+        () => AmoreStore.listFriends()
+          ..sort((a, b) => a.sort.compareTo(b.sort)),
+        <ChatFriend>[]);
+    groups = _safeLoad(
+        () => AmoreStore.listGroups()..sort((a, b) => a.sort.compareTo(b.sort)),
+        <ChatGroup>[]);
+    agents = _safeLoad(
+        () => AmoreStore.listAgents()..sort((a, b) => a.sort.compareTo(b.sort)),
+        <AgentTemplate>[]);
+    providers = _safeLoad(() => AmoreStore.listProviders(), <AIProvider>[]);
+    config = _safeLoad(() => AmoreStore.allConfig(), <String, String>{});
     bubbleRadius = double.tryParse(config['bubble_radius'] ?? '') ?? 16;
     chatFontScale = double.tryParse(config['font_scale'] ?? '') ?? 14.5;
     chatBgKey = config['chat_bg'] ?? 'default';
@@ -70,19 +90,26 @@ class AppState extends ChangeNotifier {
   }
 
   void refreshSocial() {
-    friends = AmoreStore.listFriends()..sort((a, b) => a.sort.compareTo(b.sort));
-    groups = AmoreStore.listGroups()..sort((a, b) => a.sort.compareTo(b.sort));
+    friends = _safeLoad(
+        () => AmoreStore.listFriends()
+          ..sort((a, b) => a.sort.compareTo(b.sort)),
+        <ChatFriend>[]);
+    groups = _safeLoad(
+        () => AmoreStore.listGroups()..sort((a, b) => a.sort.compareTo(b.sort)),
+        <ChatGroup>[]);
     notifyListeners();
   }
 
   void refreshProviders() {
-    providers = AmoreStore.listProviders();
-    config = AmoreStore.allConfig();
+    providers = _safeLoad(() => AmoreStore.listProviders(), <AIProvider>[]);
+    config = _safeLoad(() => AmoreStore.allConfig(), <String, String>{});
     notifyListeners();
   }
 
   void refreshAgents() {
-    agents = AmoreStore.listAgents()..sort((a, b) => a.sort.compareTo(b.sort));
+    agents = _safeLoad(
+        () => AmoreStore.listAgents()..sort((a, b) => a.sort.compareTo(b.sort)),
+        <AgentTemplate>[]);
     notifyListeners();
   }
 
