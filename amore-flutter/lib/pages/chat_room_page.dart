@@ -134,7 +134,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         ],
       ),
       body: Container(
-        decoration: AmoreTheme.pageGradient(),
+        decoration: BoxDecoration(
+          color: AmoreTheme.chatBgColor(
+              context.watch<AppState>().chatBgKey),
+        ),
         child: SafeArea(
           child: Column(
             children: [

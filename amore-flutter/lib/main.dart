@@ -24,14 +24,25 @@ class AmoreApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => AppState()..bootstrap(),
       child: Consumer<AppState>(
-        builder: (context, state, _) => MaterialApp(
-          title: 'Amore',
-          debugShowCheckedModeBanner: false,
-          theme: AmoreTheme.light(),
-          darkTheme: AmoreTheme.dark(),
-          themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const RootGate(),
-        ),
+        builder: (context, state, _) {
+          // Appearance theme color (default Apple Blue)
+          const themeColors = {
+            'purple': Color(0xFFAF52DE),
+            'pink': Color(0xFFF472B6),
+            'green': Color(0xFF34C759),
+            'orange': Color(0xFFFB923C),
+            'mono': Color(0xFF86868B),
+          };
+          final acc = themeColors[state.themeColor] ?? AmoreBrand.accent;
+          return MaterialApp(
+            title: 'Amore',
+            debugShowCheckedModeBanner: false,
+            theme: AmoreTheme.lightWith(acc),
+            darkTheme: AmoreTheme.darkWith(acc),
+            themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
+            home: const RootGate(),
+          );
+        },
       ),
     );
   }

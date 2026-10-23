@@ -133,13 +133,19 @@ class AmoreTheme {
   static ThemeData light() => _build(APalette.light);
   static ThemeData dark() => _build(APalette.dark);
 
-  static ThemeData _build(APalette p) {
+  /// dynamic accent (Appearance theme color), system widgets only
+  static ThemeData lightWith(Color accent) => _build(APalette.light, accent: accent);
+  static ThemeData darkWith(Color accent) => _build(APalette.dark, accent: accent);
+
+  static ThemeData _build(APalette p, {Color? accent}) {
+    final acc = accent ?? acc;
+    final accBg = accent == null ? accBg : accent.withOpacity(0.10);
     final scheme = ColorScheme.fromSeed(
-      seedColor: AmoreBrand.accent,
+      seedColor: acc,
       brightness: p.brightness,
     ).copyWith(
-      primary: AmoreBrand.accent,
-      secondary: AmoreBrand.accent,
+      primary: acc,
+      secondary: acc,
       surface: p.card,
       surfaceContainerHighest: p.inputBg,
     );
@@ -193,11 +199,11 @@ class AmoreTheme {
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(rSmall),
             borderSide:
-                const BorderSide(color: AmoreBrand.accent, width: 1.4)),
+                const BorderSide(color: acc, width: 1.4)),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AmoreBrand.accent,
+          backgroundColor: acc,
           foregroundColor: Colors.white,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(rButton)),
@@ -219,21 +225,21 @@ class AmoreTheme {
             s.contains(WidgetState.selected) ? Colors.white : p.textFaint),
         trackColor: WidgetStateProperty.resolveWith((s) =>
             s.contains(WidgetState.selected)
-                ? AmoreBrand.accent
+                ? acc
                 : p.cardBorder),
       ),
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AmoreBrand.accent,
+        activeTrackColor: acc,
         thumbColor: Colors.white,
       ),
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
-            (s) => s.contains(WidgetState.selected) ? AmoreBrand.accent : Colors.transparent),
+            (s) => s.contains(WidgetState.selected) ? acc : Colors.transparent),
         side: BorderSide(color: p.cardBorder),
       ),
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected) ? AmoreBrand.accent : p.textFaint),
+            s.contains(WidgetState.selected) ? acc : p.textFaint),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: p.card,
@@ -255,21 +261,21 @@ class AmoreTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       progressIndicatorTheme:
-          const ProgressIndicatorThemeData(color: AmoreBrand.accent),
+          const ProgressIndicatorThemeData(color: acc),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: Colors.transparent,
-        indicatorColor: AmoreBrand.accent.withOpacity(0.14),
+        indicatorColor: acc.withOpacity(0.14),
         labelTextStyle: WidgetStateProperty.resolveWith((s) => TextStyle(
               fontSize: 11.5,
               fontWeight: FontWeight.w600,
               color: s.contains(WidgetState.selected)
-                  ? AmoreBrand.accent
+                  ? acc
                   : p.textSecondary,
             )),
         height: 62,
       ),
       chipTheme: ChipThemeData(
-        selectedColor: AmoreBrand.accentBg,
+        selectedColor: accBg,
         labelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
         secondaryLabelStyle: TextStyle(fontSize: 13, color: p.textSecondary),
         side: BorderSide(color: p.cardBorder),
@@ -287,6 +293,20 @@ class AmoreTheme {
   /// 兼容别名：旧 pageGradient 名保留（指向纯色背景）
   static BoxDecoration pageGradient({Brightness? brightness}) =>
       pageBg(brightness: brightness);
+
+  /// 聊天背景纯色（外观设置 chat_bg；零渐变，不影响布局尺寸）
+  static Color chatBgColor(String key) {
+    switch (key) {
+      case 'graphite':
+        return const Color(0xFF17191F);
+      case 'indigo':
+        return const Color(0xFF1E1B4B);
+      case 'teal':
+        return const Color(0xFF134E4A);
+      default:
+        return const Color(0xFFF5F5F7); // gradient / default → Apple 浅灰
+    }
+  }
 
   /// 白色圆角卡片（柔和阴影）
   static BoxDecoration cardBox(

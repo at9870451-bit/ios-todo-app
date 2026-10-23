@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../state/app_state.dart';
 import 'game_card.dart';
 import '../core/group_games.dart';
 import 'link_card.dart';
@@ -90,9 +92,13 @@ class MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 外观实时值（仅气泡圆角/字号，不影响其他页面布局比例）
+    final ap = context.watch<AppState>();
+    final r = ap.bubbleRadius.clamp(4.0, 24.0).toDouble();
+    final fs = ap.chatFontScale.clamp(13.0, 20.0).toDouble();
     final bubbleColor =
-        mine ? null : AmoreTheme.bubbleOther; // 我方用渐变
-    final contentWidget = _renderContent();
+        mine ? null : AmoreTheme.bubbleOther; // 我方用品牌蓝
+    final contentWidget = _renderContent(fs);
 
     return GestureDetector(
       onLongPress: () => _showMenu(context),
@@ -120,20 +126,21 @@ class MessageBubble extends StatelessWidget {
                         ? BoxDecoration(
                             color: AmoreBrand.brandBlue,
                             borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: const Radius.circular(16),
+                              topLeft: Radius.circular(r),
+                              topRight: Radius.circular(r),
+                              bottomLeft: Radius.circular(r),
                               bottomRight: Radius.circular(
-                                  _hasRichContent ? 16 : 4),
+                                  _hasRichContent ? r : 4.0),
                             ),
                           )
                         : BoxDecoration(
                             color: bubbleColor,
                             borderRadius: BorderRadius.only(
-                              topLeft: const Radius.circular(16),
-                              topRight: const Radius.circular(16),
-                              bottomLeft: Radius.circular(_hasRichContent ? 16 : 4),
-                              bottomRight: const Radius.circular(16),
+                              topLeft: Radius.circular(r),
+                              topRight: Radius.circular(r),
+                              bottomLeft: Radius.circular(
+                                  _hasRichContent ? r : 4.0),
+                              bottomRight: Radius.circular(r),
                             ),
                             border: Border.all(color: AmoreTheme.cardBorder)),
                     child: contentWidget,
@@ -158,7 +165,7 @@ class MessageBubble extends StatelessWidget {
         segs.any((s) => s.kind != SegmentKind.text);
   }
 
-  Widget _renderContent() {
+  Widget _renderContent(double fs) {
     // 卡牌消息（塔罗/狼人杀文本协议）
     final mark = CardMark.parse(msg.content);
     if (mark != null) {
@@ -181,7 +188,7 @@ class MessageBubble extends StatelessWidget {
       return messageTextWithLinks(
         text,
         TextStyle(
-            fontSize: 14.5,
+            fontSize: fs,
             height: 1.45,
             color: mine ? Colors.white : AmoreTheme.textPrimary),
       );
@@ -212,7 +219,7 @@ class MessageBubble extends StatelessWidget {
               child: messageTextWithLinks(
                   t,
                   TextStyle(
-                      fontSize: 14.5,
+                      fontSize: fs,
                       height: 1.45,
                       color: mine ? Colors.white : AmoreTheme.textPrimary)),
             ));

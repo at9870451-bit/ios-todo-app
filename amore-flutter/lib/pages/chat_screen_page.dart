@@ -265,7 +265,10 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
         ],
       ),
       body: Container(
-        decoration: AmoreTheme.pageGradient(),
+        decoration: BoxDecoration(
+          color: AmoreTheme.chatBgColor(
+              context.watch<AppState>().chatBgKey),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -511,6 +514,10 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
 
   Widget _bubble(ChatMessage m) {
     final isUser = m.role == 'user';
+    final ap = context.watch<AppState>();
+    final r = ap.bubbleRadius.clamp(8.0, 24.0).toDouble();
+    final fs = ap.chatFontScale.clamp(13.0, 20.0).toDouble();
+    final tail = r * 0.3;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -523,10 +530,10 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               decoration: BoxDecoration(
                 color: isUser ? AmoreBrand.brandBlue : Colors.white,
                 borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(isUser ? 20 : 6),
-                  bottomLeft: Radius.circular(isUser ? 20 : 20),
-                  bottomRight: Radius.circular(isUser ? 20 : 20),
-                  topRight: Radius.circular(isUser ? 6 : 20),
+                  topLeft: Radius.circular(isUser ? r : tail),
+                  bottomLeft: Radius.circular(isUser ? r : r),
+                  bottomRight: Radius.circular(isUser ? r : r),
+                  topRight: Radius.circular(isUser ? tail : r),
                 ),
                 border: isUser
                     ? null
@@ -543,13 +550,13 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               ),
               child: (!isUser && m == _messages.last)
                   ? InkRevealText(text: m.content,
-                      style: const TextStyle(
-                          fontSize: 14,
+                      style: TextStyle(
+                          fontSize: fs,
                           height: 1.45,
-                          color: Color(0xFF1D1D1F)))
+                          color: const Color(0xFF1D1D1F)))
                   : SelectableText(m.content,
                       style: TextStyle(
-                          fontSize: 14,
+                          fontSize: fs,
                           height: 1.45,
                           color:
                               isUser ? Colors.white : const Color(0xFF1D1D1F))),

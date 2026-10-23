@@ -30,24 +30,25 @@ class _AppearancePageState extends State<AppearancePage> {
 
   void _save(String key, String value) {
     AmoreStore.setConfig(key, value);
-    context.read<AppState>().refreshAll();
+    // 只刷新外观派生值（气泡/字号/背景），不影响其他 tab 布局
+    context.read<AppState>().refreshAppearance();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = {
       'blue': ('星海蓝', AmoreTheme.accent),
-      'purple': ('霞光紫', AmoreTheme.accent2),
+      'purple': ('霞光紫', const Color(0xFFAF52DE)),
       'pink': ('樱花粉', const Color(0xFFF472B6)),
       'green': ('薄荷绿', AmoreTheme.success),
       'orange': ('暖阳橙', const Color(0xFFFB923C)),
       'mono': ('极简灰白', const Color(0xFF86868B)),
     };
     final bgs = {
-      'gradient': ('深空渐变', const [Color(0xFF1A2238), Color(0xFFF5F5F7)]),
-      'graphite': ('石墨黑', const [Color(0xFF17191F), Color(0xFF0C0D11)]),
-      'indigo': ('靛蓝夜', const [Color(0xFF1E1B4B), Color(0xFFF5F5F7)]),
-      'teal': ('深海青', const [Color(0xFF134E4A), Color(0xFFF5F5F7)]),
+      'gradient': ('经典浅灰', const Color(0xFFF5F5F7)),
+      'graphite': ('石墨黑', const Color(0xFF17191F)),
+      'indigo': ('靛蓝夜', const Color(0xFF1E1B4B)),
+      'teal': ('深海青', const Color(0xFF134E4A)),
     };
 
     return Scaffold(
@@ -124,7 +125,7 @@ class _AppearancePageState extends State<AppearancePage> {
                               Container(
                                 height: 62,
                                 decoration: BoxDecoration(
-                                  color: (e.value.$2 as List<Color>).first,
+                                  color: e.value.$2,
                                   borderRadius: BorderRadius.circular(10),
                                   border: Border.all(
                                       color: selected ? AmoreTheme.accent : Colors.transparent,
@@ -205,10 +206,13 @@ class _AppearancePageState extends State<AppearancePage> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
               const Center(
-                child: Text('外观配置已保存，全局渲染接入将在下一版生效',
-                    style: TextStyle(fontSize: 11, color: AmoreTheme.textFaint)),
+                child: Text(
+                    '调节即实时生效：气泡圆角 / 消息字号 / 聊天背景（不影响其他 Tab 布局）',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(fontSize: 11, color: AmoreTheme.textFaint)),
               ),
             ],
           ),

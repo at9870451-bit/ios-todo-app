@@ -24,6 +24,12 @@ class AppState extends ChangeNotifier {
   List<AIProvider> providers = [];
   Map<String, String> config = {};
 
+  // Appearance live values (derived from config, bubble-only)
+  double bubbleRadius = 16;
+  double chatFontScale = 14.5;
+  String chatBgKey = 'default';
+  String themeColor = 'blue';
+
   final ActiveFriendNotifier activeFriend = ActiveFriendNotifier();
   ChatGroup? activeGroup;
 
@@ -56,6 +62,10 @@ class AppState extends ChangeNotifier {
     agents = AmoreStore.listAgents()..sort((a, b) => a.sort.compareTo(b.sort));
     providers = AmoreStore.listProviders();
     config = AmoreStore.allConfig();
+    bubbleRadius = double.tryParse(config['bubble_radius'] ?? '') ?? 16;
+    chatFontScale = double.tryParse(config['font_scale'] ?? '') ?? 14.5;
+    chatBgKey = config['chat_bg'] ?? 'default';
+    themeColor = config['theme_color'] ?? 'blue';
     notifyListeners();
   }
 
@@ -121,6 +131,16 @@ class AppState extends ChangeNotifier {
   void setDarkMode(bool v) {
     AmoreStore.setConfig('ui.dark', v ? '1' : '0');
     config['ui.dark'] = v ? '1' : '0';
+    notifyListeners();
+  }
+
+  /// 只刷新外观派生值（气泡圆角/字号/背景），不影响全局布局
+  void refreshAppearance() {
+    config = AmoreStore.allConfig();
+    bubbleRadius = double.tryParse(config['bubble_radius'] ?? '') ?? 16;
+    chatFontScale = double.tryParse(config['font_scale'] ?? '') ?? 14.5;
+    chatBgKey = config['chat_bg'] ?? 'default';
+    themeColor = config['theme_color'] ?? 'blue';
     notifyListeners();
   }
 
