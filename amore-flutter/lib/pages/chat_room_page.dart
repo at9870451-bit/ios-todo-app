@@ -51,6 +51,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             duration: const Duration(milliseconds: 220), curve: Curves.easeOut);
       }
     });
+    // 转场动画期间 maxScrollExtent 是中间态，转场完成后再校正到最新
+    Future.delayed(const Duration(milliseconds: 420), () {
+      if (mounted && _scrollCtl.hasClients) {
+        _scrollCtl.jumpTo(_scrollCtl.position.maxScrollExtent);
+      }
+    });
   }
 
   Future<void> _send(String text) async {

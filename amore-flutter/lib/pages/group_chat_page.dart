@@ -57,6 +57,12 @@ class _GroupChatPageState extends State<GroupChatPage> {
         );
       }
     });
+    // 转场动画期间 maxScrollExtent 是中间态，转场完成后再校正到最新
+    Future.delayed(const Duration(milliseconds: 420), () {
+      if (mounted && _scrollCtl.hasClients) {
+        _scrollCtl.jumpTo(_scrollCtl.position.maxScrollExtent);
+      }
+    });
   }
 
   /// 发送 → 全员依次回复（对齐 build 88：所有 AI 成员一起回，各自人设/模型）
