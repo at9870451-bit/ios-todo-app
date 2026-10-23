@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../core/models.dart';
 import '../core/theme.dart';
+import 'friend_avatar.dart';
 
 class CallView extends StatefulWidget {
   final ChatFriend friend;
@@ -67,7 +68,10 @@ class _CallViewState extends State<CallView>
                         color: AmoreBrand.orange.withOpacity(0.22 * phase + 0.05),
                         width: 6),
                   ),
-                  child: AmoreTheme.avatar(widget.friend.name, size: 96),
+                  child: FriendAvatar(
+                      name: widget.friend.name,
+                      avatarFile: widget.friend.avatarFile,
+                      size: 96),
                 );
               },
             ),

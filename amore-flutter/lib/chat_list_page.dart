@@ -10,6 +10,8 @@ import '../ui/effects.dart';
 import 'chat_room_page.dart';
 import '../state/app_state.dart';
 import 'group_chat_page.dart';
+import '../widgets/friend_avatar.dart';
+import '../widgets/friend_edit_sheet.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -58,6 +60,15 @@ class _ChatListPageState extends State<ChatListPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: const Icon(Icons.edit_note_rounded),
+              title: const Text('好友设置'),
+              subtitle: const Text('头像 / 人设 / 模型 / 语音 / 长期记忆'),
+              onTap: () {
+                Navigator.pop(context);
+                FriendEditSheet.show(context, f);
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.delete_outline_rounded, color: AmoreTheme.danger),
               title: const Text('删除好友', style: TextStyle(color: AmoreTheme.danger)),
@@ -137,7 +148,8 @@ class _ChatListPageState extends State<ChatListPage> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             ...members.map((m) => ListTile(
-                  leading: AmoreTheme.avatar(m.name, size: 38),
+                  leading: FriendAvatar(
+                      name: m.name, avatarFile: m.avatarFile, size: 38),
                   title: Text(m.name),
                   subtitle: Text('${m.genderText}${m.age.isEmpty ? '' : ' · ${m.age}岁'}'),
                 )),
@@ -248,7 +260,8 @@ class _ChatListPageState extends State<ChatListPage> {
                     onChanged: (v) => setSheet(() =>
                         v == true ? selected.add(f.id) : selected.remove(f.id)),
                     title: Text(f.name),
-                    secondary: AmoreTheme.avatar(f.name, size: 32),
+                    secondary: FriendAvatar(
+                        name: f.name, avatarFile: f.avatarFile, size: 32),
                   )),
               const SizedBox(height: 12),
               SizedBox(
@@ -286,7 +299,7 @@ class _ChatListPageState extends State<ChatListPage> {
     // 合并会话（好友 + 群），按 lastAt 排序
     final rows = <_SessionRow>[
       ...state.friends.map((f) => _SessionRow(
-            avatar: AmoreTheme.avatar(f.name),
+            avatar: FriendAvatar(name: f.name, avatarFile: f.avatarFile),
             name: f.name,
             last: f.lastMessage,
             ts: f.lastAt,

@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -48,7 +50,7 @@ class AmoreApp extends StatelessWidget {
   }
 }
 
-/// 底部导航栏：选中项展开显示文字标签，背景块滑到选中位置，其余项只保留图标
+/// 底部导航栏：贴底全宽 Liquid Glass（无悬浮留白）
 class _SlideTabBar extends StatelessWidget {
   final List<(IconData, IconData, String)> items;
   final int selectedIndex;
@@ -59,66 +61,85 @@ class _SlideTabBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 悬浮 Liquid Glass 导航栏：边缘留白 + 大圆角 + 磨砂 + 高光描边
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-        child: GlassContainer(
-          radius: 30,
-          blur: 26,
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          child: Row(
-            children: [
-              for (var i = 0; i < items.length; i++)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onTap(i);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 320),
-                      curve: Curves.easeOutCubic,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: i == selectedIndex
-                            ? AmoreBrand.accent.withOpacity(0.13)
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            i == selectedIndex ? items[i].$2 : items[i].$1,
-                            size: 22,
-                            color: i == selectedIndex
-                                ? AmoreBrand.accent
-                                : const Color(0xFF86868B),
-                          ),
-                          // 选中项展开显示文字（宽度动画）
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 320),
-                            curve: Curves.easeOutCubic,
-                            child: i == selectedIndex
-                                ? Padding(
-                                    padding: const EdgeInsets.only(left: 6),
-                                    child: Text(items[i].$3,
-                                        style: const TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: AmoreBrand.accent)),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
+    final p = AmoreTheme.pal(context);
+    final light = p.brightness == Brightness.light;
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 26, sigmaY: 26),
+        child: Container(
+          decoration: BoxDecoration(
+            color: light
+                ? Colors.white.withOpacity(0.80)
+                : const Color(0xFF101725).withOpacity(0.86),
+            border: Border(
+                top: BorderSide(
+                    color: light
+                        ? Colors.white.withOpacity(0.75)
+                        : Colors.white.withOpacity(0.08),
+                    width: 0.6)),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withOpacity(light ? 0.05 : 0.3),
+                  blurRadius: 18,
+                  offset: const Offset(0, -3)),
+            ],
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 56,
+              child: Row(
+                children: [
+                  for (var i = 0; i < items.length; i++)
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onTap(i);
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 260),
+                              curve: Curves.easeOutCubic,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 18, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: i == selectedIndex
+                                    ? AmoreBrand.accent.withOpacity(0.12)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                i == selectedIndex ? items[i].$2 : items[i].$1,
+                                size: 22,
+                                color: i == selectedIndex
+                                    ? AmoreBrand.accent
+                                    : p.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              items[i].$3,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: i == selectedIndex
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                color: i == selectedIndex
+                                    ? AmoreBrand.accent
+                                    : p.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),

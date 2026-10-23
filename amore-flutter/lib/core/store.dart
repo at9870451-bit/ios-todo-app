@@ -7,12 +7,20 @@ import 'models.dart';
 class AmoreStore {
   AmoreStore._();
 
+  /// 沙盒数据目录（启动时由 main 传入，头像等本机文件放这里）
+  static String dataDir = '';
+
   // ---- 初始化 ----
 
   /// 初始化 Core（传入沙盒数据目录），App 启动时调用一次
-  static void init(String dataDir) {
-    AmoreBridge.call('core.init', {'data_dir': dataDir});
+  static void init(String dir) {
+    dataDir = dir;
+    AmoreBridge.call('core.init', {'data_dir': dir});
   }
+
+  /// 沙盒内相对路径 → 绝对路径（头像等）
+  static String filePath(String relative) =>
+      relative.isEmpty ? '' : '$dataDir/$relative';
 
   // ---- 好友 ----
 

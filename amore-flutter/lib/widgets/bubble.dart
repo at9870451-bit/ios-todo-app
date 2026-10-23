@@ -10,6 +10,7 @@ import '../core/theme.dart';
 import '../state/app_state.dart';
 import 'game_card.dart';
 import '../core/group_games.dart';
+import 'friend_avatar.dart';
 import 'link_card.dart';
 import 'red_packet.dart';
 import 'voice_bubble.dart';
@@ -110,7 +111,10 @@ class MessageBubble extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             if (!mine) ...[
-              AmoreTheme.avatar(friend?.name ?? '?', size: 34),
+              FriendAvatar(
+                  name: friend?.name ?? '?',
+                  avatarFile: friend?.avatarFile ?? '',
+                  size: 34),
               const SizedBox(width: 8),
             ],
             Flexible(

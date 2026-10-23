@@ -11,6 +11,7 @@ import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 import '../widgets/bubble.dart';
+import '../widgets/friend_avatar.dart';
 
 class GroupChatPage extends StatefulWidget {
   final ChatGroup group;
@@ -232,7 +233,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
             ...members.map((m) => ListTile(
-                  leading: AmoreTheme.avatar(m.name, size: 38),
+                  leading: FriendAvatar(
+                      name: m.name, avatarFile: m.avatarFile, size: 38),
                   title: Text(m.name),
                   subtitle: Text(m.persona.isEmpty ? '（无人设）' : m.persona,
                       maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -283,7 +285,14 @@ class _GroupChatPageState extends State<GroupChatPage> {
                         padding: const EdgeInsets.only(bottom: 10),
                         child: Row(
                           children: [
-                            AmoreTheme.avatar(_typingName, size: 34),
+                            FriendAvatar(
+                                name: _typingName,
+                                avatarFile: _members
+                                    .where((f) => f.name == _typingName)
+                                    .firstOrNull
+                                    ?.avatarFile ??
+                                    '',
+                                size: 34),
                             const SizedBox(width: 8),
                             Text('$_typingName 正在输入…',
                                 style: const TextStyle(

@@ -12,6 +12,8 @@ import '../core/store.dart';
 import '../state/app_state.dart';
 import '../core/theme.dart';
 import '../widgets/bubble.dart';
+import '../widgets/friend_avatar.dart';
+import '../widgets/friend_edit_sheet.dart';
 import '../widgets/game_card.dart';
 
 class ChatRoomPage extends StatefulWidget {
@@ -95,7 +97,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             ListTile(
               leading: const Icon(Icons.edit_note_rounded),
               title: const Text('好友设置'),
-              onTap: () => Navigator.pop(context),
+              subtitle: const Text('头像 / 人设 / 模型 / 语音 / 长期记忆'),
+              onTap: () {
+                Navigator.pop(context);
+                _openSettings();
+              },
             ),
             ListTile(
               leading: const Icon(Icons.delete_sweep_rounded,
@@ -114,6 +120,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
   }
 
+  Future<void> _openSettings() async {
+    final saved = await FriendEditSheet.show(context, _friend);
+    if (!mounted) return;
+    if (saved) setState(() {}); // 名称/头像即时刷新
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,11 +133,20 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         centerTitle: false,
         title: Row(
           children: [
-            AmoreTheme.avatar(_friend.name, size: 34),
+            GestureDetector(
+              onTap: _openSettings,
+              child: FriendAvatar(
+                  name: _friend.name,
+                  avatarFile: _friend.avatarFile,
+                  size: 34),
+            ),
             const SizedBox(width: 10),
-            Text(_friend.name,
-                style: const TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w700)),
+            GestureDetector(
+              onTap: _openSettings,
+              child: Text(_friend.name,
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.w700)),
+            ),
           ],
         ),
         actions: [
