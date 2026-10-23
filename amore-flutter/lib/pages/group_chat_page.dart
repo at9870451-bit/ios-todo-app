@@ -276,6 +276,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
             children: [
               Expanded(
                 child: ListView.builder(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollCtl,
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                   itemCount: _messages.length + (_sending ? 1 : 0),

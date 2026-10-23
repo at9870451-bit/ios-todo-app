@@ -274,6 +274,8 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
             children: [
               Expanded(
                 child: ListView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollCtl,
                   padding: const EdgeInsets.symmetric(horizontal: 14),
                   children: [

@@ -128,6 +128,19 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 当前生效模型（好友专属 > 全局激活 > 第一个）
+    final providers = context.watch<AppState>().providers;
+    AIProvider? bound;
+    if (_friend.aiProviderId.isNotEmpty) {
+      bound = providers.where((p) => p.id == _friend.aiProviderId).firstOrNull;
+    }
+    bound ??= providers
+        .where((p) => p.id == AmoreStore.activeProviderId())
+        .firstOrNull;
+    bound ??= providers.firstOrNull;
+    final modelLabel = bound == null
+        ? '未配置模型'
+        : (bound.model.isEmpty ? bound.label : bound.model);
     return Scaffold(
       appBar: AppBar(
         centerTitle: false,
@@ -141,11 +154,26 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                   size: 34),
             ),
             const SizedBox(width: 10),
-            GestureDetector(
-              onTap: _openSettings,
-              child: Text(_friend.name,
-                  style: const TextStyle(
-                      fontSize: 17, fontWeight: FontWeight.w700)),
+            Expanded(
+              child: GestureDetector(
+                onTap: _openSettings,
+                behavior: HitTestBehavior.opaque,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_friend.name,
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w700)),
+                    Text(modelLabel,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 10.5,
+                            color: AmoreTheme.textSecondary)),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -164,6 +192,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             children: [
               Expanded(
                 child: ListView.builder(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   controller: _scrollCtl,
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                   itemCount: _messages.length + (_sending ? 1 : 0),

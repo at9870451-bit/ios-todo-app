@@ -42,6 +42,12 @@ class AmoreApp extends StatelessWidget {
             theme: AmoreTheme.lightWith(acc),
             darkTheme: AmoreTheme.darkWith(acc),
             themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
+            // 点击屏幕空白处自动收起键盘
+            builder: (context, child) => GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: child,
+            ),
             home: const RootGate(),
           );
         },

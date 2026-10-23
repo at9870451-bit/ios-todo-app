@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../pages/providers_page.dart';
 import '../state/app_state.dart';
 import 'friend_avatar.dart';
 
@@ -124,6 +125,16 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
     ).whenComplete(() => _pickerOpen = false);
   }
 
+  void _openProviders() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const ProvidersPage()))
+        .then((_) {
+      if (!mounted) return;
+      context.read<AppState>().refreshProviders();
+      setState(() {});
+    });
+  }
+
   void _save() {
     final name = _nameCtl.text.trim();
     if (name.isEmpty) {
@@ -131,6 +142,9 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
           .showSnackBar(const SnackBar(content: Text('名称不能为空')));
       return;
     }
+    final providers = context.read<AppState>().providers;
+    final pid =
+        providers.any((p) => p.id == _providerId) ? _providerId : '';
     _f
       ..name = name
       ..age = _ageCtl.text.trim()
@@ -139,7 +153,7 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
       ..avatarFile = _avatarFile
       ..voiceEngine = _voiceEngine
       ..voiceId = _voiceIdCtl.text.trim()
-      ..aiProviderId = _providerId
+      ..aiProviderId = pid
       ..memory = List.of(_memory);
     AmoreStore.saveFriend(_f);
     context.read<AppState>().refreshSocial();
@@ -149,10 +163,16 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
   @override
   Widget build(BuildContext context) {
     final providers = context.watch<AppState>().providers;
+    // 绑定的配置若已被删除，回落到「跟随全局」，避免下拉断言
+    final modelValue =
+        _providerId.isEmpty || providers.any((p) => p.id == _providerId)
+            ? _providerId
+            : '';
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 4, 20, 16 + bottomInset),
       child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -242,11 +262,21 @@ class _FriendEditSheetState extends State<FriendEditSheet> {
                   const InputDecoration(hintText: '人设提示词（TA 的性格、身份、说话方式）'),
             ),
             const SizedBox(height: 12),
-            // 模型绑定
+            // 模型绑定：选择已添加的 AI 模型配置
             DropdownButtonFormField<String>(
-              initialValue: _providerId,
+              initialValue: modelValue,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: '使用模型'),
+              decoration: InputDecoration(
+                labelText: '使用模型',
+                helperText: providers.isEmpty
+                    ? '还没有模型配置，点右侧「去添加」'
+                    : '已添加 ${providers.length} 个配置，可单独指定',
+                suffixIcon: IconButton(
+                  tooltip: '管理模型配置',
+                  icon: const Icon(Icons.settings_rounded, size: 18),
+                  onPressed: _openProviders,
+                ),
+              ),
               items: [
                 const DropdownMenuItem(value: '', child: Text('跟随全局模型')),
                 ...providers.map((p) => DropdownMenuItem(
