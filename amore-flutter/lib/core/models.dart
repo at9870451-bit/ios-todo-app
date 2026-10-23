@@ -17,6 +17,7 @@ class ChatFriend {
   String name;
   String avatarFile; // Documents 内文件名（本期占位，不加载图片）
   String persona; // 人设提示词
+  String desc; // 一句话简介（与智能体共用同一套表单字段）
   String gender; // male / female / ""
   String age;
   String sessionId; // 服务端会话 id
@@ -34,6 +35,7 @@ class ChatFriend {
     this.name = 'Amore',
     this.avatarFile = '',
     this.persona = '',
+    this.desc = '',
     this.gender = '',
     this.age = '',
     this.sessionId = '',
@@ -52,6 +54,7 @@ class ChatFriend {
         name: j['name']?.toString() ?? 'Amore',
         avatarFile: j['avatar_file']?.toString() ?? '',
         persona: j['persona']?.toString() ?? '',
+        desc: j['desc']?.toString() ?? '',
         gender: j['gender']?.toString() ?? '',
         age: j['age']?.toString() ?? '',
         sessionId: j['session_id']?.toString() ?? '',
@@ -70,6 +73,7 @@ class ChatFriend {
         'name': name,
         'avatar_file': avatarFile,
         'persona': persona,
+        'desc': desc,
         'gender': gender,
         'age': age,
         'session_id': sessionId,
@@ -229,6 +233,8 @@ class AgentTemplate {
   String voiceEngine;
   String voiceId;
   String modelId;
+  String avatarFile;
+  List<String> memory;
   int sort;
   bool enabled;
 
@@ -242,9 +248,11 @@ class AgentTemplate {
     this.voiceEngine = '',
     this.voiceId = '',
     this.modelId = '',
+    this.avatarFile = '',
+    List<String>? memory,
     this.sort = 0,
     this.enabled = true,
-  });
+  }) : memory = memory ?? [];
 
   factory AgentTemplate.fromJson(Map<String, dynamic> j) => AgentTemplate(
         id: j['id']?.toString() ?? '',
@@ -256,6 +264,8 @@ class AgentTemplate {
         voiceEngine: j['voice_engine']?.toString() ?? '',
         voiceId: j['voice_id']?.toString() ?? '',
         modelId: j['model_id']?.toString() ?? '',
+        avatarFile: j['avatar_file']?.toString() ?? '',
+        memory: (j['memory'] as List?)?.map((e) => e.toString()).toList() ?? [],
         sort: (j['sort'] as num?)?.toInt() ?? 0,
         enabled: j['enabled'] as bool? ?? true,
       );
@@ -270,6 +280,8 @@ class AgentTemplate {
         'voice_engine': voiceEngine,
         'voice_id': voiceId,
         'model_id': modelId,
+        'avatar_file': avatarFile,
+        'memory': memory,
         'sort': sort,
         'enabled': enabled,
       };

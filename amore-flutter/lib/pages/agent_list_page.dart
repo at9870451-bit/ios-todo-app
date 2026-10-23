@@ -6,6 +6,8 @@ import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
+import '../widgets/friend_avatar.dart';
+import '../widgets/persona_form.dart';
 
 class AgentListPage extends StatefulWidget {
   const AgentListPage({super.key});
@@ -60,11 +62,14 @@ class _AgentListPageState extends State<AgentListPage> {
                   final f = ChatFriend(
                     name: nameCtl.text.trim().isEmpty ? a.name : nameCtl.text.trim(),
                     persona: a.persona,
+                    desc: a.desc,
                     gender: a.gender,
                     age: a.age,
                     voiceEngine: a.voiceEngine,
                     voiceId: a.voiceId,
                     aiProviderId: a.modelId,
+                    avatarFile: a.avatarFile,
+                    memory: List.of(a.memory),
                     sort: context.read<AppState>().friends.length,
                   );
                   AmoreStore.saveFriend(f);
@@ -102,7 +107,7 @@ class _AgentListPageState extends State<AgentListPage> {
                         children: [
                           Row(
                             children: [
-                              AmoreTheme.avatar(a.name, size: 40),
+                              FriendAvatar(name: a.name, avatarFile: a.avatarFile, size: 40),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
@@ -189,143 +194,52 @@ class AgentEditorSheet extends StatefulWidget {
 }
 
 class _AgentEditorSheetState extends State<AgentEditorSheet> {
-  late final AgentTemplate _a;
-  final _nameCtl = TextEditingController();
-  final _descCtl = TextEditingController();
-  final _personaCtl = TextEditingController();
-  final _ageCtl = TextEditingController();
-  final _voiceIdCtl = TextEditingController();
+  late final AgentTemplate _a =
+      widget.existing ?? AgentTemplate(name: '新模板', desc: '');
+  late final PersonaDraft _draft = PersonaDraft.fromAgent(_a);
 
-  @override
-  void initState() {
-    super.initState();
-    _a = widget.existing ?? AgentTemplate(name: '新模板', desc: '');
-    _nameCtl.text = _a.name;
-    _descCtl.text = _a.desc;
-    _personaCtl.text = _a.persona;
-    _ageCtl.text = _a.age;
-    _voiceIdCtl.text = _a.voiceId;
-  }
-
-  @override
-  void dispose() {
-    _nameCtl.dispose();
-    _descCtl.dispose();
-    _personaCtl.dispose();
-    _ageCtl.dispose();
-    _voiceIdCtl.dispose();
-    super.dispose();
-  }
-
-  /// 绑定值失效时回落「跟随全局」，避免下拉断言
-  String _modelValue(BuildContext context) {
-    final providers = context.watch<AppState>().providers;
-    if (_a.modelId.isEmpty) return '';
-    return providers.any((p) => p.id == _a.modelId) ? _a.modelId : '';
+  void _save() {
+    if (_draft.name.trim().isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('名称不能为空')));
+      return;
+    }
+    final providers = context.read<AppState>().providers;
+    if (_draft.providerId.isNotEmpty &&
+        !providers.any((p) => p.id == _draft.providerId)) {
+      _draft.providerId = '';
+    }
+    _draft.applyToAgent(_a);
+    if (_a.id.isEmpty) _a.id = _draft.id;
+    AmoreStore.saveAgent(_a);
+    widget.onSaved();
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.existing == null ? '新建模板' : '编辑「${_a.name}」',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            Text(widget.existing == null ? '新建智能体' : '编辑「${_a.name}」',
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            const Text('与「添加好友」「好友设置」使用同一套人设表单',
+                style: TextStyle(fontSize: 11.5, color: AmoreTheme.textFaint)),
             const SizedBox(height: 14),
-            TextField(
-                controller: _nameCtl,
-                onChanged: (v) => _a.name = v,
-                decoration: const InputDecoration(hintText: '名称')),
-            const SizedBox(height: 10),
-            TextField(
-                controller: _descCtl,
-                onChanged: (v) => _a.desc = v,
-                decoration: const InputDecoration(hintText: '一句话描述')),
-            const SizedBox(height: 10),
-            TextField(
-                controller: _personaCtl,
-                onChanged: (v) => _a.persona = v,
-                maxLines: 4,
-                decoration: const InputDecoration(hintText: '人设提示词')),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'female', label: Text('女')),
-                      ButtonSegment(value: 'male', label: Text('男')),
-                      ButtonSegment(value: '', label: Text('保密')),
-                    ],
-                    selected: {_a.gender},
-                    onSelectionChanged: (s) => setState(() => _a.gender = s.first),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 90,
-                  child: TextField(
-                      controller: _ageCtl,
-                      onChanged: (v) => _a.age = v,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(hintText: '年龄')),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _a.voiceEngine.isEmpty ? 'cloud_sf' : _a.voiceEngine,
-              decoration: const InputDecoration(labelText: '语音引擎'),
-              items: const [
-                DropdownMenuItem(value: 'cloud_sf', child: Text('硅基流动 CosyVoice')),
-                DropdownMenuItem(value: 'cloud_doubao', child: Text('豆包 TTS')),
-                DropdownMenuItem(value: 'model', child: Text('OpenAI 风格')),
-                DropdownMenuItem(value: 'server', child: Text('服务端 TTS')),
-              ],
-              onChanged: (v) => setState(() => _a.voiceEngine = v ?? 'cloud_sf'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-                controller: _voiceIdCtl,
-                onChanged: (v) => _a.voiceId = v,
-                decoration: const InputDecoration(hintText: '音色 ID（如 female-yujie）')),
-            const SizedBox(height: 10),
-            // 使用模型（与好友设置一致；导入好友时带入）
-            DropdownButtonFormField<String>(
-              initialValue: _modelValue(context),
-              isExpanded: true,
-              decoration: const InputDecoration(labelText: '使用模型'),
-              items: [
-                const DropdownMenuItem(value: '', child: Text('跟随全局模型')),
-                ...context.watch<AppState>().providers.map((p) => DropdownMenuItem(
-                      value: p.id,
-                      child: Text(
-                        '${p.label}${p.model.isEmpty ? '' : ' · ${p.model}'}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    )),
-              ],
-              onChanged: (v) => setState(() => _a.modelId = v ?? ''),
-            ),
-            const SizedBox(height: 18),
+            PersonaFormFields(draft: _draft),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () {
-                  _a.name = _nameCtl.text.trim();
-                  _a.desc = _descCtl.text.trim();
-                  _a.persona = _personaCtl.text.trim();
-                  _a.age = _ageCtl.text.trim();
-                  _a.voiceId = _voiceIdCtl.text.trim();
-                  AmoreStore.saveAgent(_a);
-                  widget.onSaved();
-                  Navigator.pop(context);
-                },
+                onPressed: _save,
                 child: const Text('保存'),
               ),
             ),
