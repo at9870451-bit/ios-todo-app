@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../core/model_fetch.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
@@ -205,12 +206,60 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   final _searchCtl = TextEditingController();
   List<String> _modelCandidates = [];
   String _modelQuery = '';
+  bool _fetching = false;
 
   @override
   void initState() {
     super.initState();
     _p = widget.existing ?? AIProvider(label: '新配置');
     _modelCtl.text = _p.model;
+    // 预填：内置目录 + 上次从接口读取的缓存
+    _modelCandidates = _mergedCandidates();
+  }
+
+  /// 上次从接口读取并缓存的模型（换厂商自动失效）
+  List<String> _cachedModels() {
+    final raw = AmoreStore.getConfig('models_cache_${_p.vendor}') ?? '';
+    return raw
+        .split('\n')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _mergedCandidates() {
+    final set = <String>{
+      ...AmoreStore.modelsOf(_p.vendor),
+      ..._cachedModels(),
+    };
+    return set.toList()..sort();
+  }
+
+  /// 从配置的 API 接口读取模型列表（OpenAI /v1/models 等）
+  Future<void> _fetchApi() async {
+    if (_fetching) return;
+    setState(() => _fetching = true);
+    try {
+      final list = await ModelFetch.fetch(_p);
+      if (!mounted) return;
+      AmoreStore.setConfig(
+          'models_cache_${_p.vendor}', list.take(800).join('\n'));
+      setState(() {
+        _modelCandidates = list;
+        _modelQuery = '';
+        _searchCtl.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('已从接口读取 ${list.length} 个模型')));
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('读取失败：$msg\n请检查 Base URL 与 API Key'),
+          duration: const Duration(seconds: 4)));
+    } finally {
+      if (mounted) setState(() => _fetching = false);
+    }
   }
 
   @override
@@ -231,7 +280,7 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
           _p.model = v.model;
           _modelCtl.text = v.model;
         }
-        _modelCandidates = AmoreStore.modelsOf(key);
+        _modelCandidates = _mergedCandidates();
       }
     });
   }
@@ -335,15 +384,36 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                 OutlinedButton(
                   onPressed: () {
                     setState(() {
-                      _modelCandidates = AmoreStore.modelsOf(_p.vendor);
+                      _modelCandidates = _mergedCandidates();
                       if (_modelCandidates.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text('厂商目录没有 ${_p.vendor} 的预置模型，请手输')));
+                            content: Text(
+                                '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
                       }
                     });
                   },
                   child: const Text('选模型'),
                 ),
+              ],
+            ),
+            // 从接口读取（读取 Base URL 指向的实际模型列表）
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _fetching ? null : _fetchApi,
+                  icon: _fetching
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cloud_download_outlined, size: 17),
+                  label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
+                ),
+                const Spacer(),
+                if (_modelCandidates.isNotEmpty)
+                  Text('${_modelCandidates.length} 个可选',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AmoreTheme.textFaint)),
               ],
             ),
             // 模型选择列表
