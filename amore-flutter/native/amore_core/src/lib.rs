@@ -23,7 +23,7 @@ use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use serde_json::Value;
 
-use jsonv::{obj, s};
+use jsonv::{arr, obj, s};
 
 fn ok(data: Value) -> String {
     serde_json::json!({ "ok": true, "data": data }).to_string()
