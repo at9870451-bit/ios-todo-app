@@ -15,6 +15,7 @@ import '../core/models.dart';
 import '../core/store.dart';
 import '../state/app_state.dart';
 import '../core/theme.dart';
+import '../pages/rootfs_page.dart';
 import '../widgets/bubble.dart';
 import '../widgets/attachment_card.dart';
 import '../widgets/chat_background.dart';
@@ -209,6 +210,11 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ],
         ),
         actions: [
+          IconButton(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RootfsPage())),
+              icon: const Icon(Icons.storage_rounded),
+              tooltip: 'Rootfs 管理'),
           IconButton(
               onPressed: _menu, icon: const Icon(Icons.more_horiz_rounded)),
         ],

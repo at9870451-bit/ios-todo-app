@@ -16,6 +16,7 @@ import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
+import '../pages/rootfs_page.dart';
 import '../widgets/bubble.dart';
 import '../widgets/friend_avatar.dart';
 
@@ -302,6 +303,11 @@ class _GroupChatPageState extends State<GroupChatPage> {
           ],
         ),
         actions: [
+          IconButton(
+              onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const RootfsPage())),
+              icon: const Icon(Icons.storage_rounded),
+              tooltip: 'Rootfs 管理'),
           IconButton(onPressed: _groupMenu, icon: const Icon(Icons.more_horiz_rounded)),
         ],
       ),

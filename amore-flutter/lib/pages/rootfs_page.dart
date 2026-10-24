@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import '../core/mirrors.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
 
@@ -196,6 +197,31 @@ class _RootfsPageState extends State<RootfsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    section('镜像源（沙盒包管理）'),
+                    Container(
+                      decoration: AmoreTheme.cardBox(),
+                      child: Column(
+                        children: [
+                          _mirrorRow('Alpine APK', Mirrors.apkPresets, Mirrors.apk,
+                              Mirrors.apkLabel(), 'rootfs.mirror_apk',
+                              'rootfs.mirror_apk_custom'),
+                          const Divider(height: 1),
+                          _mirrorRow('Python pip', Mirrors.pipPresets, Mirrors.pip,
+                              Mirrors.pipLabel(), 'rootfs.mirror_pip',
+                              'rootfs.mirror_pip_custom'),
+                          const Divider(height: 1),
+                          _mirrorRow('Node.js npm', Mirrors.npmPresets, Mirrors.npm,
+                              Mirrors.npmLabel(), 'rootfs.mirror_npm',
+                              'rootfs.mirror_npm_custom'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '镜像源用于沙盒内安装软件包：apk（Alpine 包）、pip（Python 包）、npm（Node 包）。选择后立即生效，终端/编程环境安装包时使用。',
+                      style: const TextStyle(
+                          fontSize: 11, color: AmoreTheme.textFaint)),
+                    const SizedBox(height: 16),
                     section('按类清理'),
                     for (final (name, sz, dir, desc) in items)
                       Container(
@@ -288,6 +314,85 @@ class _RootfsPageState extends State<RootfsPage> {
             child: const Text('清理'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _mirrorRow(String title, List<MirrorPreset> presets, String current,
+      String currentLabel, String key, String customKey) {
+    return ListTile(
+      title: Text(title, style: const TextStyle(fontSize: 14.5)),
+      subtitle: Text(
+        current.isEmpty ? '未配置（默认源）' : currentLabel,
+        style: const TextStyle(fontSize: 11.5),
+      ),
+      trailing: TextButton(
+        onPressed: () => _pickMirror(title, presets, key, customKey),
+        child: const Text('选择'),
+      ),
+    );
+  }
+
+  void _pickMirror(String title, List<MirrorPreset> presets, String key,
+      String customKey) {
+    final customCtl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: Text('$title 镜像源'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final p in presets)
+                  ListTile(
+                    dense: true,
+                    title: Text(p.name, style: const TextStyle(fontSize: 13)),
+                    subtitle: Text(p.url,
+                        style: const TextStyle(fontSize: 10.5)),
+                    trailing: const Icon(Icons.check_circle_outline_rounded,
+                        size: 16, color: AmoreTheme.textFaint),
+                    onTap: () {
+                      Mirrors.select(key, customKey, p.url);
+                      Navigator.pop(ctx);
+                      _scan();
+                      setState(() {});
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('✓ $title 已切换到 ${p.name}')));
+                    },
+                  ),
+                const Divider(height: 1),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: TextField(
+                    controller: customCtl,
+                    decoration: const InputDecoration(
+                        labelText: '自定义镜像 URL',
+                        hintText: 'https://mirrors.example.com/…'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: () {
+                final url = customCtl.text.trim();
+                if (url.isEmpty) return;
+                Mirrors.selectCustom(key, customKey, url);
+                Navigator.pop(ctx);
+                _scan();
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('✓ $title 已使用自定义镜像')));
+              },
+              child: const Text('应用自定义'),
+            ),
+          ],
+        ),
       ),
     );
   }

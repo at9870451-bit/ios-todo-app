@@ -20,6 +20,7 @@ import '../core/store.dart';
 import '../core/skill_pack.dart';
 import '../core/theme.dart';
 import '../widgets/attachment_card.dart';
+import '../pages/rootfs_page.dart';
 import '../widgets/chat_background.dart';
 import '../ui/effects.dart';
 import '../state/app_state.dart';
@@ -288,6 +289,12 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
               icon: Icons.question_answer_rounded,
               iconColor: AmoreBrand.brandBlue,
               onTap: _menu),
+          const SizedBox(width: 4),
+          GlassIconButton(
+              icon: Icons.storage_rounded,
+              iconColor: AmoreBrand.accent,
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const RootfsPage()))),
           const SizedBox(width: 8),
         ],
       ),
