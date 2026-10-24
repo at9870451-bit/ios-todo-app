@@ -117,6 +117,13 @@ class AmoreStore {
               ?.toInt() ??
           0;
 
+  /// 删除单条历史（按消息 id）；id 空时删最后一条
+  static int removeHistoryItem(String key, int id) =>
+      (AmoreBridge.call('history.remove', {'key': key, 'id': id})['count']
+                  as num?)
+              ?.toInt() ??
+          0;
+
   static int clearHistory(String key) =>
       (AmoreBridge.call('history.clear', {'key': key})['count'] as num?)
               ?.toInt() ??

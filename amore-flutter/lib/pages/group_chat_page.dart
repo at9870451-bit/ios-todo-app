@@ -366,6 +366,10 @@ class _GroupChatPageState extends State<GroupChatPage> {
                       mine: m.role == 'user',
                       friend: _members.isEmpty ? null : _members.first,
                       plain: true,
+                      onChanged: () {
+                        if (mounted) _reload();
+                      },
+                      historyKey: 'group.${widget.group.id}',
                     );
                   },
                 ),

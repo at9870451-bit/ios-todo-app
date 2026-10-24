@@ -416,6 +416,32 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             },
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
+        "history.remove" => Some(with(
+            |st| {
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
+                let id = p.get("id").and_then(|v| v.as_u64());
+                let f = history_file(&st.dir, key);
+                let mut msgs = read_json(&f)
+                    .and_then(|j| j.as_array().cloned())
+                    .unwrap_or_default();
+                let before = msgs.len();
+                if let Some(target) = id {
+                    msgs.retain(|m| {
+                        m.get("id")
+                            .and_then(|v| v.as_u64())
+                            .map(|i| i != target)
+                            .unwrap_or(true)
+                    });
+                } else {
+                    // 无 id：删除最后一条
+                    msgs.pop();
+                }
+                let removed = before - msgs.len();
+                let _ = write_json(&f, &arr(msgs));
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(removed)))])
+            },
+            obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
+        )),
         "history.count" => Some(with(
             |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");

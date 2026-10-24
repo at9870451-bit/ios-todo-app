@@ -256,7 +256,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
                       );
                     }
                     return MessageBubble(
-                        msg: m, mine: m.role == 'user', friend: _friend);
+                        msg: m,
+                        mine: m.role == 'user',
+                        friend: _friend,
+                        onChanged: () {
+                          if (mounted) _reload();
+                        });
                   },
                 ),
               ),

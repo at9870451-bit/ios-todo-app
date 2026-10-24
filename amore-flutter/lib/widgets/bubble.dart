@@ -24,6 +24,7 @@ class MessageBubble extends StatelessWidget {
   final bool mine;
   final bool plain; // 群聊里的 AI 语音条 plain 模式
   final VoidCallback? onChanged; // 删除/记忆后通知刷新
+  final String? historyKey; // 会话历史 key（覆盖默认 friend/single 推断）
 
   const MessageBubble({
     super.key,
@@ -32,7 +33,12 @@ class MessageBubble extends StatelessWidget {
     this.friend,
     this.plain = false,
     this.onChanged,
+    this.historyKey,
   });
+
+  /// 当前会话历史 key（好友聊天用 friend.<id>；单聊/群聊由页面传 onChanged 刷新）
+  String get _historyKey =>
+      historyKey ?? (friend == null ? 'single' : 'friend.${friend!.id}');
 
   String get _timeText {
     final d = DateTime.fromMillisecondsSinceEpoch((msg.ts * 1000).round());
@@ -83,8 +89,9 @@ class MessageBubble extends StatelessWidget {
                   style: TextStyle(color: AmoreTheme.danger)),
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('单条删除即将支持，可清空会话')));
+                // 真实删除单条历史（Rust history.remove）
+                AmoreStore.removeHistoryItem(_historyKey, msg.id);
+                onChanged?.call();
               },
             ),
           ],
