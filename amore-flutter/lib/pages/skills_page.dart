@@ -185,7 +185,7 @@ class _SkillsPageState extends State<SkillsPage> {
           label: const Text('本地新建工作包'),
         ),
         TextButton.icon(
-          onPressed: _importPack(null),
+          onPressed: () => _importPack(),
           icon: const Icon(Icons.download_rounded, size: 15),
           label: const Text('从剪贴板导入工作包'),
         ),
