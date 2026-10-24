@@ -430,9 +430,18 @@ extension _FirstOrNull<T> on Iterable<T> {
       parts.add(
           '【技能调用】需要下列能力时，按工具格式调用：\n<tool name="skill:技能id">\n<param name="参数名">值</param>\n</tool>\n可用技能：\n$lines');
     }
-    // 本地编程能力（run_code：数学表达式/base64/URL/JSON/正则/文本统计）
+    // 本地编程 + AOJIT 镜像执行（用户提示词命中计算/转换需求时自动调用）
     parts.add(
-        '【本地编程】你可以调用 run_code 完成计算与数据处理：\n<tool name="run_code">\n<param name="op">eval|base64|url|json|regex|stats</param>\n<param name="input">输入内容</param>\n<param name="arg">可选：base64 的 decode、regex 的 pattern::replacement</param>\n</tool>\n- eval：数学表达式，如 12*(3+4)^2，支持 sin/cos/sqrt/log/min/max 等函数\n- base64：编解码；url：URL 编解码；json：JSON 格式化；regex：正则替换；stats：文本统计');
+        '【本地编程 / AOJIT 自动调用规则】只要用户请求涉及以下任何精确计算或数据处理，你必须调用 run_code 或 skill 执行，严禁心算或编造结果：\n'
+        '1. 数学计算（四则/幂/三角函数/取整/统计）：\n<tool name="run_code"><param name="op">eval</param><param name="input">12*(3+4)^2</param></tool>\n'
+        '2. 哈希/加密（sha256、md5、sha1、hmac、blake2）：<param name="op">aojit</param><param name="input">openssl sha256 任意文本</param> 或 <param name="op">aojit</param><param name="input">blake2 abc</param>\n'
+        '3. 压缩解压（zlib）：<param name="op">aojit</param><param name="input">zlib compress 文本</param>\n'
+        '4. 编码转换（base64/hex/URL、crc32）：<param name="op">aojit</param><param name="input">b64 hex abc</param> 或 <param name="op">base64</param><param name="input">文本</param>\n'
+        '5. 正则/文本统计（statistics、字数、匹配）：<param name="op">stats</param> 或 <param name="op">regex</param><param name="arg">pattern::replacement</param>\n'
+        '6. 日期时间（now/parse/格式化）：<param name="op">aojit</param><param name="input">datetime now</param>\n'
+        '7. 二进制打包（struct pack）：<param name="op">aojit</param><param name="input">struct pack I 123</param>\n'
+        '8. 其他精确需求（SQLite 存取、网络/随机器说明）：<param name="op">aojit</param><param name="input">sqlite set key value</param>；随机数可用本地工具 random\n'
+        'AOJIT 所有操作都可经 run_code 的 aojit 操作或编程执行技能（skill:skill_run_code）调用，组件有：libc/math/python/numpy/openssl/hashlib/blake2/zlib/pcre/datetime/binascii/struct/socket/select/sqlite/busybox。');
     if (mcpLines.isNotEmpty) {
       parts.add(
           '【外部工具（MCP）】你可以调用以下外部服务工具，调用格式与本地工具一致：\n<tool name="mcp:服务名:工具名">\n<param name="参数名">值</param>\n</tool>\n可用工具：\n${mcpLines.join('\n')}');
@@ -531,6 +540,31 @@ extension _FirstOrNull<T> on Iterable<T> {
       final tool = h.substring(5);
       final r = AmoreStore.execTool(tool, params);
       return (r.status, r.content);
+    }
+    if (h == 'script:code') {
+      // 编程执行技能：op/input/arg 参数 → 本地代码引擎 / AOJIT 镜像
+      final op = (params['op'] ?? 'eval').trim();
+      final input = (params['input'] ?? '').trim();
+      final arg = (params['arg'] ?? '').trim();
+      try {
+        if (op == 'aojit') {
+          final parts = input
+              .split(RegExp(r'\s+'))
+              .where((e) => e.isNotEmpty)
+              .toList();
+          if (parts.isEmpty) {
+            return ('error', 'aojit 用法：<组件> <操作> <参数...>');
+          }
+          final comp = parts[0];
+          final op2 = parts.length > 1 ? parts[1] : '';
+          final rest = parts.length > 2 ? parts.sublist(2) : <String>[];
+          return ('ok', AojitRuntime.run(comp, op2, rest));
+        }
+        final result = CodeEngine.run(op, input, arg.isEmpty ? null : arg);
+        return ('ok', result);
+      } catch (e) {
+        return ('error', e.toString().replaceFirst('Exception: ', ''));
+      }
     }
     if (h == 'script:textstats') {
       final text = params['text'] ?? '';
