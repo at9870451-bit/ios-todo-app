@@ -84,17 +84,18 @@ class _VoiceBubbleState extends State<VoiceBubble> {
         if (p == null) {
           throw Exception('未配置模型供应商，无法使用 model 语音引擎');
         }
-        var base = p.baseURL.trim();
+        final prov = p; // 闭包内引用（避免可空 promotion 问题）
+        var base = prov.baseURL.trim();
         if (base.isEmpty) {
-          base = AmoreStore.vendors().where((v) => v.key == p.vendor).map((v) => v.base).firstOrNull ?? '';
+          base = AmoreStore.vendors().where((v) => v.key == prov.vendor).map((v) => v.base).firstOrNull ?? '';
         }
         if (base.endsWith('/')) base = base.substring(0, base.length - 1);
         // 语音类型配置：用其模型名与音色；通用配置给默认 tts 模型
-        final isTtsCfg = p.kind == 'tts';
+        final isTtsCfg = prov.kind == 'tts';
         body['model'] =
-            (isTtsCfg && p.model.isNotEmpty) ? p.model : 'tts-1';
-        if (voiceId.isEmpty && isTtsCfg && p.ttsVoice.isNotEmpty) {
-          body['voice'] = p.ttsVoice;
+            (isTtsCfg && prov.model.isNotEmpty) ? prov.model : 'tts-1';
+        if (voiceId.isEmpty && isTtsCfg && prov.ttsVoice.isNotEmpty) {
+          body['voice'] = prov.ttsVoice;
         }
         resp = await dio.post<List<int>>('$base/audio/speech',
             data: body, options: Options(headers: headers));
