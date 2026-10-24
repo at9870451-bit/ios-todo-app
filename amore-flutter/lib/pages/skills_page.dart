@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
+
 import 'package:flutter/services.dart';
 
 import '../core/mcp_client.dart';
@@ -184,10 +187,25 @@ class _SkillsPageState extends State<SkillsPage> {
           icon: const Icon(Icons.add_task_rounded, size: 18),
           label: const Text('本地新建工作包'),
         ),
-        TextButton.icon(
-          onPressed: () => _importPack(),
-          icon: const Icon(Icons.download_rounded, size: 15),
-          label: const Text('从剪贴板导入工作包'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: _importFromFile,
+              icon: const Icon(Icons.folder_open_rounded, size: 15),
+              label: const Text('本地文件'),
+            ),
+            TextButton.icon(
+              onPressed: _importFromUrl,
+              icon: const Icon(Icons.link_rounded, size: 15),
+              label: const Text('URL'),
+            ),
+            TextButton.icon(
+              onPressed: () => _importPack(),
+              icon: const Icon(Icons.content_paste_rounded, size: 15),
+              label: const Text('剪贴板'),
+            ),
+          ],
         ),
       ],
     );
@@ -720,29 +738,111 @@ class _SkillsPageState extends State<SkillsPage> {
           const SnackBar(content: Text('剪贴板为空，请先复制 manifest JSON')));
       return;
     }
+    _importParsed(raw);
+  }
+
+  // 本地文件导入（.json manifest / SkillPack 导出文件）
+  Future<void> _importFromFile() async {
+    final res = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      withData: true,
+    );
+    if (res == null || res.files.isEmpty) return;
+    final bytes = res.files.single.bytes;
+    if (bytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法读取文件内容（未获取到数据）')));
+      return;
+    }
+    _importParsed(utf8.decode(bytes, allowMalformed: true).trim());
+  }
+
+  // URL 导入（下载 manifest JSON）
+  Future<void> _importFromUrl() async {
+    final ctl = TextEditingController();
+    final url = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('URL 导入'),
+        content: TextField(
+          controller: ctl,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(
+              hintText: 'https://example.com/workflow.json'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctl.text), child: const Text('下载导入')),
+        ],
+      ),
+    );
+    if (url == null || url.trim().isEmpty) return;
     try {
-      final Map<String, dynamic> m = Map.from(jsonDecode(raw) as Map);
-      final steps = (m['steps'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
-      if (steps.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('manifest 缺少 steps，导入失败')));
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      ));
+      final resp = await dio.get<String>(url.trim());
+      _importParsed(resp.data?.trim() ?? '');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFFFF3B30),
+          content: Text('下载失败：${e.toString().replaceFirst('Exception: ', '')}')));
+    }
+  }
+
+  // 统一解析导入（兼容 SkillPack 导出格式 与 工作包 manifest 格式）
+  void _importParsed(String raw) {
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('内容为空，导入失败')));
+      return;
+    }
+    try {
+      final obj = jsonDecode(raw);
+      if (obj is! Map) {
+        throw Exception('JSON 应为对象（manifest 或 SkillPack 导出）');
+      }
+      final m = Map<String, dynamic>.from(obj);
+      final all = SkillCatalog.load();
+
+      // SkillPack 导出格式（含 category）
+      if ((m['category'] as String?)?.isNotEmpty == true) {
+        final pack = SkillPack.fromJson(m);
+        if (pack.name.isEmpty) throw Exception('缺少 name');
+        pack.id = '${pack.category}_${DateTime.now().millisecondsSinceEpoch}';
+        pack.builtin = false; // 导入的一律视为自定义
+        all.add(pack);
+        SkillCatalog.saveCustom(all);
+        SkillCatalog.setEnabled(pack.id, true);
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('✓ 「${pack.name}」已导入（${pack.category == 'plugin' ? '插件' : '技能'}）')));
         return;
       }
-      final all = SkillCatalog.load();
+
+      // 工作包 manifest 格式（name + steps）
+      final steps = (m['steps'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
+      if (steps.isEmpty) throw Exception('manifest 缺少 steps');
       all.add(SkillPack(
         id: 'wf_${DateTime.now().millisecondsSinceEpoch}',
         name: (m['name'] ?? '导入工作包').toString(),
-        desc: '从 manifest 导入',
+        desc: (m['desc'] ?? '从文件/URL 导入').toString(),
         category: 'workflow',
         manifest: jsonEncode(m),
         steps: steps,
       ));
       SkillCatalog.saveCustom(all);
+      SkillCatalog.setEnabled(all.last.id, true);
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('✓ 工作包已导入（可启用并运行）')));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFFFF3B30),
           content: Text('导入失败：${e.toString().replaceFirst('Exception: ', '')}')));
     }
   }
