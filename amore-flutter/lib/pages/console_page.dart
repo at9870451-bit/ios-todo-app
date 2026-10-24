@@ -205,7 +205,7 @@ class _ConsolePageState extends State<ConsolePage> {
         if (expr.isEmpty) {
           _append('用法：eval <表达式>，如 eval 12*(3+4)^2', kind: _LineKind.error);
         } else {
-          _append('$expr = ${CodeEngine.evalFriendly(expr)}', kind: _LineKind.ok);
+          _append('$expr = ${CodeEngine.evalFriendly(expr)}', kind: _LineKind.info);
         }
       case 'code':
         final rest = raw.substring(4).trim();
@@ -216,7 +216,7 @@ class _ConsolePageState extends State<ConsolePage> {
           _append('用法：code <op> <内容>，op ∈ eval/base64/url/json/regex/stats', kind: _LineKind.error);
         } else {
           try {
-            _append(CodeEngine.run(op, input), kind: _LineKind.ok);
+            _append(CodeEngine.run(op, input), kind: _LineKind.info);
           } catch (e) {
             _append(e.toString().replaceFirst('Exception: ', ''), kind: _LineKind.error);
           }
