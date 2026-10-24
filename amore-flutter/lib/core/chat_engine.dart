@@ -15,6 +15,7 @@ import 'mcp_client.dart';
 import 'skill_pack.dart';
 import 'tools_config.dart';
 import 'code_engine.dart';
+import 'aojit_runtime.dart';
 
 class ChatEngine {
   ChatEngine._();
@@ -472,6 +473,21 @@ extension _FirstOrNull<T> on Iterable<T> {
         final op = c.params['op'] ?? 'eval';
         final input = c.params['input'] ?? '';
         final arg = c.params['arg'] ?? '';
+        // AOJIT 镜像执行：input = '<组件> <操作> <参数...>'
+        if (op == 'aojit') {
+          final parts = input
+              .split(RegExp(r'\s+'))
+              .where((e) => e.isNotEmpty)
+              .toList();
+          if (parts.isEmpty) {
+            return ('error',
+                'aojit 用法：<组件> <操作> <参数...>，如 openssl sha256 你好 / math eval 12*(3+4)^2 / blake2 abc');
+          }
+          final comp = parts[0];
+          final op2 = parts.length > 1 ? parts[1] : '';
+          final rest = parts.length > 2 ? parts.sublist(2) : <String>[];
+          return ('ok', AojitRuntime.run(comp, op2, rest));
+        }
         final result = CodeEngine.run(op, input, arg.isEmpty ? null : arg);
         return ('ok', result);
       } catch (e) {

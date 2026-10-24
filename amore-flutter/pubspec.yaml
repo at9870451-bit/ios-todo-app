@@ -16,6 +16,7 @@ dependencies:
   provider: ^6.1.2
   # HTTP（AI 直连 / TTS）
   dio: ^5.4.3
+  crypto: ^3.0.3
   # 语音播放
   audioplayers: ^6.1.0
   # 沙盒目录

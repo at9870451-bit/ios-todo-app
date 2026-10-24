@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../core/store.dart';
 import '../core/aojit.dart';
+import '../core/aojit_runtime.dart';
 import '../core/mirrors.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
@@ -409,6 +410,105 @@ class _RootfsPageState extends State<RootfsPage> {
             Text(c.coverage,
                 style: const TextStyle(
                     fontSize: 11, color: AmoreTheme.textFaint)),
+          const SizedBox(height: 6),
+          OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact),
+            onPressed: () => _aojitExec(c),
+            icon: const Icon(Icons.play_arrow_rounded, size: 15),
+            label: const Text('执行'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // AOJIT 组件执行：弹窗输入操作/参数 → 真实运行
+  Future<void> _aojitExec(AojitComponent c) async {
+    if (!Aojit.enabled) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('AOJIT 已关闭：请先开启 AOJIT 优化')));
+      return;
+    }
+    final opCtl = TextEditingController();
+    final argCtl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('执行：${c.name}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: opCtl,
+              decoration: const InputDecoration(
+                  labelText: '操作',
+                  hintText: 'sha256 / eval / compress / blake2 / base64…'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: argCtl,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  labelText: '参数', hintText: '内容/表达式…'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '组件：${c.name}\n快捷：sha256、md5、blake2（哈希）；eval（数学）；compress（压缩）；base64/hex（编解码）',
+              style: const TextStyle(
+                  fontSize: 10.5, color: AmoreTheme.textFaint),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () => Navigator.pop(
+                ctx, '${opCtl.text.trim()}|${argCtl.text.trim()}'),
+            child: const Text('执行'),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final bar = result.indexOf('|');
+    final op = bar < 0 ? result : result.substring(0, bar);
+    final arg = bar < 0 ? '' : result.substring(bar + 1);
+    final args = arg.isEmpty
+        ? <String>[]
+        : arg.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final comp = switch (c.name) {
+      'OpenSSL libcrypto' || 'OpenSSL libssl' => 'openssl',
+      'Python hashlib' => 'hashlib',
+      'Python blake2' => 'blake2',
+      'Python math' || 'Python' || 'musl' => 'math',
+      'Python zlib' || 'zlib' => 'zlib',
+      'PCRE2' => 'pcre',
+      'Python datetime' => 'datetime',
+      'Python binascii' => 'b64',
+      'Python struct' => 'struct',
+      'Python socket' => 'socket',
+      'Python select' => 'select',
+      'SQLite' => 'sqlite',
+      'NumPy' => 'math',
+      'Node.js' => 'node',
+      'OpenSSH ssh' => 'ssh',
+      'BusyBox' => 'busybox',
+      'libwebp' || 'libjpeg-turbo' || 'Pillow' => 'pillow',
+      _ => 'math',
+    };
+    final out = AojitRuntime.run(comp, op, args);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${c.name} 结果'),
+        content: SingleChildScrollView(
+          child: SelectableText(out, style: const TextStyle(fontSize: 12.5)),
+        ),
+        actions: [
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('完成')),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/aojit_runtime.dart';
 import '../core/code_engine.dart';
 import '../core/models.dart';
 import '../core/store.dart';
@@ -69,7 +70,8 @@ class _ConsolePageState extends State<ConsolePage> {
   reset models              重置模型配置
   export                    导出 JSON 到剪贴板
   eval <表达式>              数学计算：eval 12*(3+4)^2
-  code <op> <内容>           本地代码：base64/url/json/regex/stats''');
+  code <op> <内容>           本地代码：base64/url/json/regex/stats
+  aojit <组件> <操作> <参数>    AOJIT 镜像执行：aojit openssl sha256 你好''');
       case 'info':
         final friends = AmoreStore.listFriends();
         final groups = AmoreStore.listGroups();
@@ -206,6 +208,20 @@ class _ConsolePageState extends State<ConsolePage> {
           _append('用法：eval <表达式>，如 eval 12*(3+4)^2', kind: _LineKind.error);
         } else {
           _append('$expr = ${CodeEngine.evalFriendly(expr)}', kind: _LineKind.info);
+        }
+      case 'aojit':
+        final rest = raw.substring(5).trim();
+        final parts =
+            rest.split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+        if (parts.isEmpty) {
+          _append(
+              '用法：aojit <组件> <操作> <参数...>，如 aojit openssl sha256 你好 / aojit math eval 12*(3+4)^2 / aojit blake2 abc / aojit zlib compress 你好',
+              kind: _LineKind.info);
+        } else {
+          final comp = parts[0];
+          final op = parts.length > 1 ? parts[1] : '';
+          final args = parts.length > 2 ? parts.sublist(2) : <String>[];
+          _append(AojitRuntime.run(comp, op, args), kind: _LineKind.info);
         }
       case 'code':
         final rest = raw.substring(4).trim();
