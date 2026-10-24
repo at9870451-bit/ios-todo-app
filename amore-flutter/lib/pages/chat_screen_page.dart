@@ -845,6 +845,12 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           _Attachment(name: 'AI 生成.png', path: path, kind: 'image'),
         ];
       });
+      // 明确告知：图在输入框待发送区，由用户手动发送，不会自动发出
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(const SnackBar(
+            duration: Duration(seconds: 3),
+            content: Text('✓ 图片已生成，放在输入框上方待发送区，点发送发出（可点 ✕ 取消）')));
       _scrollBottom();
     } catch (e) {
       if (!mounted) return;
@@ -900,9 +906,23 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   // 输入面板上方的附件预览条（可删除）
   Widget _attachPreview() {
     if (_pendingAtts.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 64,
-      child: ListView.separated(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 4, 0, 0),
+            child: Text('待发送（${_pendingAtts.length}）',
+                style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AmoreTheme.textSecondary,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ),
+        SizedBox(
+          height: 64,
+          child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
         itemCount: _pendingAtts.length,
@@ -944,6 +964,8 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           );
         },
       ),
+        ),
+      ],
     );
   }
 
