@@ -36,15 +36,52 @@ class _ProvidersPageState extends State<ProvidersPage> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('已激活「${p.label}」')));
   }
 
-  void _openEditor([AIProvider? existing]) {
+  void _openEditor([AIProvider? existing, String presetKind = 'main']) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (_) => ProviderEditSheet(
         existing: existing,
+        initialKind: existing == null ? presetKind : 'main',
         onSaved: _refresh,
       ),
     );
+  }
+
+  // 新建菜单：文字 / 照片 / 语音 三个配置快捷入口
+  void _newSheet() {
+    showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.chat_bubble_outline_rounded,
+                  color: Color(0xFF007AFF)),
+              title: const Text('文字模型配置'),
+              subtitle: const Text('聊天对话使用'),
+              onTap: () => Navigator.pop(ctx, 'main'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined, color: Color(0xFF34C759)),
+              title: const Text('照片模型配置'),
+              subtitle: const Text('AI 生成图片使用'),
+              onTap: () => Navigator.pop(ctx, 'image'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.record_voice_over_rounded,
+                  color: Color(0xFFAF52DE)),
+              title: const Text('语音模型配置'),
+              subtitle: const Text('语音朗读使用'),
+              onTap: () => Navigator.pop(ctx, 'tts'),
+            ),
+          ],
+        ),
+      ),
+    ).then((kind) {
+      if (kind != null) _openEditor(null, kind);
+    });
   }
 
   @override
@@ -155,7 +192,7 @@ class _ProvidersPageState extends State<ProvidersPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AmoreTheme.accent,
-        onPressed: () => _openEditor(null),
+        onPressed: _newSheet,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: const Text('新建', style: TextStyle(color: Colors.white)),
       ),
@@ -169,7 +206,12 @@ class _ProvidersPageState extends State<ProvidersPage> {
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
-          switch (kind) { 'main' => '主模型', 'secondary' => '副模型', 'tts' => '语音', _ => '图片' },
+          switch (kind) {
+            'main' => '文字',
+            'image' => '照片',
+            'tts' => '语音',
+            _ => '副模型'
+          },
           style: const TextStyle(fontSize: 10, color: AmoreTheme.accent2),
         ),
       );
@@ -193,9 +235,11 @@ class _ProvidersPageState extends State<ProvidersPage> {
 /// 供应商编辑表单
 class ProviderEditSheet extends StatefulWidget {
   final AIProvider? existing;
+  final String initialKind; // 新建时预设类型（main / image / tts）
   final VoidCallback onSaved;
 
-  const ProviderEditSheet({super.key, this.existing, required this.onSaved});
+  const ProviderEditSheet(
+      {super.key, this.existing, this.initialKind = 'main', required this.onSaved});
 
   @override
   State<ProviderEditSheet> createState() => _ProviderEditSheetState();
@@ -216,7 +260,8 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   @override
   void initState() {
     super.initState();
-    _p = widget.existing ?? AIProvider(label: '新配置');
+    _p = widget.existing ??
+        AIProvider(label: '新配置', kind: widget.initialKind);
     // 兼容旧配置：kind=tts 时 model 里存的是语音模型名
     _modelCtl.text = _p.kind == 'tts' ? '' : _p.model;
     _imageCtl.text = _p.imageModel;
@@ -448,6 +493,17 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               onChanged: (v) => _p.label = v,
               controller: TextEditingController(text: _p.label),
               decoration: const InputDecoration(hintText: '配置名称'),
+            ),
+            const SizedBox(height: 12),
+            // 配置类型（文字 / 照片 / 语音——决定用途与列表徽标；槽位仍可全填）
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'main', label: Text('文字')),
+                ButtonSegment(value: 'image', label: Text('照片')),
+                ButtonSegment(value: 'tts', label: Text('语音')),
+              ],
+              selected: {_p.kind},
+              onSelectionChanged: (sel) => setState(() => _p.kind = sel.first),
             ),
             const SizedBox(height: 12),
             // 厂商选择
