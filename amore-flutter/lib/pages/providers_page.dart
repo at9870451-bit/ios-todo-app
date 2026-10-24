@@ -162,27 +162,6 @@ class _ProvidersPageState extends State<ProvidersPage> {
     );
   }
 
-  // 模型类型徽标（自动分类结果：文字/语音/图片）
-  Widget _typeBadge(String cls) {
-    final (label, color) = switch (cls) {
-      'tts' => ('语音', const Color(0xFFAF52DE)),
-      'image' => ('图片', const Color(0xFF34C759)),
-      _ => ('文字', const Color(0xFF007AFF)),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 9.5,
-              color: color,
-              fontWeight: FontWeight.w700)),
-    );
-  }
-
   Widget _kindBadge(String kind) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
@@ -256,6 +235,27 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
       ..._cachedModels(),
     };
     return set.toList()..sort();
+  }
+
+  // 模型类型徽标（自动分类结果：文字/语音/图片）
+  Widget _typeBadge(String cls) {
+    final (label, color) = switch (cls) {
+      'tts' => ('语音', const Color(0xFFAF52DE)),
+      'image' => ('图片', const Color(0xFF34C759)),
+      _ => ('文字', const Color(0xFF007AFF)),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 9.5,
+              color: color,
+              fontWeight: FontWeight.w700)),
+    );
   }
 
   bool _testing = false;
