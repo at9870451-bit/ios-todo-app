@@ -314,6 +314,13 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
     );
   }
 
+  /// 候选列表写入目标（按配置类型只显示对应一项）
+  List<(String, String)> get _targetChips => switch (_p.kind) {
+        'image' => const [('image', '照片')],
+        'tts' => const [('tts', '语音')],
+        _ => const [('chat', '文字')],
+      };
+
   /// 打开候选列表并设定写入目标
   void _openCandidates(String target) {
     setState(() {
@@ -503,7 +510,15 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                 ButtonSegment(value: 'tts', label: Text('语音')),
               ],
               selected: {_p.kind},
-              onSelectionChanged: (sel) => setState(() => _p.kind = sel.first),
+              onSelectionChanged: (sel) => setState(() {
+                _p.kind = sel.first;
+                // 同步候选列表写入目标（文字→chat / 照片→image / 语音→tts）
+                _target = sel.first == 'image'
+                    ? 'image'
+                    : sel.first == 'tts'
+                        ? 'tts'
+                        : 'chat';
+              }),
             ),
             const SizedBox(height: 12),
             // 厂商选择
@@ -556,36 +571,40 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               decoration: const InputDecoration(hintText: 'Base URL（留空=官方默认；本机直连填 127.0.0.1:端口/v1）'),
             ),
             const SizedBox(height: 12),
-            // ---- 三个模型槽位：聊天 / 图片 / 语音（可同时选择）----
-            _slotField(
-              label: '聊天模型',
-              ctl: _modelCtl,
-              hint: '如 gpt-4o / deepseek-chat',
-              onChanged: (v) => _p.model = v,
-              onPick: () => _openCandidates('chat'),
-            ),
-            _slotField(
-              label: '图片模型',
-              ctl: _imageCtl,
-              hint: '如 gpt-image-1 / FLUX.1',
-              onChanged: (v) => _p.imageModel = v,
-              onPick: () => _openCandidates('image'),
-            ),
-            _slotField(
-              label: '语音模型',
-              ctl: _ttsCtl,
-              hint: '如 tts-1 / gpt-4o-mini-tts',
-              onChanged: (v) => _p.ttsModel = v,
-              onPick: () => _openCandidates('tts'),
-            ),
-            const SizedBox(height: 4),
-            TextField(
-              onChanged: (v) => _p.ttsVoice = v,
-              controller: TextEditingController(text: _p.ttsVoice),
-              decoration: const InputDecoration(
-                  labelText: '语音音色',
-                  hintText: '如 alloy / coral（仅语音朗读用）'),
-            ),
+            // ---- 模型槽位：按配置类型只显示对应一个（文字/照片/语音）----
+            if (_p.kind == 'main')
+              _slotField(
+                label: '聊天模型',
+                ctl: _modelCtl,
+                hint: '如 gpt-4o / deepseek-chat',
+                onChanged: (v) => _p.model = v,
+                onPick: () => _openCandidates('chat'),
+              ),
+            if (_p.kind == 'image')
+              _slotField(
+                label: '图片模型',
+                ctl: _imageCtl,
+                hint: '如 gpt-image-1 / FLUX.1',
+                onChanged: (v) => _p.imageModel = v,
+                onPick: () => _openCandidates('image'),
+              ),
+            if (_p.kind == 'tts') ...[
+              _slotField(
+                label: '语音模型',
+                ctl: _ttsCtl,
+                hint: '如 tts-1 / gpt-4o-mini-tts',
+                onChanged: (v) => _p.ttsModel = v,
+                onPick: () => _openCandidates('tts'),
+              ),
+              const SizedBox(height: 4),
+              TextField(
+                onChanged: (v) => _p.ttsVoice = v,
+                controller: TextEditingController(text: _p.ttsVoice),
+                decoration: const InputDecoration(
+                    labelText: '语音音色',
+                    hintText: '如 alloy / coral（仅语音朗读用）'),
+              ),
+            ],
             const SizedBox(height: 8),
             // 从接口读取 + 测试聊天模型
             Row(
@@ -627,11 +646,7 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                       style: TextStyle(
                           fontSize: 11.5, color: AmoreTheme.textSecondary)),
                   const SizedBox(width: 8),
-                  for (final (val, label) in const [
-                    ('chat', '聊天'),
-                    ('image', '图片'),
-                    ('tts', '语音'),
-                  ])
+                  for (final (val, label) in _targetChips)
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
