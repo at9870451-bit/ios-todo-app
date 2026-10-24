@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import '../core/aojit.dart';
 import '../core/mirrors.dart';
 import '../core/theme.dart';
 import '../state/app_state.dart';
@@ -197,6 +198,35 @@ class _RootfsPageState extends State<RootfsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    section('AOJIT'),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: AmoreTheme.cardBox(),
+                      child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        secondary: const Icon(Icons.bolt_rounded,
+                            color: AmoreBrand.accent),
+                        title: const Text('AOJIT 优化',
+                            style: TextStyle(fontSize: 14.5)),
+                        subtitle: Text(
+                            Aojit.enabled ? '已开启：运行预录制镜像，不再逐条模拟指令' : '已关闭：全部按模拟方式执行',
+                            style: const TextStyle(fontSize: 12)),
+                        value: Aojit.enabled,
+                        onChanged: (v) => setState(() => Aojit.setEnabled(v)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final c in Aojit.system)
+                      _aojitCard(c),
+                    _aojitGroup('Python 模块'),
+                    for (final c in Aojit.pythonModules)
+                      _aojitCard(c),
+                    const SizedBox(height: 8),
+                    Text(
+                      '为下列库运行预先录制并编译好的 JIT 代码，不再逐条模拟指令。Shell 管道通常快 2-4 倍。切换后对新启动的命令生效。每个库只有一个镜像，录制自列出的版本：该版本全速运行。同一个库的其他版本中未改变的代码仍从镜像运行，其余部分模拟执行，因此也能获得部分提速。',
+                      style: const TextStyle(
+                          fontSize: 11, color: AmoreTheme.textFaint)),
+                    const SizedBox(height: 16),
                     section('镜像源（沙盒包管理）'),
                     Container(
                       decoration: AmoreTheme.cardBox(),
@@ -313,6 +343,72 @@ class _RootfsPageState extends State<RootfsPage> {
             },
             child: const Text('清理'),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _aojitGroup(String t) => Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 4),
+        child: Text(t,
+            style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w700, color: AmoreTheme.textSecondary)),
+      );
+
+  Widget _aojitCard(AojitComponent c) {
+    final ok = !c.partial;
+    final badge = ok ? '可用' : '部分提速';
+    final badgeColor = ok ? const Color(0xFF34C759) : AmoreBrand.accent;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: AmoreTheme.cardBox(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(c.name,
+                    style: const TextStyle(
+                        fontSize: 14.5, fontWeight: FontWeight.w700)),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: badgeColor.withOpacity(0.5)),
+                ),
+                child: Text(badge,
+                    style: TextStyle(
+                        fontSize: 10.5,
+                        color: badgeColor,
+                        fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(c.path,
+              style: const TextStyle(
+                  fontSize: 11, color: AmoreTheme.textFaint)),
+          const SizedBox(height: 4),
+          Text(c.desc,
+              style: const TextStyle(
+                  fontSize: 12, color: AmoreTheme.textSecondary)),
+          const SizedBox(height: 6),
+          Text('镜像录制自 ${c.mirror}',
+              style: const TextStyle(
+                  fontSize: 11, color: AmoreTheme.textFaint)),
+          Text(
+              c.fullSpeedNote ? '全速：已安装的正是录制时的版本。' : '已安装另一个版本：未改变的代码从镜像运行，其余部分模拟执行。',
+              style: const TextStyle(
+                  fontSize: 11, color: AmoreTheme.textFaint)),
+          if (c.coverage.isNotEmpty)
+            Text(c.coverage,
+                style: const TextStyle(
+                    fontSize: 11, color: AmoreTheme.textFaint)),
         ],
       ),
     );
