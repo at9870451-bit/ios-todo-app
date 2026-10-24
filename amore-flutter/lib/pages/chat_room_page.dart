@@ -17,6 +17,7 @@ import '../state/app_state.dart';
 import '../core/theme.dart';
 import '../widgets/bubble.dart';
 import '../widgets/attachment_card.dart';
+import '../widgets/chat_background.dart';
 import '../widgets/friend_avatar.dart';
 import '../widgets/friend_edit_sheet.dart';
 import '../widgets/game_card.dart';
@@ -212,11 +213,8 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               onPressed: _menu, icon: const Icon(Icons.more_horiz_rounded)),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: AmoreTheme.chatBgColor(
-              context.select<AppState, String>((s) => s.chatBgKey)),
-        ),
+      body: ChatBackground(
+        bgKey: context.select<AppState, String>((s) => s.chatBgKey),
         child: SafeArea(
           child: Column(
             children: [

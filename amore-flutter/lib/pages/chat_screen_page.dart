@@ -20,6 +20,7 @@ import '../core/store.dart';
 import '../core/skill_pack.dart';
 import '../core/theme.dart';
 import '../widgets/attachment_card.dart';
+import '../widgets/chat_background.dart';
 import '../ui/effects.dart';
 import '../state/app_state.dart';
 import 'conversations_page.dart';
@@ -290,11 +291,8 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: AmoreTheme.chatBgColor(context
-              .select<AppState, String>((s) => s.chatBgKey)),
-        ),
+      body: ChatBackground(
+        bgKey: context.select<AppState, String>((s) => s.chatBgKey),
         child: SafeArea(
           child: Column(
             children: [

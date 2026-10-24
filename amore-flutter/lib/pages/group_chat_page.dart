@@ -11,6 +11,7 @@ import '../core/group_games.dart';
 import '../core/group_games_runner.dart';
 import '../widgets/game_card.dart';
 import '../widgets/attachment_card.dart';
+import '../widgets/chat_background.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
@@ -304,11 +305,8 @@ class _GroupChatPageState extends State<GroupChatPage> {
           IconButton(onPressed: _groupMenu, icon: const Icon(Icons.more_horiz_rounded)),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          color: AmoreTheme.chatBgColor(
-              context.select<AppState, String>((s) => s.chatBgKey)),
-        ),
+      body: ChatBackground(
+        bgKey: context.select<AppState, String>((s) => s.chatBgKey),
         child: SafeArea(
           child: Column(
             children: [

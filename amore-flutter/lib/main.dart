@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'core/bridge.dart';
 import 'core/store.dart';
 import 'core/theme.dart';
+import 'core/theme_prefs.dart';
 import 'state/app_state.dart';
 import 'pages/chat_list_page.dart';
 import 'pages/chat_screen_page.dart';
@@ -35,12 +36,24 @@ class AmoreApp extends StatelessWidget {
 class _AppMaterial extends StatelessWidget {
   const _AppMaterial({super.key});
 
+  /// 外观指纹：任何外观配置变化 → 重建 MaterialApp
+  String _fingerprint() {
+    return [
+      '${AmoreStore.getConfig('theme_color')}',
+      '${AmoreStore.getConfig('ui.dark')}',
+      '${AmoreStore.getConfig('operit.theme_mode')}',
+      '${AmoreStore.getConfig('operit.custom_colors')}',
+      '${AmoreStore.getConfig('operit.custom_primary')}',
+      '${AmoreStore.getConfig('operit.font_family')}',
+    ].join('|');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Selector<AppState, String>(
-      selector: (_, s) => '${s.themeColor}|${s.darkMode}',
+      selector: (_, s) => _fingerprint(),
       builder: (context, key, _) {
-        // Appearance theme color (default Apple Blue)
+        // Appearance theme color（Operit2 前置：自定义主色 > 预设）
         const themeColors = {
           'purple': Color(0xFFAF52DE),
           'pink': Color(0xFFF472B6),
@@ -48,15 +61,31 @@ class _AppMaterial extends StatelessWidget {
           'orange': Color(0xFFFB923C),
           'mono': Color(0xFF86868B),
         };
-        final parts = key.split('|');
-        final acc = themeColors[parts[0]] ?? AmoreBrand.accent;
-        final dark = parts.length > 1 && parts[1] == 'true';
+        final acc = ThemePrefs.useCustomColors
+            ? ThemePrefs.customPrimary
+            : (themeColors[ThemePrefs.themeColor] ?? AmoreBrand.accent);
+        // Operit2 字体族（system / serif / sans-serif / monospace / cursive）
+        final family = switch (ThemePrefs.fontFamily) {
+          'serif' => 'serif',
+          'sans-serif' => 'sans-serif',
+          'monospace' => 'monospace',
+          'cursive' => 'cursive',
+          _ => null,
+        };
+        final light = AmoreTheme.lightWith(acc);
+        final dark = AmoreTheme.darkWith(acc);
         return MaterialApp(
           title: 'Amore',
           debugShowCheckedModeBanner: false,
-          theme: AmoreTheme.lightWith(acc),
-          darkTheme: AmoreTheme.darkWith(acc),
-          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+          theme: family == null
+              ? light
+              : light.copyWith(
+                  textTheme: light.textTheme.apply(fontFamily: family)),
+          darkTheme: family == null
+              ? dark
+              : dark.copyWith(
+                  textTheme: dark.textTheme.apply(fontFamily: family)),
+          themeMode: ThemePrefs.effectiveThemeMode,
           // 点击屏幕空白处自动收起键盘
           builder: (context, child) => GestureDetector(
             behavior: HitTestBehavior.translucent,

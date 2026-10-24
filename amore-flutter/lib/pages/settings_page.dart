@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import '../core/theme_prefs.dart';
 import 'permissions_page.dart';
 import 'tools_permissions_page.dart';
 import 'package:provider/provider.dart' as pv;
@@ -53,6 +54,8 @@ class _SettingsPageState extends State<SettingsPage> {
     // 动画中段应用主题（视觉连续性最佳：扩散到 ~60% 时切）
     Future.delayed(const Duration(milliseconds: 290), () {
       context.read<AppState>().setDarkMode(toDark);
+      // 同步 Operit2 主题模式（兼容旧开关）
+      ThemePrefs.setThemeMode(toDark ? ThemeMode.dark : ThemeMode.light);
     });
     HapticFeedback.selectionClick();
   }

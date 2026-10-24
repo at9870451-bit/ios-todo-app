@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
+import '../core/theme_prefs.dart';
 import '../state/app_state.dart';
 import 'game_card.dart';
 import 'attachment_card.dart';
@@ -101,6 +102,8 @@ class MessageBubble extends StatelessWidget {
         .select<AppState, double>((s) => s.chatFontScale.clamp(13.0, 20.0));
     final bubbleColor =
         mine ? null : AmoreTheme.bubbleOther; // 我方用品牌蓝
+    // Operit2 聊天气泡样式：bubble（气泡）/ cursor（光标式）
+    final cursor = ThemePrefs.chatStyle == 'cursor';
     final contentWidget = _renderContent(fs);
 
     return GestureDetector(
@@ -125,10 +128,14 @@ class MessageBubble extends StatelessWidget {
                     mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                    padding: cursor
+                        ? EdgeInsets.zero
+                        : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
                     constraints: BoxConstraints(
                         maxWidth: MediaQuery.of(context).size.width * 0.72),
-                    decoration: mine
+                    decoration: cursor
+                        ? null
+                        : (mine
                         ? BoxDecoration(
                             color: AmoreBrand.brandBlue,
                             borderRadius: BorderRadius.only(
@@ -148,8 +155,10 @@ class MessageBubble extends StatelessWidget {
                                   _hasRichContent ? r : 4.0),
                               bottomRight: Radius.circular(r),
                             ),
-                            border: Border.all(color: AmoreTheme.cardBorder)),
-                    child: contentWidget,
+                            border: Border.all(color: AmoreTheme.cardBorder))),
+                    child: cursor
+                        ? _cursorBar(contentWidget, mine)
+                        : contentWidget,
                   ),
                   const SizedBox(height: 3),
                   Text(_timeText,
@@ -170,6 +179,26 @@ class MessageBubble extends StatelessWidget {
     final segs = MessageSegment.parse(msg.content);
     return segs.length > 1 ||
         segs.any((s) => s.kind != SegmentKind.text);
+  }
+
+  // Operit2 光标式消息：左侧色条 + 文本（无气泡底）
+  Widget _cursorBar(Widget content, bool mine) {
+    final barColor = mine ? AmoreBrand.brandBlue : AmoreTheme.bubbleOther;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 3.5,
+          height: 44,
+          margin: const EdgeInsets.only(right: 8),
+          decoration: BoxDecoration(
+            color: barColor,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        Expanded(child: content),
+      ],
+    );
   }
 
   Widget _renderContent(double fs) {
