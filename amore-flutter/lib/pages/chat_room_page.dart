@@ -34,6 +34,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   final _scrollCtl = ScrollController();
   List<ChatMessage> _messages = [];
   List<_Attachment> _pendingAtts = [];
+  bool _generatingImage = false;
   bool _sending = false;
   String _toolHint = '';
 
@@ -302,11 +303,23 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               title: const Text('拍照'),
               onTap: () => Navigator.pop(ctx, 'camera'),
             ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.auto_awesome_rounded,
+                  color: AmoreBrand.accent),
+              title: const Text('AI 生成图片'),
+              subtitle: const Text('用「图片」类型配置画画'),
+              onTap: () => Navigator.pop(ctx, 'aigen'),
+            ),
           ],
         ),
       ),
     );
     if (v == null) return;
+    if (v == 'aigen') {
+      await _aiGenerateImage();
+      return;
+    }
     if (v == 'photo') {
       final XFile? img =
           await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -371,6 +384,57 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
               ]);
         }
       }
+    }
+  }
+
+  // AI 生成图片（OpenAI /images/generations 兼容；存沙盒进附件预览）
+  Future<void> _aiGenerateImage() async {
+    final provider = ChatEngine.providerForImage();
+    if (provider == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('未配置模型供应商：先到「我的 → 模型配置」添加配置')));
+      return;
+    }
+    final ctl = TextEditingController();
+    final prompt = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('AI 生成图片'),
+        content: TextField(
+          controller: ctl,
+          maxLines: 3,
+          autofocus: true,
+          decoration:
+              const InputDecoration(hintText: '描述你想生成的画面（可英文更准）'),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, ctl.text), child: const Text('生成')),
+        ],
+      ),
+    );
+    if (prompt == null || prompt.trim().isEmpty) return;
+    setState(() => _generatingImage = true);
+    try {
+      final path = await ChatEngine.generateImage(provider, prompt.trim());
+      if (!mounted) return;
+      setState(() {
+        _generatingImage = false;
+        _pendingAtts = [
+          ..._pendingAtts,
+          _Attachment(name: 'AI 生成.png', path: path, kind: 'image'),
+        ];
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _generatingImage = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          backgroundColor: const Color(0xFFFF3B30).withOpacity(0.9),
+          duration: const Duration(seconds: 6),
+          content: Text(
+              '图片生成失败：${e.toString().replaceFirst('Exception: ', '')}')));
     }
   }
 
@@ -459,11 +523,16 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: _attachMenu,
-            child: const Padding(
-              padding: EdgeInsets.only(right: 4),
-              child: Icon(Icons.add_circle_outline_rounded,
-                  size: 24, color: Color(0xFF86868B)),
+            onTap: _generatingImage ? null : _attachMenu,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: _generatingImage
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.2))
+                  : const Icon(Icons.add_circle_outline_rounded,
+                      size: 24, color: Color(0xFF86868B)),
             ),
           ),
           const SizedBox(width: 4),

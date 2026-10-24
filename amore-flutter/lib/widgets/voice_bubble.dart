@@ -73,16 +73,29 @@ class _VoiceBubbleState extends State<VoiceBubble> {
       Response<List<int>> resp;
       final dio = Dio(BaseOptions(responseType: ResponseType.bytes));
       if (url == 'provider') {
-        // OpenAI 风格：用激活 provider 的 base
-        final cfg = AmoreStore.allConfig();
+        // OpenAI 风格：优先用「语音」类型配置（kind=tts），无则回退激活 provider
+        final providers = AmoreStore.listProviders();
+        final ttsList = providers.where((x) => x.kind == 'tts').toList();
         final activeId = AmoreStore.activeProviderId();
-        final p = AmoreStore.listProviders().where((x) => x.id == activeId).toList();
-        if (p.isEmpty) throw Exception('未配置模型供应商，无法使用 model 语音引擎');
-        var base = p.first.baseURL.trim();
+        var p = ttsList.isNotEmpty
+            ? ttsList.first
+            : providers.where((x) => x.id == activeId).toList().firstOrNull;
+        if (p == null && providers.isNotEmpty) p = providers.first;
+        if (p == null) {
+          throw Exception('未配置模型供应商，无法使用 model 语音引擎');
+        }
+        var base = p.baseURL.trim();
         if (base.isEmpty) {
-          base = AmoreStore.vendors().where((v) => v.key == p.first.vendor).map((v) => v.base).firstOrNull ?? '';
+          base = AmoreStore.vendors().where((v) => v.key == p.vendor).map((v) => v.base).firstOrNull ?? '';
         }
         if (base.endsWith('/')) base = base.substring(0, base.length - 1);
+        // 语音类型配置：用其模型名与音色；通用配置给默认 tts 模型
+        final isTtsCfg = p.kind == 'tts';
+        body['model'] =
+            (isTtsCfg && p.model.isNotEmpty) ? p.model : 'tts-1';
+        if (voiceId.isEmpty && isTtsCfg && p.ttsVoice.isNotEmpty) {
+          body['voice'] = p.ttsVoice;
+        }
         resp = await dio.post<List<int>>('$base/audio/speech',
             data: body, options: Options(headers: headers));
       } else {

@@ -3,6 +3,9 @@
 /// 这里负责 HTTP 请求（dio）与多轮工具循环控制。
 library;
 
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import 'models.dart';
@@ -242,6 +245,78 @@ class ChatEngine {
     }
   }
 
+  /// 选择「图片」类型配置（kind=image），无则回退激活/首个
+  static AIProvider? providerForImage() {
+    final all = AmoreStore.listProviders();
+    if (all.isEmpty) return null;
+    final imgs = all.where((p) => p.kind == 'image').toList();
+    if (imgs.isNotEmpty) return imgs.first;
+    return providerForGlobal();
+  }
+
+  /// AI 生成图片（OpenAI /v1/images/generations 兼容）。
+  /// 返回沙盒内的图片路径（已保存），失败抛异常。
+  static Future<String> generateImage(AIProvider p, String prompt,
+      {String size = '1024x1024'}) async {
+    var url = _effectiveBase(p).trim();
+    if (url.isEmpty) {
+      throw Exception('「${p.label}」缺少 Base URL：请到「我的 → 模型配置」填写接口地址');
+    }
+    if (url.endsWith('/')) url = url.substring(0, url.length - 1);
+    if (!url.contains('/images/generations')) {
+      url += url.endsWith('/v1') ? '/images/generations' : '/v1/images/generations';
+    }
+    final model = (p.imageModel.isNotEmpty ? p.imageModel : p.model).trim();
+    final headers = {
+      'Content-Type': 'application/json',
+      if (p.apiKey.isNotEmpty) 'Authorization': 'Bearer ${p.apiKey}',
+    };
+    final body = {
+      if (model.isNotEmpty) 'model': model,
+      'prompt': prompt,
+      'n': 1,
+      'size': size,
+    };
+    final resp = await _dio.post<Map<String, dynamic>>(url,
+        data: body, options: Options(headers: headers));
+    final data = resp.data;
+    if (data == null) throw Exception('图片接口无返回（HTTP ${resp.statusCode}）');
+    final first = (data['data'] as List?)?.firstOrNull;
+    if (first is! Map) {
+      throw Exception('响应无法解析：${data.toString().substring(0, data.toString().length.clamp(0, 120))}');
+    }
+    final b64 = first['b64_json']?.toString();
+    if (b64 != null && b64.isNotEmpty) {
+      // base64 直接落盘
+      final bytes = _base64Decode(b64);
+      return _saveImageBytes(bytes);
+    }
+    final imgUrl = first['url']?.toString() ?? '';
+    if (imgUrl.isNotEmpty) {
+      final r2 = await _dio.get<List<int>>(imgUrl,
+          options: Options(responseType: ResponseType.bytes));
+      if (r2.data == null || r2.data!.isEmpty) {
+        throw Exception('图片下载失败（HTTP ${r2.statusCode}）');
+      }
+      return _saveImageBytes(r2.data!);
+    }
+    throw Exception('响应中没有图片数据');
+  }
+
+  static List<int> _base64Decode(String s) {
+    // 兼容 data URL 前缀
+    final clean = s.contains(',') ? s.substring(s.indexOf(',') + 1) : s;
+    return base64Decode(clean);
+  }
+
+  static Future<String> _saveImageBytes(List<int> bytes) async {
+    final dir = await Attachments.dir();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final path = '$dir/${stamp}_ai_image.png';
+    await File(path).writeAsBytes(bytes);
+    return path;
+  }
+
   /// 把底层异常翻译成用户可读的原因
   static String _friendlyError(Object e) {
     if (e is DioException) {
@@ -296,4 +371,8 @@ class ChatTurnResult {
   ChatTurnResult({this.text, this.error, this.tools = const []});
 
   ChatTurnResult.error(this.error) : text = null, tools = const [];
+}
+
+extension _FirstOrNull<T> on Iterable<T> {
+  T? get firstOrNull => isEmpty ? null : first;
 }

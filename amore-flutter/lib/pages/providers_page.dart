@@ -213,7 +213,7 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   void initState() {
     super.initState();
     _p = widget.existing ?? AIProvider(label: '新配置');
-    _modelCtl.text = _p.model;
+    _modelCtl.text = _p.kind == 'image' ? _p.imageModel : _p.model;
     // 预填：内置目录 + 上次从接口读取的缓存
     _modelCandidates = _mergedCandidates();
   }
@@ -323,7 +323,11 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   }
 
   void _save() {
-    _p.model = _modelCtl.text.trim();
+    if (_p.kind == 'image') {
+      _p.imageModel = _modelCtl.text.trim();
+    } else {
+      _p.model = _modelCtl.text.trim();
+    }
     AmoreStore.saveProvider(_p);
     // 首个配置自动激活
     if (AmoreStore.activeProviderId().isEmpty) {
@@ -361,6 +365,17 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               decoration: const InputDecoration(hintText: '配置名称'),
             ),
             const SizedBox(height: 12),
+            // 配置类型（主模型 / 语音 / 图片）
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'main', label: Text('主模型')),
+                ButtonSegment(value: 'tts', label: Text('语音')),
+                ButtonSegment(value: 'image', label: Text('图片')),
+              ],
+              selected: {_p.kind},
+              onSelectionChanged: (sel) => setState(() => _p.kind = sel.first),
+            ),
+            const SizedBox(height: 12),
             // 厂商选择
             DropdownButtonFormField<String>(
               initialValue: _p.vendor,
@@ -383,16 +398,19 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               onChanged: (k) => _pickVendor(k ?? 'openai_generic'),
             ),
             const SizedBox(height: 12),
-            // 格式
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'chat', label: Text('Chat Completions')),
-                ButtonSegment(value: 'responses', label: Text('Responses')),
-              ],
-              selected: {_p.apiFormat},
-              onSelectionChanged: (s) => setState(() => _p.apiFormat = s.first),
-            ),
-            const SizedBox(height: 12),
+            // 格式（仅主模型）
+            if (_p.kind == 'main') ...[
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'chat', label: Text('Chat Completions')),
+                  ButtonSegment(value: 'responses', label: Text('Responses')),
+                ],
+                selected: {_p.apiFormat},
+                onSelectionChanged: (s) =>
+                    setState(() => _p.apiFormat = s.first),
+              ),
+              const SizedBox(height: 12),
+            ],
             // Key
             TextField(
               onChanged: (v) => _p.apiKey = v,
@@ -408,62 +426,75 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               decoration: const InputDecoration(hintText: 'Base URL（留空=官方默认；本机直连填 127.0.0.1:端口/v1）'),
             ),
             const SizedBox(height: 12),
-            // 模型
+            // 模型（主/语音→model；图片→imageModel）
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _modelCtl,
-                    onChanged: (v) => _p.model = v,
-                    decoration: const InputDecoration(hintText: '模型名（可手输或从目录选）'),
+                    onChanged: (v) {
+                      if (_p.kind == 'image') {
+                        _p.imageModel = v;
+                      } else {
+                        _p.model = v;
+                      }
+                    },
+                    decoration: InputDecoration(
+                        hintText: _p.kind == 'tts'
+                            ? '语音模型名（如 tts-1）'
+                            : _p.kind == 'image'
+                                ? '图片模型名（如 gpt-image-1）'
+                                : '模型名（可手输或从目录选）'),
                   ),
                 ),
                 const SizedBox(width: 8),
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _modelCandidates = _mergedCandidates();
-                      if (_modelCandidates.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(
-                                '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
-                      }
-                    });
-                  },
-                  child: const Text('选模型'),
-                ),
+                if (_p.kind == 'main')
+                  OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _modelCandidates = _mergedCandidates();
+                        if (_modelCandidates.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(
+                                  '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
+                        }
+                      });
+                    },
+                    child: const Text('选模型'),
+                  ),
               ],
             ),
-            // 从接口读取（读取 Base URL 指向的实际模型列表）
-            Row(
-              children: [
-                TextButton.icon(
-                  onPressed: _fetching ? null : _fetchApi,
-                  icon: _fetching
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.cloud_download_outlined, size: 17),
-                  label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
-                ),
-                TextButton.icon(
-                  onPressed: _testing ? null : _testModel,
-                  icon: _testing
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.wifi_tethering_rounded, size: 17),
-                  label: Text(_testing ? '测试中…' : '测试模型'),
-                ),
-                const Spacer(),
-                if (_modelCandidates.isNotEmpty)
-                  Text('${_modelCandidates.length} 个可选',
-                      style: const TextStyle(
-                          fontSize: 11.5, color: AmoreTheme.textFaint)),
-              ],
-            ),
+            // 从接口读取 / 测试（仅主模型）
+            if (_p.kind == 'main')
+              Row(
+                children: [
+                  TextButton.icon(
+                    onPressed: _fetching ? null : _fetchApi,
+                    icon: _fetching
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.cloud_download_outlined, size: 17),
+                    label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
+                  ),
+                  TextButton.icon(
+                    onPressed: _testing ? null : _testModel,
+                    icon: _testing
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.wifi_tethering_rounded, size: 17),
+                    label: Text(_testing ? '测试中…' : '测试模型'),
+                  ),
+                  const Spacer(),
+                  if (_modelCandidates.isNotEmpty)
+                    Text('${_modelCandidates.length} 个可选',
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AmoreTheme.textFaint)),
+                ],
+              ),
             // 模型选择列表
             if (_modelCandidates.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -506,13 +537,15 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                 ),
               ),
             ],
-            const SizedBox(height: 12),
-            // 音色
-            TextField(
-              onChanged: (v) => _p.ttsVoice = v,
-              controller: TextEditingController(text: _p.ttsVoice),
-              decoration: const InputDecoration(hintText: '语音音色（OpenAI 风格，如 alloy）'),
-            ),
+            if (_p.kind == 'tts') ...[
+              const SizedBox(height: 12),
+              TextField(
+                onChanged: (v) => _p.ttsVoice = v,
+                controller: TextEditingController(text: _p.ttsVoice),
+                decoration: const InputDecoration(
+                    hintText: '语音音色（OpenAI 风格，如 alloy / coral）'),
+              ),
+            ],
             const SizedBox(height: 18),
             Row(
               children: [
