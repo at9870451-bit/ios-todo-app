@@ -73,6 +73,13 @@ jobs:
           echo "符号检查（nm 与 Xcode 不兼容时跳过，链接后验证）:"
           nm -gU native/libs/ios/libamore_core.a 2>/dev/null | grep -E 'amore_(call|free)' || echo "nm 跳过：Xcode nm 无法读取新版 LLVM 产物" 
 
+      - name: Runner 工程注入链接设置（force_load + 禁 strip，保 FFI 符号）
+        working-directory: amore-flutter
+        run: |
+          ruby tools/fix_xcodeproj.rb
+          echo "=== 注入完成 ==="
+          grep -n "amore_core\|force_load" ios/Runner.xcodeproj/project.pbxproj | head -5
+
       - name: pod install
         working-directory: amore-flutter/ios
         run: pod install 2>&1 | tail -20
