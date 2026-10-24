@@ -14,6 +14,7 @@ import 'console_page.dart';
 import 'membership_page.dart';
 import 'providers_page.dart';
 import 'settings_page.dart';
+import 'skills_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -153,6 +154,18 @@ const SizedBox(height: 20),
                   subtitle: '沙盒数据命令台',
                   onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const ConsolePage())),
+                ),
+              ),
+              gap(),
+              StaggerItem(
+                index: 3,
+                child: AmoreTheme.tile(
+                  context: context,
+                  icon: Icons.extension_rounded,
+                  title: '技能中心',
+                  subtitle: '技能 / 插件 / 工作包 / MCP 服务',
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SkillsPage())),
                 ),
               ),
               gap(),

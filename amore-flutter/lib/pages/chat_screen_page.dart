@@ -17,6 +17,7 @@ import '../core/attachments.dart';
 import '../core/chat_engine.dart';
 import '../core/models.dart';
 import '../core/store.dart';
+import '../core/skill_pack.dart';
 import '../core/theme.dart';
 import '../widgets/attachment_card.dart';
 import '../ui/effects.dart';
@@ -138,7 +139,14 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
         last += '\n（我另外发了 ${atts.length} 个附件：${atts.map((a) => a.name).join('、')}）';
       }
       history.add({'role': 'user', 'content': last});
-      final system = AmoreStore.getConfig('persona.prompt') ?? '';
+      final skillParts = SkillCatalog.enabledPacks()
+          .where((x) => x.category != 'workflow' && x.prompt.isNotEmpty)
+          .map((x) => x.prompt)
+          .toList();
+      final system = [
+        AmoreStore.getConfig('persona.prompt') ?? '',
+        ...skillParts,
+      ].join('\n\n');
       final reply = await ChatEngine.request(
           provider, history.cast<Map<String, String>>().toList(), system,
           extraSystem: _reasoning != 'off'

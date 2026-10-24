@@ -11,14 +11,16 @@ import '../widgets/step_detail_sheet.dart';
 
 class WorkflowPage extends StatefulWidget {
   final WorkflowSession? viewSession; // null = 新建运行模式
-  const WorkflowPage({super.key, this.viewSession});
+  final String? initialGoal; // 工作包预设目标（预填输入框）
+  const WorkflowPage({super.key, this.viewSession, this.initialGoal});
 
   @override
   State<WorkflowPage> createState() => _WorkflowPageState();
 }
 
 class _WorkflowPageState extends State<WorkflowPage> {
-  final _goalCtl = TextEditingController(text: '帮我做一次本地数据体检');
+  final _goalCtl = TextEditingController(
+      text: '帮我做一次本地数据体检');
   late final WorkflowEngine _engine;
   Timer? _tickTimer;
   Duration _remaining = const Duration(minutes: 5);
@@ -33,6 +35,9 @@ class _WorkflowPageState extends State<WorkflowPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialGoal != null && widget.initialGoal!.isNotEmpty) {
+      _goalCtl.text = widget.initialGoal!;
+    }
     _engine = WorkflowEngine();
     if (widget.viewSession != null) {
       // 回看模式：展示历史

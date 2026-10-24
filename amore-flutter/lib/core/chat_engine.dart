@@ -11,6 +11,8 @@ import 'package:dio/dio.dart';
 import 'models.dart';
 import 'store.dart';
 import 'attachments.dart';
+import 'mcp_client.dart';
+import 'skill_pack.dart';
 
 class ChatEngine {
   ChatEngine._();
@@ -181,6 +183,7 @@ class ChatEngine {
     final system = [
       AmoreStore.buildSystemPrompt(friend),
       if (extraSystem != null && extraSystem.isNotEmpty) extraSystem,
+      ..._skillSystemParts(await _mcpToolLines()),
     ].join('\n\n');
 
     // 组装消息（历史最近 24 条）
@@ -231,9 +234,10 @@ class ChatEngine {
       for (final c in parsed.called) {
         onToolCall?.call(c.name);
       }
+      // Dart 侧统一执行：mcp: 前缀走外部 MCP，其余走 Rust 本地工具
+      feedback = await _execTools(parsed.called);
       msgs.add({'role': 'assistant', 'content': reply});
-      msgs.add({'role': 'tool', 'content': parsed.feedback!});
-      feedback = parsed.feedback!;
+      msgs.add({'role': 'tool', 'content': feedback});
       // 继续下一轮（feedback 已进 msgs）
     }
 
@@ -376,3 +380,91 @@ class ChatTurnResult {
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
+
+  // ---- 技能中心集成：技能/插件提示词 + MCP 工具指南 ----
+
+  /// 从所有启用服务并行拉取 MCP 工具清单（单个失败不阻塞）
+  static Future<List<String>> _mcpToolLines() async {
+    final services = enabledMcpServices();
+    if (services.isEmpty) return const [];
+    final results = await Future.wait(services.map((s) async {
+      try {
+        final tools = await McpClient(s).listTools();
+        if (tools.isEmpty) return '- 服务「${s.name}」：暂无工具';
+        return tools
+            .map((t) {
+              final props = (t.inputSchema['properties'] as Map?)?.keys.toList() ?? const [];
+              final argDesc = props.isEmpty ? '无参数' : '参数：${props.join(' / ')}';
+              return '- mcp:${s.name}:${t.name} —— ${t.description.isEmpty ? '外部工具' : t.description}（$argDesc）';
+            })
+            .join('\n');
+      } catch (e) {
+        return '- 服务「${s.name}」连接失败：${e.toString().substring(0, e.toString().length.clamp(0, 80))}';
+      }
+    }));
+    return results;
+  }
+
+  /// 启用的技能/插件提示词 + MCP 工具调用说明
+  static List<String> _skillSystemParts(List<String> mcpLines) {
+    final parts = <String>[];
+    for (final p in SkillCatalog.enabledPacks()) {
+      if (p.category == 'workflow') continue; // 工作包不进对话
+      if (p.prompt.isNotEmpty) parts.add(p.prompt);
+    }
+    if (mcpLines.isNotEmpty) {
+      parts.add(
+          '【外部工具（MCP）】你可以调用以下外部服务工具，调用格式与本地工具一致：\n<tool name="mcp:服务名:工具名">\n<param name="参数名">值</param>\n</tool>\n可用工具：\n${mcpLines.join('\n')}');
+    }
+    return parts;
+  }
+
+  /// 执行一批工具调用并拼回注 XML（格式与 Rust 一致）
+  static Future<String> _execTools(List<ToolCallInfo> called) async {
+    final buf = <String>[];
+    for (final c in called) {
+      final tag = _randomTag();
+      try {
+        final (status, content) = await _execOne(c);
+        buf.add('<$tag name="${c.name}" status="$status">\n$content\n</$tag>');
+      } catch (e) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
+        buf.add('<$tag name="${c.name}" status="error">\n$msg\n</$tag>');
+      }
+    }
+    return buf.join('\n');
+  }
+
+  static Future<(String, String)> _execOne(ToolCallInfo c) async {
+    if (c.name.startsWith('mcp:')) {
+      final rest = c.name.substring(4);
+      final dot = rest.indexOf(':');
+      if (dot <= 0) throw Exception('MCP 工具名格式：mcp:<服务名>:<工具名>');
+      final svcName = rest.substring(0, dot);
+      final toolName = rest.substring(dot + 1);
+      final svc = enabledMcpServices()
+          .where((s) => s.name == svcName)
+          .toList()
+          .firstOrNull;
+      if (svc == null) {
+        throw Exception('未找到 MCP 服务「$svcName」（请到技能中心启用）');
+      }
+      final result = await McpClient(svc).callTool(toolName, c.params);
+      return ('ok', result);
+    }
+    final r = AmoreStore.execTool(c.name, c.params);
+    return (r.status, r.content);
+  }
+
+  /// 6 位随机字母 tag（与 Rust random_tag 同形态）
+  static String _randomTag() {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    final t = DateTime.now().microsecondsSinceEpoch;
+    var x = t;
+    final buf = StringBuffer();
+    for (var i = 0; i < 6; i++) {
+      buf.write(letters[x % 26]);
+      x = (x >> 3) | 7919;
+    }
+    return buf.toString();
+  }
