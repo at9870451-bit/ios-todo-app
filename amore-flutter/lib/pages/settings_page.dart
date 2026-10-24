@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../core/store.dart';
+import 'permissions_page.dart';
 import 'package:provider/provider.dart' as pv;
 import '../state/app_state.dart';
 import '../ui/dark_mode_transition.dart';
@@ -105,6 +106,25 @@ class _SettingsPageState extends State<SettingsPage> {
                           )).toList(),
                     ),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+              section('权限'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: AmoreTheme.cardBox(),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.admin_panel_settings_rounded,
+                      color: AmoreTheme.accent),
+                  title: const Text('权限管理', style: TextStyle(fontSize: 14.5)),
+                  subtitle: const Text('全部自动允许 / 健康 / 日历 / 照片 / 位置等',
+                      style: TextStyle(fontSize: 12)),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: AmoreTheme.textFaint),
+                  onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PermissionsPage())),
                 ),
               ),
 
