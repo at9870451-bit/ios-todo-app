@@ -243,14 +243,14 @@ class _AppearancePageState extends State<AppearancePage> {
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        for (final (k, (label, color)) in bgs.entries)
+                        for (final e in bgs.entries)
                           ChoiceChip(
-                            label: Text(label,
+                            label: Text(e.value.$1,
                                 style: const TextStyle(fontSize: 12)),
                             selected:
-                                (AmoreStore.getConfig('chat_bg') ?? 'default') == k,
+                                (AmoreStore.getConfig('chat_bg') ?? 'default') == e.key,
                             onSelected: (_) => setState(() {
-                              AmoreStore.setConfig('chat_bg', k);
+                              AmoreStore.setConfig('chat_bg', e.key);
                               _save();
                             }),
                           ),
