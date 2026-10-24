@@ -84,16 +84,30 @@ jobs:
         working-directory: amore-flutter/ios
         run: pod install 2>&1 | tail -20
 
-      - name: 编译 iOS（未签名）
+      - name: 编译 iOS（未签名，xcodebuild 直链）
         working-directory: amore-flutter
         run: |
           set -o pipefail
-          flutter build ios --release --no-codesign 2>&1 | tee build.log | tail -60
+          flutter precache --ios
+          # 只生成 Xcode 配置，实际编译走 xcodebuild（免签名检查，兼容新 Flutter）
+          flutter build ios --config-only --release --no-codesign
+          cd ios
+          set -o pipefail
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ../build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee ../xcodebuild.log | tail -40
 
       - name: 验证符号已链入（-force_load 生效）
         working-directory: amore-flutter
         run: |
-          BIN=build/ios/iphoneos/Runner.app/Runner
+          BIN=build/Build/Products/Release-iphoneos/Runner.app/Runner
           test -f "$BIN"
           if nm "$BIN" | grep -q '_amore_call'; then
             echo "✓ amore_call 已链入 Runner"
@@ -105,7 +119,7 @@ jobs:
       - name: 打包 ipa
         working-directory: amore-flutter
         run: |
-          APP=build/ios/iphoneos/Runner.app
+          APP=build/Build/Products/Release-iphoneos/Runner.app
           rm -rf Payload Amore.ipa
           mkdir Payload
           cp -R "$APP" Payload/
