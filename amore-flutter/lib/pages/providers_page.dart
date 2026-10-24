@@ -448,36 +448,36 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (_p.kind == 'main')
-                  OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _modelCandidates = _mergedCandidates();
-                        if (_modelCandidates.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                              content: Text(
-                                  '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
-                        }
-                      });
-                    },
-                    child: const Text('选模型'),
-                  ),
+                // 选模型：聊天/语音/图片分开选（各自从目录或接口读取）
+                OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _modelCandidates = _mergedCandidates();
+                      if (_modelCandidates.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(
+                                '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
+                      }
+                    });
+                  },
+                  child: const Text('选模型'),
+                ),
               ],
             ),
-            // 从接口读取 / 测试（仅主模型）
-            if (_p.kind == 'main')
-              Row(
-                children: [
-                  TextButton.icon(
-                    onPressed: _fetching ? null : _fetchApi,
-                    icon: _fetching
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.cloud_download_outlined, size: 17),
-                    label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
-                  ),
+            // 从接口读取（全部类型可用：聊天/语音/图片分开拉各自的模型列表）
+            Row(
+              children: [
+                TextButton.icon(
+                  onPressed: _fetching ? null : _fetchApi,
+                  icon: _fetching
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cloud_download_outlined, size: 17),
+                  label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
+                ),
+                if (_p.kind == 'main')
                   TextButton.icon(
                     onPressed: _testing ? null : _testModel,
                     icon: _testing
@@ -488,13 +488,13 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                         : const Icon(Icons.wifi_tethering_rounded, size: 17),
                     label: Text(_testing ? '测试中…' : '测试模型'),
                   ),
-                  const Spacer(),
-                  if (_modelCandidates.isNotEmpty)
-                    Text('${_modelCandidates.length} 个可选',
-                        style: const TextStyle(
-                            fontSize: 11.5, color: AmoreTheme.textFaint)),
-                ],
-              ),
+                const Spacer(),
+                if (_modelCandidates.isNotEmpty)
+                  Text('${_modelCandidates.length} 个可选',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AmoreTheme.textFaint)),
+              ],
+            ),
             // 模型选择列表
             if (_modelCandidates.isNotEmpty) ...[
               const SizedBox(height: 8),
