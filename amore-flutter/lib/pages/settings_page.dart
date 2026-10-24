@@ -85,7 +85,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: const Text('夜间免打扰', style: TextStyle(fontSize: 14.5)),
-                  subtitle: const Text('23:00 – 08:00 不主动发消息', style: TextStyle(fontSize: 12)),
+                  subtitle: const Text('23:00 – 08:00 不主动发消息（当前版本为设置预留，AI 主动消息能力后续版本生效）', style: TextStyle(fontSize: 12)),
                   value: state.dndEnabled(),
                   onChanged: (v) => state.setDnd(v),
                 ),
@@ -99,7 +99,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     const Text('每日主动消息预算', style: TextStyle(fontSize: 14.5)),
                     const SizedBox(height: 4),
-                    const Text('每天最多主动找你几次（0 = 不限）',
+                    const Text('每天最多主动找你几次（0 = 不限；当前为设置预留）',
                         style: TextStyle(fontSize: 12, color: AmoreTheme.textSecondary)),
                     const SizedBox(height: 10),
                     Wrap(
