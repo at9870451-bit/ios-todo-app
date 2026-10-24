@@ -138,7 +138,7 @@ class SkillCatalog {
 
   static List<SkillPack> load() {
     final raw = AmoreStore.getConfig('skills.packs') ?? '';
-    final custom = <SkillPack>[];
+    var custom = <SkillPack>[];
     if (raw.trim().isNotEmpty) {
       try {
         final list = (jsonDecode(raw) as List?) ?? const [];

@@ -384,7 +384,7 @@ extension _FirstOrNull<T> on Iterable<T> {
   // ---- 技能中心集成：技能/插件提示词 + MCP 工具指南 ----
 
   /// 从所有启用服务并行拉取 MCP 工具清单（单个失败不阻塞）
-  static Future<List<String>> _mcpToolLines() async {
+  Future<List<String>> _mcpToolLines() async {
     final services = enabledMcpServices();
     if (services.isEmpty) return const [];
     final results = await Future.wait(services.map((s) async {
@@ -406,7 +406,7 @@ extension _FirstOrNull<T> on Iterable<T> {
   }
 
   /// 启用的技能/插件提示词 + MCP 工具调用说明
-  static List<String> _skillSystemParts(List<String> mcpLines) {
+  List<String> _skillSystemParts(List<String> mcpLines) {
     final parts = <String>[];
     for (final p in SkillCatalog.enabledPacks()) {
       if (p.category == 'workflow') continue; // 工作包不进对话
@@ -420,7 +420,7 @@ extension _FirstOrNull<T> on Iterable<T> {
   }
 
   /// 执行一批工具调用并拼回注 XML（格式与 Rust 一致）
-  static Future<String> _execTools(List<ToolCallInfo> called) async {
+  Future<String> _execTools(List<ToolCallInfo> called) async {
     final buf = <String>[];
     for (final c in called) {
       final tag = _randomTag();
@@ -435,7 +435,7 @@ extension _FirstOrNull<T> on Iterable<T> {
     return buf.join('\n');
   }
 
-  static Future<(String, String)> _execOne(ToolCallInfo c) async {
+  Future<(String, String)> _execOne(ToolCallInfo c) async {
     if (c.name.startsWith('mcp:')) {
       final rest = c.name.substring(4);
       final dot = rest.indexOf(':');
@@ -457,7 +457,7 @@ extension _FirstOrNull<T> on Iterable<T> {
   }
 
   /// 6 位随机字母 tag（与 Rust random_tag 同形态）
-  static String _randomTag() {
+  String _randomTag() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
     final t = DateTime.now().microsecondsSinceEpoch;
     var x = t;
