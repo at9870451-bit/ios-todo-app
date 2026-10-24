@@ -178,6 +178,7 @@ class AIProvider {
   bool autoV1;
   String model;
   String ttsVoice;
+  String ttsModel; // 语音模型名（与聊天 model 分开；兼容旧 tts 配置存 model）
   String imageModel;
 
   AIProvider({
@@ -191,6 +192,7 @@ class AIProvider {
     this.autoV1 = true,
     this.model = '',
     this.ttsVoice = 'alloy',
+    this.ttsModel = '',
     this.imageModel = '',
   });
 
@@ -205,6 +207,7 @@ class AIProvider {
         autoV1: j['auto_v1'] as bool? ?? true,
         model: j['model']?.toString() ?? '',
         ttsVoice: j['tts_voice']?.toString() ?? 'alloy',
+        ttsModel: j['tts_model']?.toString() ?? '',
         imageModel: j['image_model']?.toString() ?? '',
       );
 
@@ -219,6 +222,7 @@ class AIProvider {
         'auto_v1': autoV1,
         'model': model,
         'tts_voice': ttsVoice,
+        'tts_model': ttsModel,
         'image_model': imageModel,
       };
 

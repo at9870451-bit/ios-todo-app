@@ -90,11 +90,12 @@ class _VoiceBubbleState extends State<VoiceBubble> {
           base = AmoreStore.vendors().where((v) => v.key == prov.vendor).map((v) => v.base).firstOrNull ?? '';
         }
         if (base.endsWith('/')) base = base.substring(0, base.length - 1);
-        // 语音类型配置：用其模型名与音色；通用配置给默认 tts 模型
-        final isTtsCfg = prov.kind == 'tts';
-        body['model'] =
-            (isTtsCfg && prov.model.isNotEmpty) ? prov.model : 'tts-1';
-        if (voiceId.isEmpty && isTtsCfg && prov.ttsVoice.isNotEmpty) {
+        // 语音模型：优先 ttsModel（三槽位），兼容旧 tts 配置的 model
+        final ttsModel = prov.ttsModel.isNotEmpty
+            ? prov.ttsModel
+            : (prov.kind == 'tts' ? prov.model : 'tts-1');
+        body['model'] = ttsModel;
+        if (voiceId.isEmpty && prov.ttsVoice.isNotEmpty) {
           body['voice'] = prov.ttsVoice;
         }
         resp = await dio.post<List<int>>('$base/audio/speech',

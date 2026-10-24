@@ -203,20 +203,83 @@ class ProviderEditSheet extends StatefulWidget {
 
 class _ProviderEditSheetState extends State<ProviderEditSheet> {
   late final AIProvider _p;
-  final _modelCtl = TextEditingController();
+  final _modelCtl = TextEditingController(); // 聊天模型
+  final _imageCtl = TextEditingController(); // 图片模型
+  final _ttsCtl = TextEditingController(); // 语音模型
   final _searchCtl = TextEditingController();
   List<String> _modelCandidates = [];
   String _modelQuery = '';
   String _typeFilter = 'all'; // all / text / tts / image
+  String _target = 'chat'; // 候选列表点选写入目标：chat / image / tts
   bool _fetching = false;
 
   @override
   void initState() {
     super.initState();
     _p = widget.existing ?? AIProvider(label: '新配置');
-    _modelCtl.text = _p.kind == 'image' ? _p.imageModel : _p.model;
+    // 兼容旧配置：kind=tts 时 model 里存的是语音模型名
+    _modelCtl.text = _p.kind == 'tts' ? '' : _p.model;
+    _imageCtl.text = _p.imageModel;
+    _ttsCtl.text = _p.kind == 'tts' ? _p.model : _p.ttsModel;
     // 预填：内置目录 + 上次从接口读取的缓存
     _modelCandidates = _mergedCandidates();
+  }
+
+  // 模型槽位行：标签 + 输入框 + 选模型按钮
+  Widget _slotField({
+    required String label,
+    required TextEditingController ctl,
+    required String hint,
+    required ValueChanged<String> onChanged,
+    required VoidCallback onPick,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 64,
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AmoreTheme.textSecondary)),
+          ),
+          Expanded(
+            child: TextField(
+              controller: ctl,
+              onChanged: onChanged,
+              decoration: InputDecoration(
+                  hintText: hint,
+                  isDense: true,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10)),
+            ),
+          ),
+          const SizedBox(width: 6),
+          OutlinedButton(
+            onPressed: onPick,
+            style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                visualDensity: VisualDensity.compact),
+            child: const Text('选'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 打开候选列表并设定写入目标
+  void _openCandidates(String target) {
+    setState(() {
+      _target = target;
+      _modelCandidates = _mergedCandidates();
+      if (_modelCandidates.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
+      }
+    });
   }
 
   /// 上次从接口读取并缓存的模型（换厂商自动失效）
@@ -324,6 +387,8 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   @override
   void dispose() {
     _modelCtl.dispose();
+    _imageCtl.dispose();
+    _ttsCtl.dispose();
     _searchCtl.dispose();
     super.dispose();
   }
@@ -345,11 +410,9 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   }
 
   void _save() {
-    if (_p.kind == 'image') {
-      _p.imageModel = _modelCtl.text.trim();
-    } else {
-      _p.model = _modelCtl.text.trim();
-    }
+    _p.model = _modelCtl.text.trim();
+    _p.imageModel = _imageCtl.text.trim();
+    _p.ttsModel = _ttsCtl.text.trim();
     AmoreStore.saveProvider(_p);
     // 首个配置自动激活
     if (AmoreStore.activeProviderId().isEmpty) {
@@ -385,17 +448,6 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               onChanged: (v) => _p.label = v,
               controller: TextEditingController(text: _p.label),
               decoration: const InputDecoration(hintText: '配置名称'),
-            ),
-            const SizedBox(height: 12),
-            // 配置类型（主模型 / 语音 / 图片）
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'main', label: Text('主模型')),
-                ButtonSegment(value: 'tts', label: Text('语音')),
-                ButtonSegment(value: 'image', label: Text('图片')),
-              ],
-              selected: {_p.kind},
-              onSelectionChanged: (sel) => setState(() => _p.kind = sel.first),
             ),
             const SizedBox(height: 12),
             // 厂商选择
@@ -448,45 +500,38 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
               decoration: const InputDecoration(hintText: 'Base URL（留空=官方默认；本机直连填 127.0.0.1:端口/v1）'),
             ),
             const SizedBox(height: 12),
-            // 模型（主/语音→model；图片→imageModel）
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _modelCtl,
-                    onChanged: (v) {
-                      if (_p.kind == 'image') {
-                        _p.imageModel = v;
-                      } else {
-                        _p.model = v;
-                      }
-                    },
-                    decoration: InputDecoration(
-                        hintText: _p.kind == 'tts'
-                            ? '语音模型名（如 tts-1）'
-                            : _p.kind == 'image'
-                                ? '图片模型名（如 gpt-image-1）'
-                                : '模型名（可手输或从目录选）'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // 选模型：聊天/语音/图片分开选（各自从目录或接口读取）
-                OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      _modelCandidates = _mergedCandidates();
-                      if (_modelCandidates.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                            content: Text(
-                                '目录没有 ${_p.vendor} 的预置模型，可点下方「从 API 接口读取模型」')));
-                      }
-                    });
-                  },
-                  child: const Text('选模型'),
-                ),
-              ],
+            // ---- 三个模型槽位：聊天 / 图片 / 语音（可同时选择）----
+            _slotField(
+              label: '聊天模型',
+              ctl: _modelCtl,
+              hint: '如 gpt-4o / deepseek-chat',
+              onChanged: (v) => _p.model = v,
+              onPick: () => _openCandidates('chat'),
             ),
-            // 从接口读取（全部类型可用：聊天/语音/图片分开拉各自的模型列表）
+            _slotField(
+              label: '图片模型',
+              ctl: _imageCtl,
+              hint: '如 gpt-image-1 / FLUX.1',
+              onChanged: (v) => _p.imageModel = v,
+              onPick: () => _openCandidates('image'),
+            ),
+            _slotField(
+              label: '语音模型',
+              ctl: _ttsCtl,
+              hint: '如 tts-1 / gpt-4o-mini-tts',
+              onChanged: (v) => _p.ttsModel = v,
+              onPick: () => _openCandidates('tts'),
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              onChanged: (v) => _p.ttsVoice = v,
+              controller: TextEditingController(text: _p.ttsVoice),
+              decoration: const InputDecoration(
+                  labelText: '语音音色',
+                  hintText: '如 alloy / coral（仅语音朗读用）'),
+            ),
+            const SizedBox(height: 8),
+            // 从接口读取 + 测试聊天模型
             Row(
               children: [
                 TextButton.icon(
@@ -499,17 +544,16 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                       : const Icon(Icons.cloud_download_outlined, size: 17),
                   label: Text(_fetching ? '正在读取…' : '从 API 接口读取模型'),
                 ),
-                if (_p.kind == 'main')
-                  TextButton.icon(
-                    onPressed: _testing ? null : _testModel,
-                    icon: _testing
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.wifi_tethering_rounded, size: 17),
-                    label: Text(_testing ? '测试中…' : '测试模型'),
-                  ),
+                TextButton.icon(
+                  onPressed: _testing ? null : _testModel,
+                  icon: _testing
+                      ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.wifi_tethering_rounded, size: 17),
+                  label: Text(_testing ? '测试中…' : '测试模型'),
+                ),
                 const Spacer(),
                 if (_modelCandidates.isNotEmpty)
                   Text('${_modelCandidates.length} 个可选',
@@ -520,6 +564,31 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
             // 模型选择列表
             if (_modelCandidates.isNotEmpty) ...[
               const SizedBox(height: 8),
+              // 写入目标：点列表里的模型填到哪个槽位
+              Row(
+                children: [
+                  const Text('点选填入',
+                      style: TextStyle(
+                          fontSize: 11.5, color: AmoreTheme.textSecondary)),
+                  const SizedBox(width: 8),
+                  for (final (val, label) in const [
+                    ('chat', '聊天'),
+                    ('image', '图片'),
+                    ('tts', '语音'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text(label,
+                            style: const TextStyle(fontSize: 11.5)),
+                        selected: _target == val,
+                        visualDensity: VisualDensity.compact,
+                        onSelected: (_) => setState(() => _target = val),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
               // 自动分类筛选：全部 / 文字 / 语音 / 图片
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
@@ -590,26 +659,22 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                       ),
                       onTap: () {
                         setState(() {
-                          _modelCtl.text = m;
-                          if (_p.kind == 'image') {
-                            _p.imageModel = m;
-                          } else {
-                            _p.model = m;
+                          switch (_target) {
+                            case 'image':
+                              _imageCtl.text = m;
+                              _p.imageModel = m;
+                            case 'tts':
+                              _ttsCtl.text = m;
+                              _p.ttsModel = m;
+                            default:
+                              _modelCtl.text = m;
+                              _p.model = m;
                           }
                         });
                       },
                     );
                   },
                 ),
-              ),
-            ],
-            if (_p.kind == 'tts') ...[
-              const SizedBox(height: 12),
-              TextField(
-                onChanged: (v) => _p.ttsVoice = v,
-                controller: TextEditingController(text: _p.ttsVoice),
-                decoration: const InputDecoration(
-                    hintText: '语音音色（OpenAI 风格，如 alloy / coral）'),
               ),
             ],
             const SizedBox(height: 18),
