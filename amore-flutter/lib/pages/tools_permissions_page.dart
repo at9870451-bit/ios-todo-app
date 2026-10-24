@@ -112,20 +112,32 @@ class _ToolsPermissionsPageState extends State<ToolsPermissionsPage> {
               ),
               const SizedBox(height: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.all(14),
                 decoration: AmoreTheme.cardBox(),
-                child: SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('AI 能力限制',
-                      style: TextStyle(fontSize: 14.5)),
-                  subtitle: Text(
-                      ToolsConfig.fullAccess
-                          ? '完整权限：AI 可以读写当前工作区，并关闭应用内沙盒'
-                          : '受限：AI 仅可访问已授权数据',
-                      style: const TextStyle(fontSize: 12)),
-                  value: ToolsConfig.fullAccess,
-                  onChanged: (v) => setState(() => ToolsConfig.setFullAccess(v)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('AI 能力模式',
+                        style: TextStyle(
+                            fontSize: 14.5, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 8),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'readonly', label: Text('只读')),
+                        ButtonSegment(value: 'readwrite', label: Text('读写')),
+                        ButtonSegment(value: 'full', label: Text('完整权限')),
+                      ],
+                      selected: {ToolsConfig.aiMode},
+                      onSelectionChanged: (sel) => setState(
+                          () => ToolsConfig.setAiMode(sel.first)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      ToolsConfig.aiModeDesc(ToolsConfig.aiMode),
+                      style: const TextStyle(
+                          fontSize: 12, color: AmoreTheme.textSecondary),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 8),

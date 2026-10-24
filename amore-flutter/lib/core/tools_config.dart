@@ -11,12 +11,28 @@ class ToolsConfig {
       AmoreStore.setConfig('notify.granted', v ? '1' : '0');
 
   // ---- 高级设置 ----
-  /// AI 能力限制：完整权限（AI 可读写工作区、关闭应用内沙盒）
-  static bool get fullAccess =>
-      (AmoreStore.getConfig('ai.full_access') ?? '1') != '0';
+  /// AI 能力模式：readonly / readwrite / full（存 config ai.mode）
+  static String get aiMode =>
+      AmoreStore.getConfig('ai.mode') ?? 'readwrite';
+
+  static void setAiMode(String mode) =>
+      AmoreStore.setConfig('ai.mode', mode);
+
+  /// 兼容旧开关：完整权限 = full 模式
+  static bool get fullAccess => aiMode == 'full';
 
   static void setFullAccess(bool v) =>
-      AmoreStore.setConfig('ai.full_access', v ? '1' : '0');
+      setAiMode(v ? 'full' : 'readwrite');
+
+  /// 是否可写（只读模式禁止写类操作）
+  static bool get canWrite => aiMode != 'readonly';
+
+  /// 模式说明
+  static String aiModeDesc(String m) => switch (m) {
+        'readonly' => '只读：AI 仅可读取数据，禁止修改与写操作',
+        'full' => '完整权限：AI 可读写工作区，并关闭应用内沙盒',
+        _ => '读写：AI 可读写数据（默认）',
+      };
 
   /// 工具调用确认：按 AI 直接调用的工具执行审批
   static bool get toolConfirm =>

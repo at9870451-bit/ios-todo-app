@@ -13,6 +13,7 @@ import 'store.dart';
 import 'attachments.dart';
 import 'mcp_client.dart';
 import 'skill_pack.dart';
+import 'tools_config.dart';
 
 class ChatEngine {
   ChatEngine._();
@@ -451,6 +452,16 @@ extension _FirstOrNull<T> on Iterable<T> {
   }
 
   Future<(String, String)> _execOne(ToolCallInfo c) async {
+    // 工具调用确认（工具与权限页）：开启后按 AI 调用的工具执行审批（此处拦截并告知 AI）
+    if (ToolsConfig.toolConfirm) {
+      return ('error',
+          '工具调用确认已开启：AI 调用工具需人工审批，本轮不执行「${c.name}」（可在 设置 → 工具与权限 关闭后重试）');
+    }
+    // 只读能力模式：写类工具拦截（当前内置工具均为只读；Skill 执行器扩展时在此登记写名单）
+    if (!ToolsConfig.canWrite &&
+        const {'skill_save', 'tool_write'}.contains(c.name)) {
+      return ('error', 'AI 能力模式为只读：禁止写操作「${c.name}」');
+    }
     // Skill 技能：skill:<id> —— 按 handler 执行（tool: 映射本地工具 / script: 内置脚本）
     if (c.name.startsWith('skill:')) {
       final sid = c.name.substring(6);
