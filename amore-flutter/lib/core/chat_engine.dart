@@ -224,10 +224,11 @@ class ChatEngine {
       }
 
       if (parsed.feedback == null || parsed.called.isEmpty) {
-        // 无工具调用 → 结束
-        AmoreStore.appendHistory(key, 'assistant', lastClean);
-        _touchFriend(friend, lastClean);
-        return ChatTurnResult(text: lastClean, tools: allTools);
+        // 无工具调用 → 结束（插件 recv 钩子扩展点）
+        final finalText = _pluginRecvHook(lastClean, userText);
+        AmoreStore.appendHistory(key, 'assistant', finalText);
+        _touchFriend(friend, finalText);
+        return ChatTurnResult(text: finalText, tools: allTools);
       }
 
       allTools.addAll(parsed.called);
@@ -412,6 +413,20 @@ extension _FirstOrNull<T> on Iterable<T> {
       if (p.category == 'workflow') continue; // 工作包不进对话
       if (p.prompt.isNotEmpty) parts.add(p.prompt);
     }
+    // 可调用技能（带 JSON Schema 参数规范）→ 以工具形式注入
+    final callable = SkillCatalog.enabledPacks()
+        .where((p) => p.category == 'skill' && p.callable)
+        .toList();
+    if (callable.isNotEmpty) {
+      final lines = callable.map((p) {
+        final args = p.parameters.isNotEmpty
+            ? '参数规范：${p.parameters}'
+            : '无参数';
+        return '- skill:${p.id} —— ${p.desc}（$args）';
+      }).join('\n');
+      parts.add(
+          '【技能调用】需要下列能力时，按工具格式调用：\n<tool name="skill:技能id">\n<param name="参数名">值</param>\n</tool>\n可用技能：\n$lines');
+    }
     if (mcpLines.isNotEmpty) {
       parts.add(
           '【外部工具（MCP）】你可以调用以下外部服务工具，调用格式与本地工具一致：\n<tool name="mcp:服务名:工具名">\n<param name="参数名">值</param>\n</tool>\n可用工具：\n${mcpLines.join('\n')}');
@@ -436,6 +451,16 @@ extension _FirstOrNull<T> on Iterable<T> {
   }
 
   Future<(String, String)> _execOne(ToolCallInfo c) async {
+    // Skill 技能：skill:<id> —— 按 handler 执行（tool: 映射本地工具 / script: 内置脚本）
+    if (c.name.startsWith('skill:')) {
+      final sid = c.name.substring(6);
+      final skill = SkillCatalog.byId(sid);
+      if (skill == null) {
+        throw Exception('未启用技能「$sid」（请到技能中心启用）');
+      }
+      final result = _execSkill(skill, c.params);
+      return result;
+    }
     if (c.name.startsWith('mcp:')) {
       final rest = c.name.substring(4);
       final dot = rest.indexOf(':');
@@ -456,6 +481,30 @@ extension _FirstOrNull<T> on Iterable<T> {
     return (r.status, r.content);
   }
 
+  /// Skill 执行器：tool:<本地工具> / script:<内置脚本>
+  (String, String) _execSkill(SkillPack skill, Map<String, String> params) {
+    final h = skill.handler;
+    if (h.startsWith('tool:')) {
+      final tool = h.substring(5);
+      final r = AmoreStore.execTool(tool, params);
+      return (r.status, r.content);
+    }
+    if (h == 'script:textstats') {
+      final text = params['text'] ?? '';
+      final chars = text.replaceAll(RegExp(r'\s'), '').length;
+      final words = text.trim().isEmpty ? 0 : text.trim().split(RegExp(r'\s+')).length;
+      final paras = text.trim().isEmpty
+          ? 0
+          : text.split(RegExp(r'\n\s*\n')).where((x) => x.trim().isNotEmpty).length;
+      final lines = text.isEmpty ? 0 : text.split('\n').length;
+      return ('ok',
+          '字数（不含空白）：$chars；字符数：${text.length}；词语数：$words；段落数：$paras；行数：$lines');
+    }
+    // prompt 型：无执行逻辑，返回技能说明
+    return ('ok', '技能「${skill.name}」已触发：${skill.desc.isEmpty ? '请根据上下文继续' : skill.desc}');
+  }
+
+
   /// 6 位随机字母 tag（与 Rust random_tag 同形态）
   String _randomTag() {
     const letters = 'abcdefghijklmnopqrstuvwxyz';
@@ -467,4 +516,10 @@ extension _FirstOrNull<T> on Iterable<T> {
       x = (x >> 3) | 7919;
     }
     return buf.toString();
+  }
+
+  // ---- 插件 recv 钩子：AI 回复落地前的宿主级处理（内置策略可扩展）----
+
+  String _pluginRecvHook(String reply, String userText) {
+    return reply;
   }

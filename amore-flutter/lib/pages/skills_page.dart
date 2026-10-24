@@ -1,5 +1,7 @@
 // 技能中心：Skill 技能 / 插件 / 工作包 / MCP 服务
 import 'package:flutter/material.dart';
+import 'dart:convert';
+
 import 'package:flutter/services.dart';
 
 import '../core/mcp_client.dart';
@@ -310,6 +312,61 @@ class _SkillsPageState extends State<SkillsPage> {
           Text(p.desc,
               style:
                   TextStyle(fontSize: 12, color: AmoreTheme.textSecondary)),
+          if (p.category == 'skill' && p.parameters.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('参数规范（JSON Schema）：',
+                style: TextStyle(
+                    fontSize: 10.5, color: AmoreTheme.textFaint)),
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(top: 2),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F2F7),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(p.parameters,
+                  style: const TextStyle(
+                      fontSize: 10, fontFamily: 'monospace')),
+            ),
+          ],
+          if (p.handler.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('执行器：${p.handler}',
+                style: TextStyle(
+                    fontSize: 10.5, color: AmoreTheme.textFaint)),
+          ],
+          if (p.category == 'plugin' && p.hook.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('消息钩子：${p.hook == 'send' ? '发送前' : '接收后'}',
+                style: TextStyle(
+                    fontSize: 10.5, color: AmoreTheme.textFaint)),
+          ],
+          if (p.category == 'workflow' && p.manifest.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text('manifest',
+                    style: TextStyle(
+                        fontSize: 10.5, color: AmoreTheme.textFaint)),
+                const Spacer(),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact),
+                  onPressed: () => _exportPack(p),
+                  icon: const Icon(Icons.copy_rounded, size: 14),
+                  label: const Text('导出'),
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact),
+                  onPressed: () => _importPack(p),
+                  icon: const Icon(Icons.download_rounded, size: 14),
+                  label: const Text('导入'),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -399,10 +456,14 @@ class _SkillsPageState extends State<SkillsPage> {
     _saveMcp(services: list);
   }
 
+  String _handlerSel = 'prompt';
+
   void _addSkill() {
     final nameCtl = TextEditingController();
     final descCtl = TextEditingController();
     final promptCtl = TextEditingController();
+    final schemaCtl = TextEditingController();
+    _handlerSel = 'prompt';
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -421,9 +482,31 @@ class _SkillsPageState extends State<SkillsPage> {
               const SizedBox(height: 8),
               TextField(
                 controller: promptCtl,
-                maxLines: 4,
+                maxLines: 3,
                 decoration: const InputDecoration(
-                    labelText: '技能指令（注入 AI 的提示词）'),
+                    labelText: '技能指令（提示词型技能用）',
+                    hintText: '或留空，用下方「参数+执行器」做可调用技能'),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: schemaCtl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                    labelText: '参数规范（JSON Schema，可空）',
+                    hintText:
+                        '{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}'),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<String>(
+                initialValue: 'prompt',
+                decoration: const InputDecoration(labelText: '执行器'),
+                items: const [
+                  DropdownMenuItem(value: 'prompt', child: Text('提示词型（仅注入指令）')),
+                  DropdownMenuItem(value: 'tool:get_time', child: Text('本地工具：时间')),
+                  DropdownMenuItem(value: 'tool:calc', child: Text('本地工具：计算')),
+                  DropdownMenuItem(value: 'tool:random', child: Text('本地工具：随机数')),
+                ],
+                onChanged: (v) => _handlerSel = v ?? 'prompt',
               ),
             ],
           ),
@@ -442,6 +525,8 @@ class _SkillsPageState extends State<SkillsPage> {
                 desc: descCtl.text.trim(),
                 category: 'skill',
                 prompt: promptCtl.text.trim(),
+                parameters: schemaCtl.text.trim(),
+                handler: _handlerSel,
               ));
               SkillCatalog.saveCustom(all);
               SkillCatalog.setEnabled(all.last.id, true);
@@ -460,6 +545,52 @@ class _SkillsPageState extends State<SkillsPage> {
     SkillCatalog.saveCustom(all);
     SkillCatalog.setEnabled(p.id, false);
     setState(() {});
+  }
+
+  // 工作包导出：复制 manifest JSON 到剪贴板
+  void _exportPack(SkillPack p) async {
+    final m = p.manifest.isNotEmpty
+        ? p.manifest
+        : '{"name":"${p.name}","version":"1.0.0","author":"Amore","entry":"steps","kind":"workflow","steps":${p.steps.map((e) => '"$e"').toList()}}';
+    await Clipboard.setData(ClipboardData(text: m));
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✓ 工作包 manifest 已复制到剪贴板')));
+  }
+
+  // 工作包导入：从剪贴板解析 manifest 加入
+  Future<void> _importPack(SkillPack _) async {
+    final data = await Clipboard.getData('text/plain');
+    final raw = data?.text?.trim() ?? '';
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('剪贴板为空，请先复制 manifest JSON')));
+      return;
+    }
+    try {
+      final Map<String, dynamic> m = Map.from(jsonDecode(raw) as Map);
+      final steps = (m['steps'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
+      if (steps.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('manifest 缺少 steps，导入失败')));
+        return;
+      }
+      final all = SkillCatalog.load();
+      all.add(SkillPack(
+        id: 'wf_${DateTime.now().millisecondsSinceEpoch}',
+        name: (m['name'] ?? '导入工作包').toString(),
+        desc: '从 manifest 导入',
+        category: 'workflow',
+        manifest: jsonEncode(m),
+        steps: steps,
+      ));
+      SkillCatalog.saveCustom(all);
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✓ 工作包已导入（可启用并运行）')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('导入失败：${e.toString().replaceFirst('Exception: ', '')}')));
+    }
   }
 
   void _runWorkflow(SkillPack p) {
