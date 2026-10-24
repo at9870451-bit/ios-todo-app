@@ -134,7 +134,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 decoration: AmoreTheme.cardBox(),
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.rule_settings_rounded,
+                  leading: const Icon(Icons.shield_rounded,
                       color: AmoreTheme.accent),
                   title: const Text('工具与权限', style: TextStyle(fontSize: 14.5)),
                   subtitle: const Text('系统授权 / AI 能力限制 / 工具确认 / 超时设置',
