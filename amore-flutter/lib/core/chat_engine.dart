@@ -228,7 +228,7 @@ class ChatEngine {
 
       if (parsed.feedback == null || parsed.called.isEmpty) {
         // 无工具调用 → 结束（插件 recv 钩子扩展点）
-        final finalText = _pluginRecvHook(lastClean, userText);
+        final finalText = _withProducts(_pluginRecvHook(lastClean, userText));
         AmoreStore.appendHistory(key, 'assistant', finalText);
         _touchFriend(friend, finalText);
         return ChatTurnResult(text: finalText, tools: allTools);
@@ -245,12 +245,50 @@ class ChatEngine {
       // 继续下一轮（feedback 已进 msgs）
     }
 
-      AmoreStore.appendHistory(key, 'assistant', lastClean);
-      _touchFriend(friend, lastClean);
-      return ChatTurnResult(text: lastClean, tools: allTools);
+      final finalText = _withProducts(lastClean);
+      AmoreStore.appendHistory(key, 'assistant', finalText);
+      _touchFriend(friend, finalText);
+      return ChatTurnResult(text: finalText, tools: allTools);
     } catch (e) {
       return ChatTurnResult.error(_friendlyError(e));
     }
+  }
+
+  /// 供对话页等复用：执行工具调用（AI 产物自动入队）
+  static Future<String> runTools(List<ToolCallInfo> called) =>
+      _execTools(called);
+
+  /// 工具指南注入（技能 + 本地编程/AOJIT + MCP）
+  static Future<List<String>> mcpToolLines() => _mcpToolLines();
+
+  static List<String> skillSystemParts(List<String> mcpLines) =>
+      _skillSystemParts(mcpLines);
+
+  /// AI 产物（压缩包等）附加到回复文本
+  static String withProducts(String text) => _withProducts(text);
+
+  /// 清空本轮 AI 产物队列（每轮对话开始前）
+  static void clearProducts() => g_aiProducts.clear();
+
+  /// 对话页工具循环：单轮请求 + 工具回注（≤3 轮），返回最终展示文本
+  static Future<String> turnWithTools({
+    required AIProvider provider,
+    required List<Map<String, String>> msgs,
+    required String system,
+    String? extraSystem,
+  }) async {
+    String lastClean = '';
+    for (var round = 0; round < 3; round++) {
+      final reply = await request(provider, msgs, system,
+          extraSystem: extraSystem);
+      final parsed = AmoreStore.parseAssistant(reply);
+      lastClean = parsed.clean;
+      if (parsed.called.isEmpty) break;
+      final fb = await _execTools(parsed.called);
+      msgs.add({'role': 'assistant', 'content': reply});
+      msgs.add({'role': 'tool', 'content': fb});
+    }
+    return _withProducts(lastClean);
   }
 
   /// 选择「图片」类型配置（kind=image），无则回退激活/首个
@@ -381,6 +419,16 @@ class ChatTurnResult {
   ChatTurnResult.error(this.error) : text = null, tools = const [];
 }
 
+/// AI 生成的附件产物（如文件压缩结果），随本轮回复作为附件回发
+final g_aiProducts = <Map<String, String>>[];
+
+String _withProducts(String text) {
+  if (g_aiProducts.isEmpty) return text;
+  final atts = List<Map<String, String>>.from(g_aiProducts);
+  g_aiProducts.clear();
+  return Attachments.encode(atts, text);
+}
+
 extension _FirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
 }
@@ -441,6 +489,7 @@ extension _FirstOrNull<T> on Iterable<T> {
         '6. 日期时间（now/parse/格式化）：<param name="op">aojit</param><param name="input">datetime now</param>\n'
         '7. 二进制打包（struct pack）：<param name="op">aojit</param><param name="input">struct pack I 123</param>\n'
         '8. 其他精确需求（SQLite 存取、网络/随机器说明）：<param name="op">aojit</param><param name="input">sqlite set key value</param>；随机数可用本地工具 random\n'
+        '9. 用户要求压缩/打包附件文件时：<param name="op">aojit</param><param name="input">file compress 附件完整文件名（含扩展名）</param>——压缩包会自动作为附件随你的回复发送给用户\n'
         'AOJIT 所有操作都可经 run_code 的 aojit 操作或编程执行技能（skill:skill_run_code）调用，组件有：libc/math/python/numpy/openssl/hashlib/blake2/zlib/pcre/datetime/binascii/struct/socket/select/sqlite/busybox。');
     if (mcpLines.isNotEmpty) {
       parts.add(
@@ -495,7 +544,21 @@ extension _FirstOrNull<T> on Iterable<T> {
           final comp = parts[0];
           final op2 = parts.length > 1 ? parts[1] : '';
           final rest = parts.length > 2 ? parts.sublist(2) : <String>[];
-          return ('ok', AojitRuntime.run(comp, op2, rest));
+          final result = AojitRuntime.run(comp, op2, rest);
+          if (result.startsWith('AOJIT_PRODUCT:')) {
+            final nl = result.indexOf('\n');
+            final raw = result.substring(13, nl < 0 ? result.length : nl);
+            try {
+              final mm = Map<String, dynamic>.from(jsonDecode(raw) as Map);
+              g_aiProducts.add({
+                'name': (mm['name'] ?? '产物').toString(),
+                'path': (mm['path'] ?? '').toString(),
+                'kind': 'file',
+              });
+            } catch (_) {}
+            return ('ok', nl < 0 ? '已生成附件产物' : result.substring(nl + 1));
+          }
+          return ('ok', result);
         }
         final result = CodeEngine.run(op, input, arg.isEmpty ? null : arg);
         return ('ok', result);

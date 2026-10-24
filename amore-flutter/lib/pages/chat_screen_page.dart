@@ -145,15 +145,24 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
           .where((x) => x.category != 'workflow' && x.prompt.isNotEmpty)
           .map((x) => x.prompt)
           .toList();
+      // 工具指南注入：技能 + 本地编程/AOJIT 自动调用规则 + MCP 工具
+      final toolParts =
+          ChatEngine.skillSystemParts(await ChatEngine.mcpToolLines());
       final system = [
         AmoreStore.getConfig('persona.prompt') ?? '',
         ...skillParts,
+        ...toolParts,
       ].join('\n\n');
-      final reply = await ChatEngine.request(
-          provider, history.cast<Map<String, String>>().toList(), system,
-          extraSystem: _reasoning != 'off'
-              ? '回复推理强度：${_reasoningLabel(_reasoning)}。'
-              : null);
+      ChatEngine.clearProducts();
+      // 工具循环：AI 可调用 run_code / aojit / skill / mcp 并回注继续
+      final reply = await ChatEngine.turnWithTools(
+        provider: provider,
+        msgs: history.cast<Map<String, String>>().toList(),
+        system: system,
+        extraSystem: _reasoning != 'off'
+            ? '回复推理强度：${_reasoningLabel(_reasoning)}。'
+            : null,
+      );
       setState(() =>
           _messages.add(ChatMessage(content: reply, role: 'assistant')));
     } catch (e) {

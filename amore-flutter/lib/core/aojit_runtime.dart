@@ -53,6 +53,8 @@ class AojitRuntime {
           return _sqliteOp(op, args);
         case 'busybox':
           return 'BusyBox 镜像 = 终端内置命令（help/ls/cat/date/eval/code 等，即 BusyBox 命令集的沙盒实现）';
+        case 'file':
+          return _fileOp(op, args);
         case 'node':
         case 'ssh':
         case 'webp':
@@ -82,7 +84,43 @@ class AojitRuntime {
     return '';
   }
 
-  // ---- 数学 ----
+  // ---- 附件文件压缩（产物由引擎回发）----
+  static String _fileOp(String op, List<String> args) {
+    if (op != 'compress') return '用法：file compress <附件名>';
+    if (args.isEmpty) return '用法：file compress <附件名>';
+    final name = args[0];
+    final dir = Directory('${AmoreStore.dataDir}/attachments');
+    if (!dir.existsSync()) return '附件目录不存在（还没有收到过附件）';
+    late final List<File> all;
+    try {
+      all = dir
+          .listSync()
+          .whereType<File>()
+          .toList();
+    } catch (_) {
+      return '读取附件目录失败';
+    }
+    final hits = all
+        .where((f) =>
+            f.path.split('/').last == name ||
+            f.path.split('/').last.endsWith('_$name') ||
+            f.path.split('/').last.endsWith('$name'))
+        .toList();
+    if (hits.isEmpty) {
+      final names = all.map((f) => f.path.split('/').last).toList();
+      return '未找到附件「$name」。当前沙盒附件：${names.isEmpty ? '(无)' : names.join('、')}';
+    }
+    final f = hits.first;
+    final bytes = f.readAsBytesSync();
+    final gz = ZLibCodec(gzip: true).encode(bytes);
+    final gzName = '${f.path.split('/').last}.gz';
+    final gzPath = '${dir.path}/$gzName';
+    File(gzPath).writeAsBytesSync(gz);
+    // 产物标记：引擎解析后作为附件随 AI 回复回发
+    return 'AOJIT_PRODUCT:{\"name\":\"$gzName\",\"path\":\"$gzPath\"}\n压缩完成：${f.path.split('/').last}（${bytes.length} → ${gz.length} 字节，${(gz.length / 1024).toStringAsFixed(1)} KB）';
+  }
+
+  // ---- 数学 ----  // ---- 数学 ----
   static String _mathOp(String op, List<String> args) {
     if (op.isEmpty && args.isNotEmpty) op = args.removeAt(0);
     switch (op) {
