@@ -84,6 +84,7 @@ class _SkillsPageState extends State<SkillsPage> {
           icon: const Icon(Icons.add_rounded, size: 18),
           label: const Text('自定义技能'),
         ),
+        _importButtons(),
       ],
     );
   }
@@ -108,6 +109,7 @@ class _SkillsPageState extends State<SkillsPage> {
           icon: const Icon(Icons.extension_rounded, size: 18),
           label: const Text('本地添加插件'),
         ),
+        _importButtons(),
       ],
     );
   }
@@ -187,6 +189,16 @@ class _SkillsPageState extends State<SkillsPage> {
           icon: const Icon(Icons.add_task_rounded, size: 18),
           label: const Text('本地新建工作包'),
         ),
+        _importButtons(),
+      ],
+    );
+  }
+
+  // 统一的导入按钮组（本地文件 / URL / 剪贴板——技能/插件/工作包共用）
+  Widget _importButtons() {
+    return Column(
+      children: [
+        const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -201,7 +213,7 @@ class _SkillsPageState extends State<SkillsPage> {
               label: const Text('URL'),
             ),
             TextButton.icon(
-              onPressed: () => _importPack(),
+              onPressed: _importFromClipboard,
               icon: const Icon(Icons.content_paste_rounded, size: 15),
               label: const Text('剪贴板'),
             ),
@@ -209,6 +221,18 @@ class _SkillsPageState extends State<SkillsPage> {
         ),
       ],
     );
+  }
+
+  // 剪贴板导入（统一解析：技能/插件/工作包）
+  Future<void> _importFromClipboard() async {
+    final data = await Clipboard.getData('text/plain');
+    final raw = data?.text?.trim() ?? '';
+    if (raw.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('剪贴板为空，请先复制 JSON')));
+      return;
+    }
+    _importParsed(raw);
   }
 
   // ---- MCP tab ----
