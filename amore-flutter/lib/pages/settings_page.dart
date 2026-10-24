@@ -7,6 +7,7 @@ import '../core/store.dart';
 import '../core/theme_prefs.dart';
 import 'permissions_page.dart';
 import 'tools_permissions_page.dart';
+import 'rootfs_page.dart';
 import 'package:provider/provider.dart' as pv;
 import '../state/app_state.dart';
 import '../ui/dark_mode_transition.dart';
@@ -213,6 +214,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
               const SizedBox(height: 20),
               section('数据管理'),
+              AmoreTheme.tile(
+                context: context,
+                icon: Icons.storage_rounded,
+                title: 'Rootfs 管理',
+                subtitle: '沙盒存储总览 / 按类清理 / 目录浏览',
+                trailing: const Icon(Icons.chevron_right_rounded,
+                    size: 18, color: AmoreTheme.textFaint),
+                onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RootfsPage())),
+              ),
+              const SizedBox(height: 8),
               AmoreTheme.tile(
                 context: context,
                 icon: Icons.delete_sweep_rounded,
