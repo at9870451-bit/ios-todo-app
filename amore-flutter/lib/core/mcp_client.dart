@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 
 import 'store.dart';
+import 'tools_config.dart';
 
 /// MCP 服务配置（存 Rust config：skills.mcp 数组）
 class McpService {
@@ -93,9 +94,10 @@ class McpClient {
   late final Dio _dio;
 
   McpClient(this.service) {
+    final t = ToolsConfig.mcpTimeout; // MCP 启动超时（秒，可在工具与权限页调整）
     _dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 60),
+      connectTimeout: Duration(seconds: t),
+      receiveTimeout: Duration(seconds: t.clamp(10, 300)),
       validateStatus: (s) => s != null && s < 500,
       headers: {
         'Content-Type': 'application/json',

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../core/store.dart';
 import 'permissions_page.dart';
+import 'tools_permissions_page.dart';
 import 'package:provider/provider.dart' as pv;
 import '../state/app_state.dart';
 import '../ui/dark_mode_transition.dart';
@@ -125,6 +126,23 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 18, color: AmoreTheme.textFaint),
                   onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const PermissionsPage())),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: AmoreTheme.cardBox(),
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.rule_settings_rounded,
+                      color: AmoreTheme.accent),
+                  title: const Text('工具与权限', style: TextStyle(fontSize: 14.5)),
+                  subtitle: const Text('系统授权 / AI 能力限制 / 工具确认 / 超时设置',
+                      style: TextStyle(fontSize: 12)),
+                  trailing: const Icon(Icons.chevron_right_rounded,
+                      size: 18, color: AmoreTheme.textFaint),
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => const ToolsPermissionsPage())),
                 ),
               ),
 
