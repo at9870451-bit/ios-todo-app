@@ -162,6 +162,27 @@ class _ProvidersPageState extends State<ProvidersPage> {
     );
   }
 
+  // 模型类型徽标（自动分类结果：文字/语音/图片）
+  Widget _typeBadge(String cls) {
+    final (label, color) = switch (cls) {
+      'tts' => ('语音', const Color(0xFFAF52DE)),
+      'image' => ('图片', const Color(0xFF34C759)),
+      _ => ('文字', const Color(0xFF007AFF)),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 9.5,
+              color: color,
+              fontWeight: FontWeight.w700)),
+    );
+  }
+
   Widget _kindBadge(String kind) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(
@@ -207,6 +228,7 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
   final _searchCtl = TextEditingController();
   List<String> _modelCandidates = [];
   String _modelQuery = '';
+  String _typeFilter = 'all'; // all / text / tts / image
   bool _fetching = false;
 
   @override
@@ -498,6 +520,32 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
             // 模型选择列表
             if (_modelCandidates.isNotEmpty) ...[
               const SizedBox(height: 8),
+              // 自动分类筛选：全部 / 文字 / 语音 / 图片
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    for (final (val, label) in const [
+                      ('all', '全部'),
+                      ('text', '文字'),
+                      ('tts', '语音'),
+                      ('image', '图片'),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: ChoiceChip(
+                          label: Text(label,
+                              style: const TextStyle(fontSize: 11.5)),
+                          selected: _typeFilter == val,
+                          visualDensity: VisualDensity.compact,
+                          onSelected: (_) =>
+                              setState(() => _typeFilter = val),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
               TextField(
                 controller: _searchCtl,
                 onChanged: (v) => setState(() => _modelQuery = v.toLowerCase()),
@@ -523,13 +571,31 @@ class _ProviderEditSheetState extends State<ProviderEditSheet> {
                     if (_modelQuery.isNotEmpty && !m.toLowerCase().contains(_modelQuery)) {
                       return const SizedBox.shrink();
                     }
+                    final cls = ModelClassifier.classify(m);
+                    if (_typeFilter != 'all' && cls != _typeFilter) {
+                      return const SizedBox.shrink();
+                    }
                     return ListTile(
                       dense: true,
-                      title: Text(m, style: const TextStyle(fontSize: 12.5)),
+                      title: Row(
+                        children: [
+                          Flexible(
+                            child: Text(m,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 12.5)),
+                          ),
+                          const SizedBox(width: 6),
+                          _typeBadge(cls),
+                        ],
+                      ),
                       onTap: () {
                         setState(() {
                           _modelCtl.text = m;
-                          _p.model = m;
+                          if (_p.kind == 'image') {
+                            _p.imageModel = m;
+                          } else {
+                            _p.model = m;
+                          }
                         });
                       },
                     );

@@ -139,3 +139,35 @@ class ModelFetch {
     return list;
   }
 }
+/// 模型用途自动分类：text（文字/聊天） / tts（语音） / image（图片生成）
+/// 启发式：按常见厂商模型命名特征匹配，未命中归为 text
+class ModelClassifier {
+  static const imageHints = [
+    'image', 'img-', 'dall-e', 'dalle', 'flux', 'stable-diffusion',
+    'sdxl', 'kolors', 'cogview', 'seedream', 'wanx', 'pixart',
+    'playground', 'hunyuan-image', 'midjourney', 'firefly', 'imagen', 'sd3',
+  ];
+
+  static const ttsHints = [
+    'tts', 'voice', 'speech', 'audio-speech', 'cosyvoice',
+    'doubao-tts', 'sovits', 'vits', 'fish-speech', 'minimax-speech',
+    'gpt-4o-mini-tts', 'kokoro', 'chat-tts', 'spark-tts', 'sensevoice',
+  ];
+
+  static String classify(String model) {
+    final m = model.toLowerCase();
+    for (final h in ttsHints) {
+      if (m.contains(h)) return 'tts';
+    }
+    for (final h in imageHints) {
+      if (m.contains(h)) return 'image';
+    }
+    return 'text';
+  }
+
+  static String label(String kind) => switch (kind) {
+        'tts' => '语音',
+        'image' => '图片',
+        _ => '文字',
+      };
+}
