@@ -355,7 +355,7 @@ class _SkillsPageState extends State<SkillsPage> {
           ],
           if (p.category == 'plugin' && p.hook.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('消息钩子：${p.hook == 'send' ? '发送前' : '接收后'}',
+            Text('宿主扩展点：recv 钩子（回复前处理）',
                 style: TextStyle(
                     fontSize: 10.5, color: AmoreTheme.textFaint)),
           ],

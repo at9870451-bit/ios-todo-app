@@ -521,5 +521,14 @@ extension _FirstOrNull<T> on Iterable<T> {
   // ---- 插件 recv 钩子：AI 回复落地前的宿主级处理（内置策略可扩展）----
 
   String _pluginRecvHook(String reply, String userText) {
+    // 宿主扩展点：AI 回复落地前，启用的 recv 钩子插件可对回复做处理。
+    // 内置策略：回复为空/纯空白时给出可读提示（避免「AI 没说话」的空白气泡）。
+    final recvPlugins = SkillCatalog.enabledPacks()
+        .where((p) => p.category == 'plugin' && p.hook == 'recv')
+        .toList();
+    if (recvPlugins.isEmpty) return reply;
+    if (reply.trim().isEmpty) {
+      return '（本轮没有生成内容）';
+    }
     return reply;
   }
