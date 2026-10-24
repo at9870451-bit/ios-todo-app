@@ -112,6 +112,18 @@ class SkillCatalog {
           '【数学计算技能】需要精确计算时调用 skill:calc 技能，不要心算。',
     ),
     SkillPack(
+      id: 'skill_run_code',
+      name: '编程执行',
+      desc: '本地计算与数据处理（表达式/base64/URL/JSON/正则/文本统计）',
+      category: 'skill',
+      builtin: true,
+      parameters:
+          '{"type":"object","properties":{"op":{"type":"string","description":"eval/base64/url/json/regex/stats"},"input":{"type":"string","description":"输入内容"},"arg":{"type":"string","description":"可选参数"}},"required":["op","input"]}',
+      handler: 'script:code',
+      prompt:
+          '【编程执行技能】需要精确计算、数据转换、正则处理时调用 skill:run_code 技能（或 run_code 工具），不要心算或猜测。',
+    ),
+    SkillPack(
       id: 'skill_rand',
       name: '随机数',
       desc: '生成指定范围的随机整数',

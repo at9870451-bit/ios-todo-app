@@ -300,7 +300,8 @@ class _ChatListPageState extends State<ChatListPage> {
       separatorBuilder: (_, __) => const SizedBox(height: 6),
       itemBuilder: (_, i) {
         final r = rows[i];
-        return StaggerItem(
+        return RepaintBoundary(
+        child: StaggerItem(
           index: i,
           child: Material(
           color: Colors.transparent,
@@ -339,6 +340,7 @@ class _ChatListPageState extends State<ChatListPage> {
               ),
             ),
           ),
+        ),
         ),
         );
       },

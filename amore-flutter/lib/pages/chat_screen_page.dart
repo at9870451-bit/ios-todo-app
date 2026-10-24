@@ -66,7 +66,7 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _restore());
-    _inputCtl.addListener(() => setState(() {}));
+    // 流畅性：不在打字时整页 setState（发送按钮用局部监听）
   }
 
   Future<void> _restore() async {
@@ -761,14 +761,17 @@ class _ChatScreenPageState extends State<ChatScreenPage> {
                   const SizedBox(width: 8),
                   GestureDetector(
                     onTap: _send,
-                    child: Icon(
-                      Icons.arrow_upward_rounded,
-                      size: 22,
-                      color: (_inputCtl.text.trim().isEmpty &&
-                                  _pendingAtts.isEmpty) ||
-                              _sending
-                          ? const Color(0xFFD1D1D6)
-                          : AmoreBrand.orange,
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _inputCtl,
+                      builder: (context, v, _) => Icon(
+                        Icons.arrow_upward_rounded,
+                        size: 22,
+                        color: (v.text.trim().isEmpty &&
+                                    _pendingAtts.isEmpty) ||
+                                _sending
+                            ? const Color(0xFFD1D1D6)
+                            : AmoreBrand.orange,
+                      ),
                     ),
                   ),
                 ],

@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../core/code_engine.dart';
 import '../core/models.dart';
 import '../core/store.dart';
 import '../core/theme.dart';
@@ -66,7 +67,9 @@ class _ConsolePageState extends State<ConsolePage> {
   clear chat all|名字        清空聊天记录
   wipe memory 名字           清空某好友的长期记忆
   reset models              重置模型配置
-  export                    导出 JSON 到剪贴板''');
+  export                    导出 JSON 到剪贴板
+  eval <表达式>              数学计算：eval 12*(3+4)^2
+  code <op> <内容>           本地代码：base64/url/json/regex/stats''');
       case 'info':
         final friends = AmoreStore.listFriends();
         final groups = AmoreStore.listGroups();
@@ -197,6 +200,27 @@ class _ConsolePageState extends State<ConsolePage> {
         };
         Clipboard.setData(ClipboardData(text: json.toString()));
         _append('JSON 已复制到剪贴板（${json.toString().length} 字符）', kind: _LineKind.info);
+      case 'eval':
+        final expr = raw.substring(4).trim();
+        if (expr.isEmpty) {
+          _append('用法：eval <表达式>，如 eval 12*(3+4)^2', kind: _LineKind.error);
+        } else {
+          _append('$expr = ${CodeEngine.evalFriendly(expr)}', kind: _LineKind.ok);
+        }
+      case 'code':
+        final rest = raw.substring(4).trim();
+        final sp = rest.indexOf(' ');
+        final op = sp < 0 ? rest : rest.substring(0, sp);
+        final input = sp < 0 ? '' : rest.substring(sp + 1).trim();
+        if (input.isEmpty) {
+          _append('用法：code <op> <内容>，op ∈ eval/base64/url/json/regex/stats', kind: _LineKind.error);
+        } else {
+          try {
+            _append(CodeEngine.run(op, input), kind: _LineKind.ok);
+          } catch (e) {
+            _append(e.toString().replaceFirst('Exception: ', ''), kind: _LineKind.error);
+          }
+        }
       default:
         _append('command not found: $cmd（输入 help 查看可用命令）', kind: _LineKind.error);
     }

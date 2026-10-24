@@ -14,6 +14,7 @@ import 'attachments.dart';
 import 'mcp_client.dart';
 import 'skill_pack.dart';
 import 'tools_config.dart';
+import 'code_engine.dart';
 
 class ChatEngine {
   ChatEngine._();
@@ -428,6 +429,9 @@ extension _FirstOrNull<T> on Iterable<T> {
       parts.add(
           '【技能调用】需要下列能力时，按工具格式调用：\n<tool name="skill:技能id">\n<param name="参数名">值</param>\n</tool>\n可用技能：\n$lines');
     }
+    // 本地编程能力（run_code：数学表达式/base64/URL/JSON/正则/文本统计）
+    parts.add(
+        '【本地编程】你可以调用 run_code 完成计算与数据处理：\n<tool name="run_code">\n<param name="op">eval|base64|url|json|regex|stats</param>\n<param name="input">输入内容</param>\n<param name="arg">可选：base64 的 decode、regex 的 pattern::replacement</param>\n</tool>\n- eval：数学表达式，如 12*(3+4)^2，支持 sin/cos/sqrt/log/min/max 等函数\n- base64：编解码；url：URL 编解码；json：JSON 格式化；regex：正则替换；stats：文本统计');
     if (mcpLines.isNotEmpty) {
       parts.add(
           '【外部工具（MCP）】你可以调用以下外部服务工具，调用格式与本地工具一致：\n<tool name="mcp:服务名:工具名">\n<param name="参数名">值</param>\n</tool>\n可用工具：\n${mcpLines.join('\n')}');
@@ -461,6 +465,18 @@ extension _FirstOrNull<T> on Iterable<T> {
     if (!ToolsConfig.canWrite &&
         const {'skill_save', 'tool_write'}.contains(c.name)) {
       return ('error', 'AI 能力模式为只读：禁止写操作「${c.name}」');
+    }
+    // 本地编程：run_code（表达式/base64/url/JSON/正则/统计，纯 Dart 沙盒）
+    if (c.name == 'run_code' || c.name == 'skill:run_code') {
+      try {
+        final op = c.params['op'] ?? 'eval';
+        final input = c.params['input'] ?? '';
+        final arg = c.params['arg'] ?? '';
+        final result = CodeEngine.run(op, input, arg.isEmpty ? null : arg);
+        return ('ok', result);
+      } catch (e) {
+        return ('error', e.toString().replaceFirst('Exception: ', ''));
+      }
     }
     // Skill 技能：skill:<id> —— 按 handler 执行（tool: 映射本地工具 / script: 内置脚本）
     if (c.name.startsWith('skill:')) {
