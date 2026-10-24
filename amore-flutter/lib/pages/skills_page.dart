@@ -94,11 +94,17 @@ class _SkillsPageState extends State<SkillsPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        Text('插件 = 能力扩展包：启用后 AI 行为更强',
+        Text('插件 = 宿主级扩展（消息钩子/行为注入）',
             style: TextStyle(
                 fontSize: 11.5, color: AmoreTheme.textSecondary)),
         const SizedBox(height: 10),
         for (final p in packs) _packCard(p, enabled.contains(p.id)),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: _addPlugin,
+          icon: const Icon(Icons.extension_rounded, size: 18),
+          label: const Text('本地添加插件'),
+        ),
       ],
     );
   }
@@ -112,7 +118,7 @@ class _SkillsPageState extends State<SkillsPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
-        Text('工作包 = 预设流程模板：一键生成目标并开始分步执行',
+        Text('工作包 = 工具/脚本/流程的打包分发（manifest 清单）',
             style: TextStyle(
                 fontSize: 11.5, color: AmoreTheme.textSecondary)),
         const SizedBox(height: 10),
@@ -172,6 +178,17 @@ class _SkillsPageState extends State<SkillsPage> {
               ],
             ),
           ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _addWorkflow,
+          icon: const Icon(Icons.add_task_rounded, size: 18),
+          label: const Text('本地新建工作包'),
+        ),
+        TextButton.icon(
+          onPressed: _importPack(null),
+          icon: const Icon(Icons.download_rounded, size: 15),
+          label: const Text('从剪贴板导入工作包'),
+        ),
       ],
     );
   }
@@ -456,6 +473,143 @@ class _SkillsPageState extends State<SkillsPage> {
     _saveMcp(services: list);
   }
 
+  // 本地添加插件（宿主级扩展：名称/描述/消息钩子/行为指令）
+  void _addPlugin() {
+    final nameCtl = TextEditingController();
+    final descCtl = TextEditingController();
+    final promptCtl = TextEditingController();
+    var hookSel = 'recv';
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: const Text('本地添加插件'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                    controller: nameCtl,
+                    decoration: const InputDecoration(labelText: '插件名称')),
+                const SizedBox(height: 8),
+                TextField(
+                    controller: descCtl,
+                    decoration: const InputDecoration(labelText: '一句话描述')),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  initialValue: hookSel,
+                  decoration: const InputDecoration(labelText: '消息钩子'),
+                  items: const [
+                    DropdownMenuItem(value: '', child: Text('无（仅行为注入）')),
+                    DropdownMenuItem(value: 'recv', child: Text('recv（接收后）')),
+                  ],
+                  onChanged: (v) => setDlg(() => hookSel = v ?? ''),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: promptCtl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                      labelText: '行为指令（注入 AI 的提示词）'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+            FilledButton(
+              onPressed: () {
+                final name = nameCtl.text.trim();
+                if (name.isEmpty) return;
+                final all = SkillCatalog.load();
+                all.add(SkillPack(
+                  id: 'plugin_${DateTime.now().millisecondsSinceEpoch}',
+                  name: name,
+                  desc: descCtl.text.trim(),
+                  category: 'plugin',
+                  prompt: promptCtl.text.trim(),
+                  hook: hookSel,
+                ));
+                SkillCatalog.saveCustom(all);
+                SkillCatalog.setEnabled(all.last.id, true);
+                Navigator.pop(ctx);
+                setState(() {});
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 本地新建工作包（名称/描述/步骤列表）
+  void _addWorkflow() {
+    final nameCtl = TextEditingController();
+    final descCtl = TextEditingController();
+    final stepsCtl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('本地新建工作包'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                  controller: nameCtl,
+                  decoration: const InputDecoration(labelText: '工作包名称')),
+              const SizedBox(height: 8),
+              TextField(
+                  controller: descCtl,
+                  decoration: const InputDecoration(labelText: '一句话描述')),
+              const SizedBox(height: 8),
+              TextField(
+                controller: stepsCtl,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                    labelText: '步骤（每行一步）',
+                    hintText: '第一步…\n第二步…\n第三步…'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          FilledButton(
+            onPressed: () {
+              final name = nameCtl.text.trim();
+              if (name.isEmpty) return;
+              final steps = stepsCtl.text
+                  .split('\n')
+                  .map((e) => e.trim())
+                  .where((e) => e.isNotEmpty)
+                  .toList();
+              if (steps.isEmpty) return;
+              final all = SkillCatalog.load();
+              all.add(SkillPack(
+                id: 'wf_${DateTime.now().millisecondsSinceEpoch}',
+                name: name,
+                desc: descCtl.text.trim(),
+                category: 'workflow',
+                manifest:
+                    '{"name":"$name","version":"1.0.0","author":"本机","entry":"steps","kind":"workflow"}',
+                steps: steps,
+              ));
+              SkillCatalog.saveCustom(all);
+              SkillCatalog.setEnabled(all.last.id, true);
+              Navigator.pop(ctx);
+              setState(() {});
+            },
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _handlerSel = 'prompt';
 
   void _addSkill() {
@@ -558,7 +712,7 @@ class _SkillsPageState extends State<SkillsPage> {
   }
 
   // 工作包导入：从剪贴板解析 manifest 加入
-  Future<void> _importPack(SkillPack _) async {
+  Future<void> _importPack([SkillPack? _]) async {
     final data = await Clipboard.getData('text/plain');
     final raw = data?.text?.trim() ?? '';
     if (raw.isEmpty) {
