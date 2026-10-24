@@ -165,7 +165,10 @@ class AppState extends ChangeNotifier {
   void refreshAppearance() {
     config = AmoreStore.allConfig();
     bubbleRadius = double.tryParse(config['bubble_radius'] ?? '') ?? 16;
-    chatFontScale = double.tryParse(config['font_scale'] ?? '') ?? 14.5;
+    // Operit2 外观体系：字号优先读 operit.font_scale（兼容旧 font_scale）
+    chatFontScale = double.tryParse(
+            config['operit.font_scale'] ?? config['font_scale'] ?? '') ??
+        14.5;
     chatBgKey = config['chat_bg'] ?? 'default';
     themeColor = config['theme_color'] ?? 'blue';
     notifyListeners();
