@@ -124,6 +124,15 @@ class AmoreStore {
               ?.toInt() ??
           0;
 
+  /// 覆盖整个历史列表（用于修正 read 标记等字段）
+  static int replaceHistory(String key, List<ChatMessage> msgs) {
+    final r = AmoreBridge.call('history.replace', {
+      'key': key,
+      'messages': msgs.map((m) => m.toJson()).toList(),
+    });
+    return (r['count'] as num?)?.toInt() ?? 0;
+  }
+
   static int clearHistory(String key) =>
       (AmoreBridge.call('history.clear', {'key': key})['count'] as num?)
               ?.toInt() ??

@@ -416,6 +416,21 @@ pub fn dispatch(method: &str, p: &Value) -> Option<Value> {
             },
             obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
         )),
+        "history.replace" => Some(with(
+            |st| {
+                let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");
+                let msgs = p
+                    .get("messages")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                let f = history_file(&st.dir, key);
+                let count = msgs.len();
+                let _ = write_json(&f, &arr(msgs));
+                obj([("count", serde_json::Value::Number(serde_json::Number::from(count)))])
+            },
+            obj([("count", serde_json::Value::Number(serde_json::Number::from(0)))]),
+        )),
         "history.remove" => Some(with(
             |st| {
                 let key = p.get("key").and_then(|v| v.as_str()).unwrap_or("");

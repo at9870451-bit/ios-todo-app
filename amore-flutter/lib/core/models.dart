@@ -147,12 +147,14 @@ class ChatMessage {
   String role; // user / assistant / system / tool
   String content;
   double ts;
+  bool read; // iMessage 已读状态（自己发送的消息：true=对方已读）
 
   ChatMessage(
       {int? id,
       this.role = 'user',
       this.content = '',
-      double? ts})
+      double? ts,
+      this.read = false})
       : id = id ?? DateTime.now().microsecondsSinceEpoch,
         ts = ts ?? DateTime.now().millisecondsSinceEpoch / 1000;
 
@@ -161,10 +163,11 @@ class ChatMessage {
         role: j['role']?.toString() ?? 'user',
         content: j['content']?.toString() ?? '',
         ts: (j['ts'] as num?)?.toDouble(),
+        read: j['read'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() =>
-      {'id': id, 'role': role, 'content': content, 'ts': ts};
+      {'id': id, 'role': role, 'content': content, 'ts': ts, 'read': read};
 }
 
 class AIProvider {

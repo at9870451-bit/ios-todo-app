@@ -50,10 +50,94 @@ class AppState extends ChangeNotifier {
   void bootstrap() {
     try {
       coreInfo = AmoreBridge.coreVersion().toString();
+      _seedDemoData();
       refreshAll();
     } catch (e) {
       coreInfo = 'bridge error: $e';
     }
+  }
+
+  /// 首次启动预置模拟会话（iMessage 风格即时通讯演示数据；seed_done=1 后不再生成）
+  void _seedDemoData() {
+    if (AmoreStore.getConfig('seed_done') == '1') return;
+    final now = DateTime.now().millisecondsSinceEpoch / 1000;
+    // 写入会话历史；最后一条自己发出的消息按需标记已读
+    void hist(String key, List<(bool, String, int, bool)> msgs) {
+      for (final (mine, text, ago, read) in msgs) {
+        AmoreStore.appendHistory(key, mine ? 'user' : 'assistant', text);
+      }
+      final all = AmoreStore.loadHistory(key);
+      for (final m in all.reversed) {
+        if (m.role == 'user') {
+          m.read = msgs.last.$4;
+          break;
+        }
+      }
+      AmoreStore.replaceHistory(key, all);
+    }
+
+    // 好友：林小满
+    AmoreStore.saveFriend(ChatFriend(
+      id: 'f_xiaoman', name: '林小满', gender: 'female', age: '26',
+      desc: '产品经理 · 喜欢咖啡和猫',
+      persona: '你叫林小满，28岁产品经理，说话温柔带点俏皮，喜欢分享生活细节。',
+      sort: 0,
+    ));
+    hist('friend.f_xiaoman', [
+      (false, '在忙吗？晚上一起吃饭？', 4200, true),
+      (true, '好呀，老地方？', 4100, true),
+      (false, '嗯！七点见～今天想喝那家新开的粥铺', 4050, true),
+      (true, '没问题，我定位置', 4000, true),
+      (false, '对了，明天方案评审你帮我看看吗', 800, true),
+      (true, '发我，晚上帮你看', 600, true),
+      (false, '谢谢你！😊 那明天见', 300, true),
+    ]);
+
+    // 好友：陈一诺
+    AmoreStore.saveFriend(ChatFriend(
+      id: 'f_yinuo', name: '陈一诺', gender: 'female', age: '24',
+      desc: '设计师 · 追星女孩',
+      persona: '你叫陈一诺，24岁平面设计师，活泼爱分享，偶尔追剧追星。',
+      sort: 1,
+    ));
+    hist('friend.f_yinuo', [
+      (false, '新头像好看！哪拍的呀', 9000, true),
+      (true, '上周去海边拍的嘿嘿', 8900, true),
+      (false, '好羡慕，我也想去看海了', 8600, true),
+      (true, '下次一起！', 8500, true),
+      (false, '周末有空吗，陪我看展', 200, false),
+    ]);
+
+    // 好友：李哲
+    AmoreStore.saveFriend(ChatFriend(
+      id: 'f_lizhe', name: '李哲', gender: 'male', age: '29',
+      desc: '后端工程师 · 夜猫子',
+      persona: '你叫李哲，29岁后端工程师，理性简洁，偶尔吐槽需求。',
+      sort: 2,
+    ));
+    hist('friend.f_lizhe', [
+      (false, '接口文档我更新了，记得看', 15000, true),
+      (true, '收到，晚点看', 14800, true),
+      (false, '今晚发版，有问题随时叫我', 7200, true),
+      (true, '辛苦了', 7000, true),
+    ]);
+
+    // 群聊：周末爬山小分队
+    AmoreStore.saveGroup(ChatGroup(
+      id: 'g_hike', name: '周末爬山小分队', sort: 0,
+      memberIds: ['f_xiaoman', 'f_yinuo', 'f_lizhe'],
+      lastMessage: '周六早上八点北门集合！',
+      lastAt: now - 600,
+    ));
+    hist('group.g_hike', [
+      (false, '这周六去爬香山吗', 6000, true),
+      (true, '去去去！好久没运动了', 5900, true),
+      (false, '我也去，带点水果', 5800, true),
+      (true, '好，那周六早上八点北门集合！', 600, true),
+    ]);
+
+    // 未读标记：聊天列表红点依据 lastAt + config（简化：无未读实现，仅数据）
+    AmoreStore.setConfig('seed_done', '1');
   }
 
   /// 最近一次 Core 错误的文字（UI 可展示；单次失败不再拖垮整个 App）

@@ -168,9 +168,25 @@ class MessageBubble extends StatelessWidget {
                         : contentWidget,
                   ),
                   const SizedBox(height: 3),
-                  Text(_timeText,
-                      style: const TextStyle(
-                          fontSize: 10.5, color: AmoreTheme.textFaint)),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (mine) ...[
+                        Text(
+                          msg.read ? '已读' : '已送达',
+                          style: TextStyle(
+                              fontSize: 10.5,
+                              color: msg.read
+                                  ? const Color(0xFF34C759)
+                                  : AmoreTheme.textFaint),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Text(_timeText,
+                          style: const TextStyle(
+                              fontSize: 10.5, color: AmoreTheme.textFaint)),
+                    ],
+                  ),
                 ],
               ),
             ),
