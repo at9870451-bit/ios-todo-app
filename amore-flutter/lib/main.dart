@@ -13,6 +13,7 @@ import 'state/app_state.dart';
 import 'pages/chat_list_page.dart';
 import 'pages/chat_screen_page.dart';
 import 'pages/profile_page.dart';
+import 'pages/settings_page.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -314,12 +315,14 @@ class _MainShellState extends State<MainShell> {
     ChatListPage(),
     ChatScreenPage(),
     ProfilePage(),
+    SettingsPage(),
   ];
 
   static const _items = [
     (Icons.forum_outlined, Icons.forum_rounded, '聊天'),
     (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, '对话'),
     (Icons.person_outline_rounded, Icons.person_rounded, '我的'),
+    (Icons.settings_outlined, Icons.settings_rounded, '设置'),
   ];
 
   @override
